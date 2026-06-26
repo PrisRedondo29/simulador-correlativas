@@ -135,7 +135,7 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                     </div>
 
                                     <div className="flex items-center gap-3 mb-3 flex-wrap">
-                                        <h2 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
+                                        <h2 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight leading-tight">
                                             {infoMateria.nombre}
                                         </h2>
                                         {isEquivalencia && (
@@ -169,7 +169,7 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                             <div className="flex flex-col gap-6 mt-6">
                                 {mostrarModuloRegularidad && (
                                     <Card className="bg-default-50 border border-default-200 shadow-sm p-4 overflow-visible">
-                                        <h4 className="font-bold text-foreground mb-4 text-base flex items-center gap-2">
+                                        <h4 className="font-semibold text-foreground mb-4 text-base flex items-center gap-2">
                                             <i className="fa-solid fa-graduation-cap text-primary" />
                                             Historial Académico
                                         </h4>
@@ -212,9 +212,10 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                             {!isRendidaLibre && !isEquivalencia && (
                                                 <>
                                                     <div className="flex flex-col gap-1">
-                                                        <label className="text-xs font-semibold text-default-500 uppercase tracking-wide">Año de Regularización</label>
+                                                        <label htmlFor="input-anio-regularizacion" className="text-xs font-semibold text-default-500 uppercase tracking-wide">Año de Regularización</label>
                                                         <div className="flex items-center gap-3">
                                                             <Input
+                                                                id="input-anio-regularizacion"
                                                                 type="number" variant="faded" color="warning" size="sm" className="flex-1"
                                                                 value={String(anioActualReg)} onChange={handleCambioAnio}
                                                             />
@@ -223,8 +224,9 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                     </div>
 
                                                     <div className="flex flex-col gap-1">
-                                                        <label className="text-xs font-semibold text-default-500 uppercase tracking-wide">Nota de Cursada</label>
+                                                        <label htmlFor="input-nota-cursada" className="text-xs font-semibold text-default-500 uppercase tracking-wide">Nota de Cursada</label>
                                                         <Input
+                                                            id="input-nota-cursada"
                                                             type="number" placeholder="0 - 10" variant="faded" color="warning" size="sm"
                                                             value={detallesLocales.notaRegularizacion != null ? String(detallesLocales.notaRegularizacion) : ""}
                                                             onValueChange={handleCambioNotaCursada}
@@ -236,16 +238,18 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                             {isEquivalencia && (
                                                 <div className="flex flex-col gap-4">
                                                     <div className="flex flex-col gap-1">
-                                                        <label className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Año de Otorgamiento</label>
+                                                        <label htmlFor="input-anio-otorgamiento" className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Año de Otorgamiento</label>
                                                         <Input
+                                                            id="input-anio-otorgamiento"
                                                             type="number" variant="faded" color="primary" size="sm"
                                                             value={detallesLocales.anioExamen != null ? String(detallesLocales.anioExamen) : ""} 
                                                             onChange={handleCambioAnio}
                                                         />
                                                     </div>
                                                     <div className="flex flex-col gap-1">
-                                                        <label className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Nota de Equivalencia (Opcional)</label>
+                                                        <label htmlFor="input-nota-equivalencia" className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Nota de Equivalencia (Opcional)</label>
                                                         <Input
+                                                            id="input-nota-equivalencia"
                                                             type="number" placeholder="0 - 10" variant="faded" color="primary" size="sm"
                                                             value={detallesLocales.notaFinal != null ? String(detallesLocales.notaFinal) : ""}
                                                             onValueChange={handleCambioNotaEquivalencia}
@@ -289,8 +293,8 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                     )}
 
                                                     <div className="flex gap-1.5 w-full">
-                                                        {[0, 1, 2, 3, 4].map(i => (
-                                                            <div key={i} className={`flex-1 h-4 rounded-full ${intentosFinal[i] ? (intentosFinal[i].estado === 'aprobado' ? "bg-success" : (intentosFinal[i].estado === 'ausente' ? "bg-warning" : "bg-danger")) : "bg-default-200"}`} />
+                                                        {[0, 1, 2, 3, 4].map((i) => (
+                                                            <div key={`intento-bar-${i}`} className={`flex-1 h-4 rounded-full ${intentosFinal[i] ? (intentosFinal[i].estado === 'aprobado' ? "bg-success" : (intentosFinal[i].estado === 'ausente' ? "bg-warning" : "bg-danger")) : "bg-default-200"}`} />
                                                         ))}
                                                     </div>
                                                     <div className="flex justify-between text-[10px] text-default-400 font-bold px-0.5">
@@ -299,7 +303,7 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
 
                                                     <div className="flex flex-col gap-1.5 mt-2">
                                                         {intentosFinal.map((intento, i) => (
-                                                            <div key={i} className="flex items-center justify-between text-xs text-default-600 bg-default-100/50 rounded-lg pl-3 pr-1 py-1 group">
+                                                            <div key={intento.fecha ? `${intento.fecha}-${i}` : `intento-${i}`} className="flex items-center justify-between text-xs text-default-600 bg-default-100/50 rounded-lg pl-3 pr-1 py-1 group">
                                                                 {editingIntentoIndex === i ? (
                                                                     <div className="flex-1 flex flex-col gap-2 w-full py-1">
                                                                         <div className="flex gap-2 items-center w-full">
@@ -338,10 +342,10 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                                             </span>
                                                                         </div>
                                                                         <div className="flex gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
-                                                                            <Button isIconOnly size="sm" variant="light" color="secondary" className="h-7 w-7" onPress={() => setEditingIntentoIndex(i)}>
+                                                                            <Button isIconOnly size="sm" variant="light" color="secondary" className="size-7" onPress={() => setEditingIntentoIndex(i)}>
                                                                                 <i className="fa-solid fa-pen text-[10px]" />
                                                                             </Button>
-                                                                            <Button isIconOnly size="sm" variant="light" color="danger" className="h-7 w-7" onPress={() => handleEliminarIntento(i)}>
+                                                                            <Button isIconOnly size="sm" variant="light" color="danger" className="size-7" onPress={() => handleEliminarIntento(i)}>
                                                                                 <i className="fa-solid fa-trash-can text-[10px]" />
                                                                             </Button>
                                                                         </div>
@@ -376,7 +380,7 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                 {[...detallesLocales.historial].reverse().map((cursada, idx) => {
                                                     const actualIdx = detallesLocales.historial.length - 1 - idx;
                                                     return (
-                                                        <Card key={idx} className="bg-default-50 border border-default-200 shadow-none p-4 relative group">
+                                                        <Card key={`cursada-${actualIdx}`} className="bg-default-50 border border-default-200 shadow-none p-4 relative group">
                                                             {editingHistorialIndex === actualIdx ? (
                                                                 <div className="flex flex-col gap-3">
                                                                     <div className="flex items-center gap-2">
@@ -436,8 +440,8 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                             ) : (
                                                                 <>
                                                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Button isIconOnly size="sm" variant="flat" className="h-6 w-6" onPress={() => setEditingHistorialIndex(actualIdx)}><i className="fa-solid fa-pen text-[10px]" /></Button>
-                                                                        <Button isIconOnly size="sm" variant="flat" color="danger" className="h-6 w-6" onPress={() => handleEliminarCursadaHistorial(actualIdx)}><i className="fa-solid fa-trash-can text-[10px]" /></Button>
+                                                                        <Button isIconOnly size="sm" variant="flat" className="size-6" onPress={() => setEditingHistorialIndex(actualIdx)}><i className="fa-solid fa-pen text-[10px]" /></Button>
+                                                                        <Button isIconOnly size="sm" variant="flat" color="danger" className="size-6" onPress={() => handleEliminarCursadaHistorial(actualIdx)}><i className="fa-solid fa-trash-can text-[10px]" /></Button>
                                                                     </div>
                                                                     <div className="flex justify-between items-start mb-3">
                                                                         <div className="flex flex-col gap-0.5">
@@ -473,8 +477,8 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                     <div className='py-1'>
                                         {materiasUtils.buscarMateriasCorrelativas(infoMateria.correlativas, materias, progreso).length > 0 ? (
                                             <div className="flex flex-col gap-2">
-                                                {materiasUtils.buscarMateriasCorrelativas(infoMateria.correlativas, materias, progreso).map((m, index) => (
-                                                    <Card className='border border-default-200 shadow-none' key={index}>
+                                                {materiasUtils.buscarMateriasCorrelativas(infoMateria.correlativas, materias, progreso).map((m) => (
+                                                    <Card className='border border-default-200 shadow-none' key={m.codigo}>
                                                         <CardHeader className="py-2 flex justify-between items-center w-full">
                                                             <div className="flex flex-col">
                                                                 <span className="font-semibold text-default-700 text-sm">{m.nombre}</span>

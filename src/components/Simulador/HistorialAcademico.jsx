@@ -40,8 +40,8 @@ function HistorialAcademico({ historialSemestres, openedAccordions, setOpenedAcc
             {/* Encabezado del PDF (solo visible al capturar) */}
             {descargandoPDF && (
                 <div className="w-full text-center py-6 mb-4 border-b-2 border-primary/20">
-                    <h1 className="text-3xl font-black text-foreground tracking-tight">Registro de Avance Universitario</h1>
-                    <h2 className="text-lg font-bold text-primary mt-1 uppercase tracking-widest">
+                    <h1 className="text-3xl font-semibold text-foreground tracking-tight">Registro de Avance Universitario</h1>
+                    <h2 className="text-lg font-medium text-primary mt-1 uppercase tracking-widest">
                         Licenciatura en Sistemas — Plan {plan}
                     </h2>
                 </div>
@@ -90,7 +90,7 @@ function HistorialAcademico({ historialSemestres, openedAccordions, setOpenedAcc
                     })
 
                     return (
-                        <div key={idx} className="relative">
+                        <div key={`${item.anioActual}-${item.cuatri}-${idx}`} className="relative">
                             {/* Nodo de la timeline */}
                             <div
                                 className={`absolute -left-[27px] top-6 ${idx === indiceIntermedio ? 'bg-primary animate-pulse shadow-[0_0_15px_rgba(var(--heroui-primary-500),0.5)]' : 'bg-success'} text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] shadow-sm ring-4 ring-background z-10`}

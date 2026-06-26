@@ -8,7 +8,7 @@ import { trackFriccionCorrelativa } from "../../services/analyticsService";
 function MateriaCard({ materia, todasLasMaterias, estado, detalles, actualizarEstados, abrirInfo, vista = 'grid', plan = null }) {
     const [isOpen, setIsOpen] = useState(false);
 
-    if (!estado) return <p>Cargando Materia...</p>
+    if (!estado) return <p>Cargando Materia…</p>
     const { codigo, correlativas, nombre, anio, cuatrimestre, horas_totales, horas_semanales } = materia;
 
     const config = estadoUtils.ESTADO_CONFIG[estado] || estadoUtils.ESTADO_CONFIG["Disponible"];

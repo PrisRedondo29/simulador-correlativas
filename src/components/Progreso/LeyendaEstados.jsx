@@ -37,7 +37,7 @@ function LeyendaEstados({ materias }) {
                     {estados.map((estado, index) => {
                         const estilo = materiasUtils.obtenerEstiloPorEstado(estado.name)
                         return (
-                            <div key={index} className="flex items-center gap-4">
+                            <div key={estado.name} className="flex items-center gap-4">
                                 <div className={`${bgMap[estilo.accent]} w-12 h-12 rounded-2xl flex items-center justify-center transition-transform hover:scale-105`}>
                                     <i className={`fa-solid ${estilo.icon} ${estilo.colorText} text-xl`}></i>
                                 </div>
@@ -78,7 +78,7 @@ function LeyendaEstados({ materias }) {
                 </CardHeader>
                 <CardBody className='px-6 py-4 flex flex-col gap-4'>
                     <div className="flex gap-4 items-start bg-background/50 p-4 rounded-xl border border-primary/10">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                             <span className="font-bold text-primary">16</span>
                         </div>
                         <div className="flex flex-col gap-1">
@@ -90,7 +90,7 @@ function LeyendaEstados({ materias }) {
                     </div>
 
                     <div className="flex gap-4 items-start bg-background/50 p-4 rounded-xl border border-primary/10">
-                        <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                             <i className="fa-solid fa-shield-halved text-primary"></i>
                         </div>
                         <div className="flex flex-col gap-1">

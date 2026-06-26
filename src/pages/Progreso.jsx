@@ -65,7 +65,7 @@ function Progreso({ plan, setPlan }) {
 
     // Manejo de años abiertos/cerrados subido al nivel superior para compartir el botón con el buscador
     const [isAnioOpen, setIsAnioOpen] = useState(() => {
-        const guardado = localStorage.getItem('materias_isAnioOpen');
+        const guardado = localStorage.getItem('materias_isAnioOpen:v1');
         if (guardado) {
             try { return JSON.parse(guardado); } catch (e) { return []; }
         }
@@ -73,14 +73,14 @@ function Progreso({ plan, setPlan }) {
     });
 
     useEffect(() => {
-        localStorage.setItem('materias_isAnioOpen', JSON.stringify(isAnioOpen));
+        localStorage.setItem('materias_isAnioOpen:v1', JSON.stringify(isAnioOpen));
     }, [isAnioOpen]);
 
     const handleMostrarTodo = () => {
         if (isAnioOpen.length > 0) {
             setIsAnioOpen([]);
         } else {
-            const anios = [...new Set(materias.map((m) => Number(m.anio)))].sort((a, b) => a - b);
+            const anios = [...new Set(materias.map((m) => Number(m.anio)))].toSorted((a, b) => a - b);
             setIsAnioOpen(anios);
         }
     };

@@ -59,7 +59,7 @@ function FiltroMateriasModal({ estado, materias, progreso, isOpen, onOpenChange,
                                                     materiasFiltradas.map((m, index) => {
                                                         const estilo = materiasUtils.obtenerEstiloPorEstado(estado)
                                                         return (
-                                                            <Card className='mb-3 border-2 border-default-200 w-full' key={index}
+                                                            <Card className='mb-3 border-2 border-default-200 w-full' key={m.codigo}
                                                                 isPressable onPress={() => handleClick(m)}>
                                                                 <CardHeader>
                                                                     <div className='flex justify-between items-center w-full'>
@@ -68,7 +68,7 @@ function FiltroMateriasModal({ estado, materias, progreso, isOpen, onOpenChange,
                                                                         </div>
 
                                                                         {/* Aquí aplicamos el ícono con los colores dinámicos */}
-                                                                        <Chip variant="flat" className="w-8 h-8" color={estiloEstado(progreso[m.codigo])}>
+                                                                        <Chip variant="flat" className="size-8" color={estiloEstado(progreso[m.codigo])}>
                                                                             <i className={`fa-solid ${estilo.icon} ${estilo.colorText} text-sm `}></i>
                                                                         </Chip>
                                                                     </div>

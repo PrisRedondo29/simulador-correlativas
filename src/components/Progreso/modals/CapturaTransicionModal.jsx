@@ -20,16 +20,16 @@ function CapturaTransicionModal({ isOpen, onOpenChange, tipo, materia, config, o
     const [isLibre, setIsLibre] = useState(false);
     const [isEquivalencia, setIsEquivalencia] = useState(false);
     const [errors, setErrors] = useState({});
-    // Estado de sugerencia cuando nota cursada < 4
-    const [sugerenciaLibre, setSugerenciaLibre] = useState(false);
+    // Estado de sugerencia cuando nota cursada < 4 (valor derivado, sin useEffect)
+    const sugerenciaLibre = notaCursada !== "" && !isNaN(Number(notaCursada)) && Number(notaCursada) < 4;
 
+    // Reset al abrir/cambiar tipo de modal
     useEffect(() => {
         setAnio(String(new Date().getFullYear()));
         setNotaCursada("");
         setNotaFinal("");
         setFechaFinal(new Date().toISOString().split("T")[0]);
         setErrors({});
-        setSugerenciaLibre(false);
         setIsEquivalencia(false);
 
         // Si viene del estado Libre, marcar el switch por defecto
@@ -50,15 +50,6 @@ function CapturaTransicionModal({ isOpen, onOpenChange, tipo, materia, config, o
         setIsEquivalencia(val);
         if (val) setIsLibre(false);
     };
-
-    // Detectar si la nota de cursada es reprobatoria para mostrar alerta
-    useEffect(() => {
-        if (notaCursada !== "" && !isNaN(Number(notaCursada))) {
-            setSugerenciaLibre(Number(notaCursada) < 4);
-        } else {
-            setSugerenciaLibre(false);
-        }
-    }, [notaCursada]);
 
     const cuatrimestreAuto = materia?.cuatrimestre
         ? (Number(materia.cuatrimestre) % 2 === 0 ? 2 : 1)

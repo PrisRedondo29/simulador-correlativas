@@ -179,7 +179,7 @@ function MateriasProgreso({ progreso, materias }) {
                 return (
                     <Card
                         isPressable
-                        key={index}
+                        key={stat.estado}
                         className={`bg-background/70 backdrop-blur-sm border border-default-200/60 hover:border-default-300/80 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${glowClass} w-full group`}
                         onPress={() => handleClick(stat.estado, stat.label)}
                     >

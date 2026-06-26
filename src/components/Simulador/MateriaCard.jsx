@@ -32,9 +32,9 @@ function MateriaCard({ materia, actualizarEstados, estado }) {
             </CardBody>
             <CardFooter className="pt-1.5 sm:pt-2">
                 <div className="flex gap-1.5 sm:gap-2 flex-wrap w-full">
-                    {estados.map((est, index) => (
+                    {estados.map((est) => (
                         <Chip
-                            key={index}
+                            key={est.name}
                             variant={isCursado === est.isCursado ? "shadow" : "flat"}
                             color={est.color}
                             size="sm"

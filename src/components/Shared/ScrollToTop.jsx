@@ -21,7 +21,7 @@ function ScrollToTop() {
     };
 
     useEffect(() => {
-        window.addEventListener("scroll", toggleVisibility);
+        window.addEventListener("scroll", toggleVisibility, { passive: true });
         return () => window.removeEventListener("scroll", toggleVisibility);
     }, []);
 
@@ -35,7 +35,7 @@ function ScrollToTop() {
                 color="primary" 
                 variant="shadow" 
                 size="lg" 
-                className="rounded-full shadow-xl w-14 h-14"
+                className="rounded-full shadow-xl size-14"
                 onPress={scrollToTop}
                 aria-label="Ir arriba"
                 data-html2canvas-ignore // Muy importante para que no salga bugueado en el PDF

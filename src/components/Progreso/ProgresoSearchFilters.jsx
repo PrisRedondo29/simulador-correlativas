@@ -7,11 +7,7 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
     const estados = materiasUtils.estadosPosibles.concat(['Bloqueado', 'Cursando']);
     
     const handleToggleFiltro = (estado) => {
-        if (filtros.includes(estado)) {
-            setFiltros(filtros.filter(f => f !== estado));
-        } else {
-            setFiltros([...filtros, estado]);
-        }
+        setFiltros(prev => prev.includes(estado) ? prev.filter(f => f !== estado) : [...prev, estado]);
     };
 
     const clearFiltros = () => setFiltros([]);
@@ -73,15 +69,23 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
                                         return (
                                             <div 
                                                 key={estado}
+                                                role="button"
+                                                tabIndex={0}
                                                 onClick={(e) => {
                                                     // Evitar que el clic en el checkbox dispare esto dos veces
                                                     if (e.target.tagName !== 'INPUT') {
                                                         handleToggleFiltro(estado);
                                                     }
                                                 }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        handleToggleFiltro(estado);
+                                                    }
+                                                }}
                                                 className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-default-100' : 'hover:bg-default-50'}`}
                                             >
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-background border border-default-200 ${isSelected ? estilo.colorText : 'text-default-300'}`}>
+                                                <div className={`size-8 rounded-lg flex items-center justify-center bg-background border border-default-200 ${isSelected ? estilo.colorText : 'text-default-300'}`}>
                                                     <i className={`fa-solid ${estilo.icon} text-sm`}></i>
                                                 </div>
                                                 <span className={`text-sm font-bold flex-1 ${isSelected ? 'text-foreground' : 'text-default-500'}`}>

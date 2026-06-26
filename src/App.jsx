@@ -18,14 +18,14 @@ import ServerError from './components/Shared/ServerError'
 function AppContent({ plan, setPlan }) {
     const { isCriticalError } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(() => {
-        const saved = localStorage.getItem('sidebar_collapsed');
+        const saved = localStorage.getItem('sidebar_collapsed:v1');
         return saved ? JSON.parse(saved) : false;
     });
 
     usePageTracking();
 
     useEffect(() => {
-        localStorage.setItem('sidebar_collapsed', JSON.stringify(isCollapsed));
+        localStorage.setItem('sidebar_collapsed:v1', JSON.stringify(isCollapsed));
     }, [isCollapsed]);
 
     if (isCriticalError) {
@@ -56,9 +56,7 @@ function App() {
     useEffect(() => {
         const syncPlan = () => {
             const currentPlan = localStorage.getItem('plan_activo');
-            if (currentPlan !== plan) {
-                setPlan(currentPlan);
-            }
+            setPlan(currentPlan);
         };
 
         window.addEventListener('progress-hydrated', syncPlan);
@@ -68,7 +66,7 @@ function App() {
             window.removeEventListener('progress-hydrated', syncPlan);
             window.removeEventListener('storage', syncPlan);
         };
-    }, [plan]);
+    }, []);
 
     // Persistir el plan cada vez que cambie
     useEffect(() => {

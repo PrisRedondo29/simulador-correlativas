@@ -10,14 +10,16 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
     const [progresoSimulado, setProgresoSimulado] = useState(null)
     const [progresoBase, setProgresoBase] = useState(null)
     const [cuatri, setCuatri] = useState('1')
-    const [anioActual, setAnioActual] = useState(new Date().getFullYear())
+    const [anioActual, setAnioActual] = useState(() => new Date().getFullYear())
     const [historialSemestres, setHistorialSemestres] = useState([])
-    const [estadoAnterior, setEstadoAnterior] = useState(false)
-    const [estadoSiguiente, setEstadoSiguiente] = useState(true)
     const [simulacionTerminada, setSimulacionTerminada] = useState(false)
 
     // Calculamos el semestre del plan (1 a 10) basándonos en el historial
     const semestreActualPlan = historialSemestres.length + 1;
+
+    // Estado derivado calculado en render (sin useEffect)
+    const estadoAnterior = historialSemestres.length > 0;
+    const estadoSiguiente = !simulacionTerminada;
 
     // ─── Carga de materias e inicialización ──────────────────────────────────
     useEffect(() => {
@@ -50,12 +52,6 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
         }
     }, [plan]) // Only re-run when plan changes. anioInicio/cuatriInicio are initial values.
 
-
-    // ─── Habilitar/deshabilitar botones de navegación ──────────────────────
-    useEffect(() => {
-        setEstadoAnterior(historialSemestres.length > 0)
-        setEstadoSiguiente(!simulacionTerminada)
-    }, [historialSemestres, simulacionTerminada])
 
     // ─── Handlers de navegación ─────────────────────────────────────────────
     const handleAnterior = () => {
@@ -99,9 +95,10 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
         trackAvanceSemestre({ plan, anio: anioActual, cuatri });
 
         // Trackeamos intención de cursada (materias que pasaron a Cursado en este paso)
-        const materiasNuevasCursadas = materiasCursables
-            .filter(m => progresoSimulado[m.codigo] === 'Cursado')
-            .map(m => m.codigo);
+        const materiasNuevasCursadas = materiasCursables.reduce((acc, m) => {
+            if (progresoSimulado[m.codigo] === 'Cursado') acc.push(m.codigo);
+            return acc;
+        }, []);
         
         if (materiasNuevasCursadas.length > 0) {
             trackIntencionCursada({
@@ -114,7 +111,6 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
         const cantidadCursados = materias.filter(m => progresoSimulado[m.codigo] === 'Cursado').length
         if (cantidadCursados === materias.length) {
             setSimulacionTerminada(true)
-            setEstadoSiguiente(false)
             // El año proyectado de egreso: anio actual + semestres restantes / 2 (redondeado)
             const anioEgreso = anioActual + Math.ceil((semestreActualPlan) / 2);
             trackProyeccionEgreso({ plan, semestres_totales: semestreActualPlan, anio_proyeccion: anioEgreso });

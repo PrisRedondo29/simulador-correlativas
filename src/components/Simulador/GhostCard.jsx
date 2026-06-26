@@ -22,9 +22,9 @@ function GhostCard({ materia }) {
                         <div className="h-px flex-1 bg-danger-500/20"></div>
                     </div>
                     <div className="flex flex-wrap gap-1">
-                        {materia.correlativasFaltantes.map((f, i) => (
+                        {materia.correlativasFaltantes.map((f) => (
                             <Chip
-                                key={i}
+                                key={f}
                                 size="sm"
                                 variant="flat"
                                 color="danger"

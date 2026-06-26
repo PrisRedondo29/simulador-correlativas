@@ -6,7 +6,7 @@ import regularidadUtils from '../../utils/Progreso/regularidadUtils'
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
 
 function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, materias, isSticky, headerRef, setIsSticky }) {
-    const [isStatsExpanded, setIsStatsExpanded] = useState(window.innerWidth >= 768);
+    const [isStatsExpanded, setIsStatsExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
 
     const promedios = regularidadUtils.calcularPromedioGeneral(progresoDetalles, progreso);
 
@@ -97,7 +97,7 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                             </Link>
                         </div>
 
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-foreground tracking-tight leading-none mb-3">
+                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight leading-none mb-3">
                             Mi Progreso <span className="text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary">Académico</span>
                         </h1>
 

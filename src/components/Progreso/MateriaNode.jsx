@@ -14,9 +14,11 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
     const config = estadoUtils.ESTADO_CONFIG[estado] || estadoUtils.ESTADO_CONFIG["Disponible"];
 
     return (
-        <div 
-            className={`transition-all duration-300 hover:scale-105 ${onClick ? 'cursor-pointer active:scale-95' : ''}`}
+        <button 
+            type="button"
+            className={`transition-all duration-300 hover:scale-105 bg-transparent p-0 border-0 text-left ${onClick ? 'cursor-pointer active:scale-95' : 'cursor-default'}`}
             onClick={() => onClick && onClick(materia.codigo)}
+            aria-label={`Ver detalle de ${materia.nombre}`}
         >
             {/* 
                 Handle (Anclaje) de entrada:
@@ -39,7 +41,7 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
 
                 <CardBody className="p-2 pt-0">
                     {/* Nombre de la materia con truncado si es muy largo */}
-                    <div className="text-sm font-black leading-tight line-clamp-2 min-h-[2.5rem]" title={materia.nombre}>
+                    <div className="text-sm font-semibold leading-tight line-clamp-2 min-h-[2.5rem]" title={materia.nombre}>
                         {materia.nombre}
                     </div>
                     <div className="mt-2 flex justify-between items-end">
@@ -64,7 +66,7 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                 En horizontal usa Position.Right, en vertical usa Position.Bottom
             */}
             <Handle type="source" position={sourcePosition} style={{ background: '#555' }} />
-        </div>
+        </button>
     );
 };
 
