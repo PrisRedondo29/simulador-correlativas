@@ -107,10 +107,10 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
                 </Tooltip>
                 {!isCollapsed && (
                     <div className="flex flex-col min-w-0 flex-1 transition-opacity duration-300">
-                        <span className="text-sm font-bold text-foreground truncate leading-tight">
+                        <span className="text-sm font-bold text-white truncate leading-tight">
                             {userData?.config?.alias || (user.displayName?.split(' ')[0] ?? 'Usuario')}
                         </span>
-                        <span className="text-[10px] text-foreground/50 truncate w-full">{user.email}</span>
+                        <span className="text-[10px] text-primary-100/50 truncate w-full">{user.email}</span>
                     </div>
                 )}
             </div>
@@ -197,7 +197,7 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
     };
 
     return (
-        <nav className={`flex flex-col gap-2 transition-all duration-300 ${isCollapsed ? 'px-2' : 'p-4'}`}>
+        <nav className={`flex flex-col gap-1 transition-all duration-300 ${isCollapsed ? 'px-2' : 'p-4'}`}>
             {menuItems.map((item) => {
                 const isActive = !item.isExternal && location.pathname === item.path;
                 const isDisabled = !isActive && item.isDeactivated;
@@ -209,7 +209,7 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
                             href={item.path}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'p-3'} text-foreground/70 hover:bg-primary/10 hover:text-primary hover:translate-x-0.5 border border-transparent hover:border-primary/20`}
+                            className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'p-3'} text-primary-100/70 hover:bg-white/10 hover:text-white hover:translate-x-0.5 border border-transparent hover:border-white/10`}
                         >
                             {item.imgIcon ? (
                                 <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center p-0.5 shrink-0 shadow-sm group-hover:scale-110 transition-transform">
@@ -235,19 +235,19 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
                         id={item.id}
                         onClick={() => isDisabled ? addToast({ title: 'En progreso', description: 'Esta página aún no está disponible', color: 'warning' }) : handleClick(item.path)}
                         className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'p-3'} ${isActive
-                            ? 'bg-primary/10 text-primary font-bold shadow-sm border border-primary/20 backdrop-blur-sm'
+                            ? 'bg-white/15 text-white font-bold shadow-sm border border-white/20 backdrop-blur-sm'
                             : isDisabled
-                                ? 'bg-default-200/50 text-foreground/60 cursor-not-allowed'
-                                : 'text-foreground/70 hover:bg-default-100/80 hover:text-primary hover:translate-x-0.5'
+                                ? 'bg-white/5 text-primary-100/40 cursor-not-allowed'
+                                : 'text-primary-100/70 hover:bg-white/10 hover:text-white hover:translate-x-0.5'
                             }`}
                     >
-                        <i className={`fa-solid ${item.icon} w-5 text-lg shrink-0 ${isActive ? 'text-primary drop-shadow-sm' : 'group-hover:scale-110 transition-transform'}`} />
+                        <i className={`fa-solid ${item.icon} w-5 text-lg shrink-0 ${isActive ? 'text-white drop-shadow-sm' : 'group-hover:scale-110 transition-transform'}`} />
                         {!isCollapsed && <span className="text-sm font-medium transition-opacity duration-300 whitespace-nowrap overflow-hidden">{item.name}</span>}
                         {isActive && !isCollapsed && (
-                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_6px_2px] shadow-primary/60 animate-pulse" />
+                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_2px] shadow-white/60 animate-pulse" />
                         )}
                         {isActive && isCollapsed && (
-                            <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-primary" />
+                            <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-white" />
                         )}
                     </button>
                 );
@@ -270,13 +270,13 @@ NavLinks.propTypes = {
 // ─── Sidebar Footer  (tema + auth) ────────────────────────────────────
 const SidebarFooter = ({ onSignInPress, id_prefix = 'desktop', isCollapsed }) => {
     return (
-        <div className={`mt-auto border-t border-default-200/40 transition-all duration-300 ${isCollapsed ? 'p-2' : 'p-4'}`}>
-            <div className={`bg-background/60 backdrop-blur-md rounded-2xl border border-default-200/50 flex flex-col gap-3 shadow-sm transition-all duration-300 ${isCollapsed ? 'p-1 py-3' : 'p-3'}`}>
+        <div className={`mt-auto border-t border-white/10 transition-all duration-300 ${isCollapsed ? 'p-2' : 'p-4'}`}>
+            <div className={`bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex flex-col gap-3 shadow-sm transition-all duration-300 ${isCollapsed ? 'p-1 py-3' : 'p-3'}`}>
                 <div id={`selector-tema-${id_prefix}`}>
                     <ThemeSwitcher isCollapsed={isCollapsed} />
                 </div>
 
-                <div className={`${!isCollapsed ? 'border-t border-default-200/50 pt-3' : 'w-full flex justify-center'}`}>
+                <div className={`${!isCollapsed ? 'border-t border-white/10 pt-3' : 'w-full flex justify-center'}`}>
                     <UserPanel onSignInPress={onSignInPress} isCollapsed={isCollapsed} />
                 </div>
             </div>
@@ -327,7 +327,7 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
                         variant="shadow"
                         onPress={onDrawerOpen}
                         id="btn-menu-mobile"
-                        className="bg-background text-primary border border-default-200 shadow-xl"
+                        className="bg-primary text-white border border-primary-300 shadow-xl shadow-primary/30"
                         aria-label="Abrir menú principal"
                         size="lg"
                     >
@@ -337,7 +337,7 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
             )}
 
             <aside
-                className={`hidden lg:flex flex-col h-screen fixed left-0 top-0 bg-background/85 backdrop-blur-xl border-r border-default-200/60 z-40 shadow-xl shadow-black/5 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'}`}
+                className={`hidden lg:flex flex-col h-screen fixed left-0 top-0 bg-primary z-40 shadow-xl shadow-primary/30 transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20' : 'w-64'}`}
             >
                 {/* Botón Toggle */}
                 <Button
@@ -346,15 +346,15 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
                     variant="light"
                     radius="full"
                     onPress={() => setIsCollapsed(!isCollapsed)}
-                    className={`hidden lg:flex absolute -right-3 top-10 -translate-y-1/2 bg-background border border-default-200 shadow-md z-[60] hover:bg-default-100 transition-all duration-300 ${isCollapsed ? 'rotate-180 -right-4' : ''}`}
+                    className={`hidden lg:flex absolute -right-3 top-10 -translate-y-1/2 bg-primary border border-primary-300 shadow-md z-[60] hover:bg-primary-600 text-white transition-all duration-300 ${isCollapsed ? 'rotate-180 -right-4' : ''}`}
                 >
                     <i className="fa-solid fa-chevron-left text-[10px]" />
                 </Button>
 
                 {/* Header */}
-                <div className={`p-4 mb-2 flex items-center border-b border-default-200/40 relative h-20 shrink-0 ${isCollapsed ? 'justify-center' : 'gap-3 px-6'}`}>
+                <div className={`p-4 mb-2 flex items-center border-b border-white/10 relative h-20 shrink-0 ${isCollapsed ? 'justify-center' : 'gap-3 px-6'}`}>
                     <div
-                        className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/40 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/50 hover:shadow-primary/50 transition-all duration-300 shrink-0"
+                        className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center shadow-lg cursor-pointer ring-2 ring-white/10 hover:ring-white/30 hover:bg-white/20 transition-all duration-300 shrink-0"
                         onClick={() => navigate('/')}
                     >
                         <i className="fa-solid fa-graduation-cap text-white text-xl" />
@@ -362,8 +362,8 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
 
                     {!isCollapsed && (
                         <div className="flex flex-col transition-opacity duration-300">
-                            <span className="font-black text-foreground text-xl tracking-tight leading-none">UNLu</span>
-                            <span className="text-primary font-bold text-sm tracking-widest uppercase">Simulador</span>
+                            <span className="font-black text-white text-xl tracking-tight leading-none">UNLu</span>
+                            <span className="text-primary-100/70 font-bold text-[11px] tracking-widest uppercase">Simulador</span>
                         </div>
                     )}
                 </div>
@@ -386,7 +386,7 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
                 placement="left"
                 backdrop="opaque"
                 classNames={{
-                    base: 'bg-background shadow-none border-r border-default-200',
+                    base: 'bg-primary shadow-none border-r border-primary-300',
                     backdrop: 'bg-black/30'
                 }}
             >
@@ -394,14 +394,14 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
                     {(onClose) => (
                         <>
                             <DrawerHeader className="p-0">
-                                <div className="w-full p-6 border-b border-default-200 flex items-center gap-3">
+                                <div className="w-full p-6 border-b border-white/10 flex items-center gap-3">
                                     <div
-                                        className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center cursor-pointer"
+                                        className="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center cursor-pointer"
                                         onClick={() => navigate('/')}
                                     >
                                         <i className="fa-solid fa-graduation-cap text-white" />
                                     </div>
-                                    <span className="font-bold text-foreground text-lg">Menú</span>
+                                    <span className="font-bold text-white text-lg">Menú</span>
                                 </div>
                             </DrawerHeader>
 

@@ -73,7 +73,7 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                     {/* Contenedor de Icono: Más grande en móvil, estándar en desktop */}
                     <div className="relative group shrink-0">
                         <div className="absolute -inset-1 bg-linear-to-r from-primary to-secondary rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative bg-primary w-20 h-20 md:w-16 md:h-16 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20">
+                        <div className="relative bg-primary w-20 h-20 md:w-16 md:h-16 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-primary/30">
                             <i className="fa-solid fa-graduation-cap text-white text-4xl md:text-3xl lg:text-5xl"></i>
                         </div>
                     </div>
@@ -98,7 +98,7 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                         </div>
 
                         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight leading-none mb-3">
-                            Mi Progreso <span className="text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary">Académico</span>
+                            Mi Progreso <span className="text-primary">Académico</span>
                         </h1>
 
                         <p className="text-foreground/70 font-medium text-sm sm:text-base lg:text-lg max-w-3xl leading-relaxed mb-6">
@@ -244,7 +244,7 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                                 showValueLabel={false}
                                 classNames={{
                                     track: "bg-default-200/60 ",
-                                    indicator: "bg-gradient-to-r from-secondary to-primary"
+                                    indicator: "bg-gradient-to-r from-primary to-secondary"
                                 }}
                             />
                             {markerPosition > 0 && markerPosition < 100 && (

@@ -18,19 +18,19 @@ function Inicio() {
             title: "Adiós al Laberinto Académico",
             description: 'Una interfaz gráfica dinámica reemplaza los PDFs estáticos, mostrando el impacto instantáneo de escenarios "What-If" en futuros semestres. Navega tu plan de estudios de forma visual e intuitiva.',
             icon: "fa-solid fa-sitemap text-primary",
-            color: "bg-primary/5 hover:bg-primary/10 border-primary/20 hover:border-primary/40"
+            color: "bg-primary/5 hover:bg-primary/10 border-primary/20 hover:border-primary/30"
         },
         {
             title: "Automatización de Correlativas",
             description: "Un motor inteligente gestiona automáticamente la cadena compleja de requisitos previos con actualizaciones en cascada. Olvídate de verificar manualmente cada correlatividad.",
             icon: "fa-solid fa-gears text-success",
-            color: "bg-success/5 hover:bg-success/10 border-success/20 hover:border-success/40"
+            color: "bg-success/5 hover:bg-success/10 border-success/20 hover:border-success/30"
         },
         {
             title: "Persistencia sin Logins",
             description: "Experiencia de usuario rápida usando el almacenamiento local del navegador. Tu progreso se mantiene guardado incluso si cierras la pestaña, sin necesidad de cuentas complejas.",
             icon: "fa-solid fa-floppy-disk text-warning",
-            color: "bg-warning/5 hover:bg-warning/10 border-warning/20 hover:border-warning/40"
+            color: "bg-warning/5 hover:bg-warning/10 border-warning/20 hover:border-warning/30"
         }
     ]
 
@@ -44,13 +44,28 @@ function Inicio() {
 
     return (
         <div className="flex flex-col gap-12 md:gap-24 py-8 md:py-16 px-4 md:px-12 max-w-7xl mx-auto animate-in fade-in duration-500 overflow-hidden">
+            {/* Institutional Top Banner */}
+            <div className="bg-primary text-white rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg shadow-primary/20 -mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+                        <i className="fa-solid fa-graduation-cap text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <p className="font-black text-sm tracking-wide">Universidad Nacional de Luján</p>
+                        <p className="text-primary-100/70 text-xs font-medium">Simulador de Avance Académico</p>
+                    </div>
+                </div>
+                <div className="bg-white/20 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase">
+                    Herramienta Estudiantil
+                </div>
+            </div>
             {/* Hero Section */}
             <section className="flex flex-col items-center text-center gap-6 md:gap-8 mt-6 md:mt-10 relative">
                 {/* Decorative background blob */}
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[300px] md:w-[600px] h-[200px] md:h-[400px] bg-primary/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-[300px] md:w-[600px] h-[200px] md:h-[400px] bg-primary/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
                 <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-foreground tracking-tight max-w-5xl leading-[1.1] md:leading-tight relative z-10">
                     Planificá tu carrera en Sistemas <br className="hidden md:block" />
-                    <span className="text-transparent bg-clip-text bg-linear-to-r from-primary via-secondary to-primary bg-300% animate-gradient px-1">
+                    <span className="text-primary">
                         sin errores ni sorpresas
                     </span>
                 </h1>

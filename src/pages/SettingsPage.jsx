@@ -100,7 +100,7 @@ export default function SettingsPage({ plan, setPlan }) {
             </header>
 
             {!user && (
-                <Card className="bg-linear-to-br from-primary/10 to-primary/5 border-primary/20 shadow-md">
+                <Card className="bg-linear-to-br from-primary/10 to-secondary/5 border-primary/20 shadow-md">
                     <CardBody className="flex flex-col md:flex-row items-center gap-6 p-6">
                         <div className="bg-primary/20 p-4 rounded-2xl">
                             <i className="fa-solid fa-rocket text-primary text-3xl" />

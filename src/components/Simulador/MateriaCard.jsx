@@ -4,7 +4,7 @@ import { useState } from "react"
 function MateriaCard({ materia, actualizarEstados, estado }) {
     const estados = [
         { name: "No Seleccionada", isCursado: false, color: "warning", icon: "fa-regular fa-clock text-warning", background: "bg-warning/10 border-2 border-warning/30" },
-        { name: "Seleccionada", isCursado: true, color: "primary", icon: "fa-solid fa-check-double text-primary", background: "bg-primary/10 border-2 border-primary/30 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]" },
+        { name: "Seleccionada", isCursado: true, color: "primary", icon: "fa-solid fa-check-double text-primary", background: "bg-primary/10 border-2 border-primary/30 shadow-[0_0_15px_-3px_rgba(46,125,50,0.3)]" },
     ]
 
     // Leemos isCursado a partir de la prop "estado".

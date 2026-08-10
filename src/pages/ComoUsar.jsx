@@ -13,7 +13,7 @@ export default function ComoUsar() {
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
                 <div className="flex flex-col items-center mb-12 text-center">
-                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 ring-4 ring-primary/5">
+                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 ring-4 ring-primary/10">
                         <i className="fa-solid fa-book-open-reader text-primary text-4xl"></i>
                     </div>
                     <h1 className="text-4xl font-black text-foreground tracking-tight mb-4">

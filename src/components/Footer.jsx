@@ -5,7 +5,9 @@ import React from 'react'
 function Footer() {
     return (
         <footer className="w-full pb-8 pt-12 px-4 md:px-8 mt-auto mb-10">
-            <Card className="max-w-2xl mx-auto shadow-sm hover:shadow-md transition-shadow duration-300 border-small border-default-200 bg-background/50 backdrop-blur-lg">
+            <Card className="max-w-2xl mx-auto shadow-sm hover:shadow-md transition-shadow duration-300 border-small border-default-200 bg-background/50 backdrop-blur-lg overflow-hidden">
+                {/* Institutional top stripe */}
+                <div className="h-1.5 bg-primary w-full" />
                 <CardBody className='flex flex-col md:flex-row items-center justify-center gap-8 p-8'>
                     {/* Contenedor de Imagen con Efecto Reflejo/Aura */}
                     <div className="relative group shrink-0">
