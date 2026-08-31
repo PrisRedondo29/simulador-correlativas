@@ -9,17 +9,17 @@ export default function ComoUsar() {
     const navigate = useNavigate()
 
     return (
-        <div className="min-h-screen bg-default-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-background py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col items-center mb-12 text-center">
-                    <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mb-6 ring-4 ring-primary/5">
-                        <i className="fa-solid fa-book-open-reader text-primary text-4xl"></i>
+                <div className="flex flex-col items-center mb-10 text-center">
+                    <div className="w-16 h-16 bg-[#005a36] rounded-2xl flex items-center justify-center mb-4 shadow-md text-white">
+                        <i className="fa-solid fa-book-open-reader text-2xl sm:text-3xl text-white"></i>
                     </div>
-                    <h1 className="text-4xl font-black text-foreground tracking-tight mb-4">
-                        Centro de Ayuda
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight mb-2">
+                        Centro de Ayuda y Tutoriales
                     </h1>
-                    <p className="text-foreground/60 text-lg max-w-2xl">
+                    <p className="text-slate-500 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
                         Aprendé a exprimir al máximo todas las herramientas que el simulador tiene para ofrecerte.
                     </p>
                 </div>

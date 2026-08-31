@@ -6,22 +6,22 @@ import { Card, CardBody } from '@heroui/react'
  */
 function SimulandoAhora({ cuatri, anioActual }) {
     return (
-        <Card className="mb-6 bg-primary text-primary-foreground shadow-lg border-none rounded-3xl overflow-hidden relative">
-            {/* Decoraciones abstractas */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full -ml-12 -mb-12 blur-xl" />
+        <Card className="mb-6 bg-linear-to-r from-[#005a36] to-[#004d2e] text-white shadow-sm border border-emerald-800 rounded-2xl overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
 
-            <CardBody className="p-5 md:p-8 relative z-10">
-                <div className="flex items-center gap-4">
-                    <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm hidden md:block">
-                        <i className="fa-regular fa-calendar-days text-3xl" />
-                    </div>
-                    <div className="flex flex-col">
-                        <div className="text-xs text-primary-foreground/80 font-semibold tracking-wider uppercase mb-1">
-                            Simulando Ahora
+            <CardBody className="p-5 sm:p-6 relative z-10">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white shrink-0">
+                            <i className="fa-regular fa-calendar-days text-xl" />
                         </div>
-                        <div className="text-xl md:text-3xl font-bold">
-                            {cuatri}º Cuatrimestre - Año {anioActual}
+                        <div className="flex flex-col">
+                            <div className="text-[11px] text-emerald-200 font-bold tracking-widest uppercase mb-0.5">
+                                Simulando Ahora
+                            </div>
+                            <div className="text-lg sm:text-2xl font-black text-white">
+                                {cuatri}º Cuatrimestre · Año {anioActual}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -101,53 +101,67 @@ const ContactForm = () => {
     };
 
     return (
-        <Card className="w-full max-w-xl shadow-2xl border border-default-200/60 bg-background/70 backdrop-blur-xl mx-auto">
-            <CardBody className="p-5 sm:p-8 md:p-10">
+        <Card className="w-full max-w-2xl shadow-xs border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-3xl mx-auto">
+            <CardBody className="p-6 sm:p-10">
+                <div className="mb-6 space-y-1">
+                    <h2 className="text-xl sm:text-2xl font-bold text-foreground">Envianos tu consulta</h2>
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs sm:text-sm">
+                        ¿Necesitás realizar una consulta o comunicarte con el equipo? Podés hacerlo a través de nuestro formulario de contacto.
+                    </p>
+                </div>
+
                 <Form
                     ref={form}
                     onSubmit={onSubmit}
-                    className="flex flex-col gap-6 w-full"
+                    className="flex flex-col gap-5 w-full"
                     validationBehavior="native"
                 >
                     <Input
                         isRequired
                         name="user_name"
-                        label="Nombre"
-                        placeholder="Tu nombre completo"
+                        label="TU NOMBRE"
+                        placeholder="Ej. Juan Pérez"
                         labelPlacement="outside"
-                        variant="faded"
+                        variant="bordered"
                         radius="lg"
-                        size="lg"
-                        classNames={{ label: "font-semibold mb-1" }}
-                        startContent={<i className="fa-solid fa-user text-foreground/60 mr-1"></i>}
+                        size="md"
+                        classNames={{
+                            label: "font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1",
+                            inputWrapper: "bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 hover:border-[#005a36] focus-within:border-[#005a36] shadow-none"
+                        }}
                     />
 
                     <Input
                         isRequired
                         name="user_email"
                         type="email"
-                        label="Email"
-                        placeholder="tu@email.com"
+                        label="TU DIRECCIÓN DE CORREO ELECTRÓNICO"
+                        placeholder="ejemplo@correo.com"
                         labelPlacement="outside"
-                        variant="faded"
+                        variant="bordered"
                         radius="lg"
-                        size="lg"
-                        classNames={{ label: "font-semibold mb-1" }}
+                        size="md"
+                        classNames={{
+                            label: "font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1",
+                            inputWrapper: "bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 hover:border-[#005a36] focus-within:border-[#005a36] shadow-none"
+                        }}
                         errorMessage="Por favor, ingresa un correo electrónico válido."
-                        startContent={<i className="fa-solid fa-envelope text-foreground/60 mr-1"></i>}
                     />
 
                     <Textarea
                         isRequired
                         name="message"
-                        label="Mensaje"
-                        placeholder="Escribe tu mensaje o reporte de error detallado aquí..."
+                        label="MENSAJE"
+                        placeholder="Escribí aquí tu consulta, detalle o sugerencia..."
                         labelPlacement="outside"
-                        variant="faded"
+                        variant="bordered"
                         radius="lg"
-                        size="lg"
+                        size="md"
                         minRows={4}
-                        classNames={{ label: "font-semibold mb-1" }}
+                        classNames={{
+                            label: "font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1",
+                            inputWrapper: "bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 hover:border-[#005a36] focus-within:border-[#005a36] shadow-none"
+                        }}
                     />
 
                     <div className="w-full pt-2 flex flex-col gap-4">
@@ -156,7 +170,7 @@ const ContactForm = () => {
                             color="primary"
                             size="lg"
                             isLoading={isLoading}
-                            className="w-full font-bold shadow-lg shadow-primary/40 h-14"
+                            className="w-full font-bold shadow-sm h-12 rounded-xl text-sm"
                             endContent={!isLoading && <i className="fa-solid fa-paper-plane ml-2"></i>}
                         >
                             {isLoading ? "Enviando..." : "Enviar mensaje"}
@@ -165,8 +179,8 @@ const ContactForm = () => {
                         {/* Mensaje de éxito/feedback */}
                         <div className={`transition-all duration-300 ${action ? 'h-auto opacity-100' : 'h-0 opacity-0 overflow-hidden'}`}>
                             {action && (
-                                <div className="text-success-700 flex items-center justify-center gap-2 font-bold text-sm bg-success/10 py-3 px-4 rounded-xl border border-success/20 animate-in zoom-in duration-300">
-                                    <i className="fa-solid fa-circle-check"></i>
+                                <div className="text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-2 font-bold text-sm bg-emerald-50 dark:bg-emerald-950/40 py-3 px-4 rounded-xl border border-emerald-200 dark:border-emerald-800 animate-in zoom-in duration-300">
+                                    <i className="fa-solid fa-circle-check text-emerald-600"></i>
                                     {action}
                                 </div>
                             )}
@@ -179,3 +193,4 @@ const ContactForm = () => {
 };
 
 export default ContactForm;
+

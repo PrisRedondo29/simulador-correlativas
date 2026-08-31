@@ -5,22 +5,22 @@ export default heroui({
         /* --- 1. MODO CLARO --- */
         light: {
             colors: {
-                background: "#ffffff",
-                foreground: "#000000",
-                focus: "#006FEE",
+                background: "#f8fafc",
+                foreground: "#0f172a",
+                focus: "#005a36",
                 overlay: "#ffffff",
                 default: {
-                    /* Escala zinc: 400+ son oscuros para usarse como texto legible */
-                    50: "#fafafa", 100: "#f4f4f5", 200: "#e4e4e7", 300: "#d4d4d8",
-                    400: "#a1a1aa", 500: "#71717a", 600: "#52525b", 700: "#3f3f46",
-                    800: "#27272a", 900: "#18181b",
-                    foreground: "#000", DEFAULT: "#a1a1aa"
+                    /* Escala zinc/slate */
+                    50: "#f8fafc", 100: "#f1f5f9", 200: "#e2e8f0", 300: "#cbd5e1",
+                    400: "#94a3b8", 500: "#64748b", 600: "#475569", 700: "#334155",
+                    800: "#1e293b", 900: "#0f172a",
+                    foreground: "#0f172a", DEFAULT: "#94a3b8"
                 },
                 primary: {
-                    50: "#dfedfd", 100: "#b3d4fa", 200: "#86bbf7", 300: "#59a1f4",
-                    400: "#2d88f1", 500: "#006fee", 600: "#005cc4", 700: "#00489b",
-                    800: "#003571", 900: "#002147",
-                    foreground: "#fff", DEFAULT: "#006eec"
+                    50: "#e8f5ee", 100: "#c7ebd7", 200: "#96dcba", 300: "#5ec99b",
+                    400: "#2eb37f", 500: "#005a36", 600: "#004d2e", 700: "#004026",
+                    800: "#00331f", 900: "#002617",
+                    foreground: "#ffffff", DEFAULT: "#005a36"
                 },
                 secondary: {
                     50: "#eee4f8", 100: "#d7bfef", 200: "#bf99e5", 300: "#a773db",

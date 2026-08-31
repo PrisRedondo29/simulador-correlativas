@@ -64,26 +64,25 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
     }, [isSticky, progreso])
 
     return (
-        <header ref={headerRef} className="bg-transparent border border-default-200/60 shadow-sm hover:shadow-md rounded-2xl flex flex-col transition-all duration-300">
+        <header ref={headerRef} className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-xs hover:shadow-sm rounded-3xl flex flex-col transition-all duration-300">
             {/* Contenedor con blur para la parte superior (No afecta al fixed de abajo) */}
-            <div className="bg-background/80 backdrop-blur-md p-6 md:p-8 pb-3 flex flex-col gap-6 rounded-t-2xl w-full">
+            <div className="p-6 md:p-8 pb-4 flex flex-col gap-6 rounded-t-3xl w-full">
                 {/* Sección Superior: Pantalla completa centrada en móvil, horizontal en desktop */}
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-10">
+                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-8">
 
-                    {/* Contenedor de Icono: Más grande en móvil, estándar en desktop */}
+                    {/* Contenedor de Icono */}
                     <div className="relative group shrink-0">
-                        <div className="absolute -inset-1 bg-linear-to-r from-primary to-secondary rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative bg-primary w-20 h-20 md:w-16 md:h-16 lg:w-24 lg:h-24 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20 ring-1 ring-white/20">
-                            <i className="fa-solid fa-graduation-cap text-white text-4xl md:text-3xl lg:text-5xl"></i>
+                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-[#005a36] rounded-2xl flex items-center justify-center shadow-md text-white">
+                            <i className="fa-solid fa-graduation-cap text-3xl lg:text-4xl"></i>
                         </div>
                     </div>
 
                     <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
                         {/* Migas de pan / Ubicación */}
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                            <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary font-black text-[10px] uppercase tracking-tighter shrink-0">UNLu</span>
-                            <span className="text-secondary font-bold text-xs lg:text-sm tracking-wide uppercase">{carrera}</span>
-                            <Divider orientation="vertical" className="h-4 bg-default-300 hidden sm:block" />
+                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#005a36] dark:text-emerald-400 font-black text-[10px] uppercase tracking-wider border border-emerald-200/50 shrink-0">UNLu</span>
+                            <span className="text-[#005a36] dark:text-emerald-300 font-bold text-xs lg:text-sm tracking-wide uppercase">{carrera}</span>
+                            <Divider orientation="vertical" className="h-4 bg-slate-200 hidden sm:block" />
                             <Link to="/config" className="hover:opacity-80 transition-opacity" title="Cambiar Plan de Estudios">
                                 <Chip
                                     size="sm"
@@ -97,66 +96,65 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                             </Link>
                         </div>
 
-                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-foreground tracking-tight leading-none mb-3">
-                            Mi Progreso <span className="text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary">Académico</span>
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight leading-tight mb-2">
+                            Mi Progreso Académico
                         </h1>
 
-                        <p className="text-foreground/70 font-medium text-sm sm:text-base lg:text-lg max-w-3xl leading-relaxed mb-6">
-                            Gestioná tu avance <strong>real y oficial</strong> en la <span className="text-foreground font-bold">Licenciatura en Sistemas de Información</span>.<br />
-                            Los cambios aquí realizados representan tu avance definitivo. <span className="text-sm border border-primary/30 bg-primary/10 px-2 py-1 ml-1 rounded-md mb-1 inline-block">Si solo querés planificar cómo sería tu cursada, usá el <Link to="/simulador" className="font-bold underline text-primary hover:text-primary-600">Simulador</Link>.</span>
+                        <p className="text-slate-500 dark:text-zinc-400 font-normal text-xs sm:text-sm lg:text-base max-w-3xl leading-relaxed mb-6">
+                            Gestioná tu avance <strong>real y oficial</strong> en la <span className="text-foreground font-semibold">Licenciatura en Sistemas de Información</span>. <span className="inline-block mt-1 sm:mt-0">Si querés planificar cómo sería tu cursada futura, usá el <Link to="/simulador" className="font-bold text-[#005a36] dark:text-emerald-400 underline hover:opacity-80">Simulador</Link>.</span>
                         </p>
 
-                        {/* Sección Estadísticas: Grilla en móvil, flex en desktop */}
+                        {/* Sección Estadísticas: Grilla en móvil, flex en desktop (Imagen 4) */}
                         <div className="grid grid-cols-2 lg:flex gap-3 w-full sm:w-auto">
                             <Tooltip content="Promedio de exámenes finales aprobados." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 lg:px-4 lg:py-2 bg-success/10 border border-success/20 rounded-xl transition-all hover:bg-success/20">
-                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-success/20 flex items-center justify-center text-success shrink-0">
+                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
+                                    <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                                         <i className="fa-solid fa-chart-line text-sm" />
                                     </div>
                                     <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-success-700 font-bold uppercase tracking-wider leading-none mb-1">Sin Aplazos</span>
-                                        <span className="text-lg font-black text-success-800 leading-none">{promedios.promedioSinAplazos || '--'}</span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Sin Aplazos</span>
+                                        <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{promedios.promedioSinAplazos || '--'}</span>
                                     </div>
                                 </div>
                             </Tooltip>
 
                             <Tooltip content="Promedio de todos los intentos registrados." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 lg:px-4 lg:py-2 bg-danger/10 border border-danger/30 rounded-xl transition-all hover:bg-danger/20">
-                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-danger/20 flex items-center justify-center text-danger shrink-0">
+                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
+                                    <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
                                         <i className="fa-solid fa-chart-area text-sm" />
                                     </div>
                                     <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-danger-700 font-bold uppercase tracking-wider leading-none mb-1">Con Aplazos</span>
-                                        <span className="text-lg font-black text-danger-800 leading-none">{promedios.promedioConAplazos || '--'}</span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Con Aplazos</span>
+                                        <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{promedios.promedioConAplazos || '--'}</span>
                                     </div>
                                 </div>
                             </Tooltip>
 
                             <Tooltip content="Materias finalizadas respecto al total de la carrera." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 lg:px-4 lg:py-2 bg-primary/10 border border-primary/20 rounded-xl transition-all hover:bg-primary/20">
-                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary shrink-0">
+                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
+                                    <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center text-[#005a36] dark:text-teal-400 shrink-0">
                                         <i className="fa-solid fa-book-bookmark text-sm" />
                                     </div>
                                     <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-primary-700 font-bold uppercase tracking-wider leading-none mb-1">Total Materias</span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Total Materias</span>
                                         <div className="flex items-baseline gap-1">
-                                            <span className="text-lg font-black text-primary-800 leading-none">{totalMateriasFinalizadas}</span>
-                                            <span className="text-[10px] font-bold text-primary-600/70">/ {totalMateriasCarrera}</span>
+                                            <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{totalMateriasFinalizadas}</span>
+                                            <span className="text-[10px] font-bold text-slate-400">/ {totalMateriasCarrera}</span>
                                         </div>
                                     </div>
                                 </div>
                             </Tooltip>
 
                             <Tooltip content="Horas de materias regulares, aprobadas y promocionadas respecto al total." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 lg:px-4 lg:py-2 bg-secondary/10 border border-secondary/20 rounded-xl transition-all hover:bg-secondary/20">
-                                    <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
+                                    <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
                                         <i className="fa-solid fa-clock text-sm" />
                                     </div>
                                     <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-secondary-700 font-bold uppercase tracking-wider leading-none mb-1">Carga Horaria</span>
+                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Carga Horaria</span>
                                         <div className="sm:flex items-baseline gap-1">
-                                            <span className="text-lg font-black text-secondary-800 leading-none">{totalHorasProgreso}</span>
-                                            <span className="text-[10px] font-bold text-secondary-600/70">/ {totalHorasCarrera} hs</span>
+                                            <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{totalHorasProgreso}</span>
+                                            <span className="text-[10px] font-bold text-slate-400">/ {totalHorasCarrera} hs</span>
                                         </div>
                                     </div>
                                 </div>
@@ -230,8 +228,8 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                                 </div>
                             </div>
                             <div className="text-right">
-                                <span className="text-2xl font-black text-secondary tabular-nums">{progress}%</span>
-                                <span className="text-foreground/60 font-bold text-sm ml-1 hidden sm:inline-block">completado</span>
+                                <span className="text-2xl font-black text-[#005a36] dark:text-emerald-400 tabular-nums">{progress}%</span>
+                                <span className="text-slate-500 font-bold text-xs sm:text-sm ml-1 hidden sm:inline-block">completado</span>
                             </div>
                         </div>
 
@@ -239,12 +237,11 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                             <Progress
                                 value={progress}
                                 aria-label="Progreso total de la carrera"
-                                color="secondary"
                                 className="h-2.5"
                                 showValueLabel={false}
                                 classNames={{
-                                    track: "bg-default-200/60 ",
-                                    indicator: "bg-gradient-to-r from-secondary to-primary"
+                                    track: "bg-slate-200/80 dark:bg-zinc-800",
+                                    indicator: "bg-linear-to-r from-[#005a36] to-emerald-500"
                                 }}
                             />
                             {markerPosition > 0 && markerPosition < 100 && (

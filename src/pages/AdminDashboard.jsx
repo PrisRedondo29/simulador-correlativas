@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, CardBody, Spinner, Chip } from '@heroui/react';
+import { Card, CardBody, Spinner, Button } from '@heroui/react';
 
 export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
@@ -9,28 +9,116 @@ export default function AdminDashboard() {
 
     return (
         <div className="p-4 md:p-8 max-w-7xl mx-auto flex flex-col gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-4xl font-black tracking-tight text-foreground">Panel de Estadísticas Académicas</h1>
-                        <Chip color="primary" variant="flat" size="sm" className="font-bold">ADMIN</Chip>
+            {/* Greeting Banner (Imagen 4) */}
+            <div className="bg-linear-to-r from-[#005a36] to-[#004d2e] text-white rounded-3xl p-6 sm:p-8 shadow-md relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="flex-1 space-y-2">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-200 text-xs font-semibold uppercase tracking-wider">
+                        <i className="fa-solid fa-building-columns" /> UNLU SECRETARÍA DE PLANEAMIENTO · MÓDULO DE GESTIÓN
                     </div>
-                    <p className="text-foreground/60">Análisis detallado de uso, progreso y fricción académica de los estudiantes.</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
+                        Hola de nuevo, Administrador
+                    </h1>
+                    <p className="text-white/85 text-xs sm:text-sm max-w-2xl font-normal leading-relaxed">
+                        Panel de control institucional. Desde aquí podés monitorear los indicadores clave del plan de estudios, consultas y autoevaluación.
+                    </p>
                 </div>
-                <div className="bg-primary/10 px-4 py-2 rounded-2xl border border-primary/20 flex items-center gap-3">
-                    <i className="fa-solid fa-chart-line text-primary text-xl" />
-                    <div>
-                        <p className="text-[10px] uppercase font-black text-primary/70 leading-none">Actualizado</p>
-                        <p className="text-xs font-bold text-primary">En tiempo real</p>
-                    </div>
-                </div>
-            </header>
 
-            <Card className="w-full h-[800px] border border-default-200 shadow-xl overflow-hidden relative">
+                <div className="flex flex-wrap items-center gap-3 shrink-0">
+                    <Button
+                        size="md"
+                        className="bg-amber-400 hover:bg-amber-300 text-slate-900 font-extrabold text-xs sm:text-sm rounded-xl px-4 shadow-sm"
+                        startContent={<i className="fa-solid fa-plus text-xs" />}
+                    >
+                        Nueva Autoevaluación
+                    </Button>
+                    <Button
+                        size="md"
+                        variant="flat"
+                        className="bg-white/20 hover:bg-white/30 text-white font-bold text-xs sm:text-sm rounded-xl px-4"
+                        startContent={<i className="fa-solid fa-upload text-xs" />}
+                    >
+                        Cargar Propuesta
+                    </Button>
+                </div>
+            </div>
+
+            {/* 4 Stat Metric Cards (Imagen 4) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+                    <CardBody className="p-5 flex flex-col justify-between gap-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Proyectos Activos</span>
+                            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-[#005a36] dark:text-emerald-400 flex items-center justify-center">
+                                <i className="fa-solid fa-rocket text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-3xl font-black text-slate-800 dark:text-zinc-100">18</div>
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mt-1 flex items-center gap-1">
+                                <i className="fa-solid fa-arrow-trend-up text-[10px]" /> +3 nuevos este mes
+                            </div>
+                        </div>
+                    </CardBody>
+                </Card>
+
+                <Card className="border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+                    <CardBody className="p-5 flex flex-col justify-between gap-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Propuestas en Revisión</span>
+                            <div className="w-9 h-9 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                                <i className="fa-regular fa-clipboard text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-3xl font-black text-slate-800 dark:text-zinc-100">7</div>
+                            <div className="text-xs text-slate-500 dark:text-zinc-400 font-semibold mt-1">
+                                4 pendientes de dictamen
+                            </div>
+                        </div>
+                    </CardBody>
+                </Card>
+
+                <Card className="border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+                    <CardBody className="p-5 flex flex-col justify-between gap-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Dimensiones Evaluadas</span>
+                            <div className="w-9 h-9 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+                                <i className="fa-solid fa-circle-check text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-3xl font-black text-slate-800 dark:text-zinc-100">5 / 5</div>
+                            <div className="text-xs text-teal-600 dark:text-teal-400 font-semibold mt-1">
+                                100% completado
+                            </div>
+                        </div>
+                    </CardBody>
+                </Card>
+
+                <Card className="border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:shadow-xs transition-all rounded-2xl">
+                    <CardBody className="p-5 flex flex-col justify-between gap-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Horas Registradas</span>
+                            <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                <i className="fa-regular fa-clock text-sm" />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="text-3xl font-black text-slate-800 dark:text-zinc-100">1.240 hs</div>
+                            <div className="text-xs text-purple-600 dark:text-purple-400 font-semibold mt-1">
+                                +120 hs este período
+                            </div>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+
+            {/* Looker Studio Report */}
+            <Card className="w-full h-[800px] border border-slate-200/80 dark:border-zinc-800 shadow-sm rounded-3xl overflow-hidden relative">
                 {loading && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-default-50/50 backdrop-blur-sm z-10 gap-4">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/80 dark:bg-zinc-900/80 backdrop-blur-sm z-10 gap-4">
                         <Spinner size="lg" color="primary" />
-                        <p className="text-sm font-bold text-foreground/50 animate-pulse">Cargando reporte de Looker Studio...</p>
+                        <p className="text-sm font-bold text-slate-500 dark:text-zinc-400 animate-pulse">Cargando reporte de Looker Studio...</p>
                     </div>
                 )}
                 <CardBody className="p-0">
@@ -48,34 +136,35 @@ export default function AdminDashboard() {
             </Card>
 
             <footer className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-default-100 border border-default-200 flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
                         <i className="fa-solid fa-users" />
                     </div>
                     <div>
-                        <p className="text-xs text-default-500 font-bold uppercase tracking-wider">Tráfico</p>
-                        <p className="text-sm font-black">Google Analytics 4</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider">Tráfico</p>
+                        <p className="text-sm font-black text-foreground">Google Analytics 4</p>
                     </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-default-100 border border-default-200 flex items-center gap-4">
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500">
                         <i className="fa-solid fa-database" />
                     </div>
                     <div>
-                        <p className="text-xs text-default-500 font-bold uppercase tracking-wider">Base de Datos</p>
-                        <p className="text-sm font-black">Firebase Firestore</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider">Base de Datos</p>
+                        <p className="text-sm font-black text-foreground">Firebase Firestore</p>
                     </div>
                 </div>
-                <div className="p-4 rounded-2xl bg-default-100 border border-default-200 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-[#005a36] dark:text-emerald-400">
                         <i className="fa-solid fa-shield-halved" />
                     </div>
                     <div>
-                        <p className="text-xs text-default-500 font-bold uppercase tracking-wider">Seguridad</p>
-                        <p className="text-sm font-black">Acceso Restringido</p>
+                        <p className="text-xs text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider">Seguridad</p>
+                        <p className="text-sm font-black text-foreground">Acceso Restringido</p>
                     </div>
                 </div>
             </footer>
         </div>
     );
 }
+

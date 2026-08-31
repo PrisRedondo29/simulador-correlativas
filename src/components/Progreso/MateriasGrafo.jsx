@@ -25,15 +25,15 @@ const SemesterNode = ({ data }) => {
   if (data.variant === 'separator') {
     return (
       <div className="pointer-events-none select-none flex items-center justify-center">
-        {/* Línea divisoria principal entre cuatrimestres */}
-        <div className={`border-red-300 border-dashed border-4 opacity-90 ${isHorizontal ? 'border-l h-400' : 'border-t w-500'}`} />
+        {/* Línea divisoria sutil entre cuatrimestres */}
+        <div className={`border-slate-200/60 dark:border-zinc-800 border-dashed ${isHorizontal ? 'border-l h-[500px]' : 'border-t w-[500px]'}`} />
       </div>
     );
   }
 
   return (
     <div className="pointer-events-none select-none">
-      <div className="bg-default-800 font-black text-white px-3 py-1.5 rounded-lg text-md tracking-widest shadow-lg opacity-40">
+      <div className="bg-slate-100/90 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-bold px-4 py-2 rounded-xl text-xs tracking-wider shadow-xs border border-slate-200/70 dark:border-zinc-700 text-center uppercase">
         {data.label}
       </div>
     </div>
