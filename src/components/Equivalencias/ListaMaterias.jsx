@@ -34,7 +34,7 @@ function ListaMaterias({ materiasFiltradas, progresoSimulado, onToggleEstado }) 
           <Repeat size={12} /> Plan 17.13 (Origen)
         </div>
         <div className="col-span-1"></div>
-        <div className="col-span-5 text-xs font-black uppercase text-primary-700 dark:text-primary-500 girlie:text-primary-800 boyie:text-primary-800 text-center tracking-[0.2em] flex items-center justify-center gap-2">
+        <div className="col-span-5 text-xs font-black uppercase text-primary-700 dark:text-primary-500 text-center tracking-[0.2em] flex items-center justify-center gap-2">
           <ArrowRight size={12} /> Plan 17.14 (Destino)
         </div>
       </div>

@@ -95,7 +95,7 @@ function Equivalencias() {
                             </div>
                             <Chip 
                                 aria-label="Estado de balance de horas"
-                                size="sm" variant="flat" color="primary" className="font-bold text-primary-800 dark:text-primary-200 girlie:text-primary-900 boyie:text-primary-900">
+                                size="sm" variant="flat" color="primary" className="font-bold text-primary-800 dark:text-primary-200">
                                 {comparativaHoras?.nuevo.restantes < comparativaHoras?.viejo.restantes ? 'Más Eficiente' : 'Balance'}
                             </Chip>
                         </div>
@@ -115,7 +115,7 @@ function Equivalencias() {
                                 />
                             </div>
                             <div>
-                                <div className="flex justify-between text-xs font-bold uppercase text-primary-800 dark:text-primary-500 girlie:text-primary-900 boyie:text-primary-800 mb-1">
+                                <div className="flex justify-between text-xs font-bold uppercase text-primary-800 dark:text-primary-500 mb-1">
                                     <span>Plan 17.14 (Nuevo)</span>
                                     <span>{comparativaHoras?.nuevo.restantes}h / {comparativaHoras?.nuevo.totales}h</span>
                                 </div>
@@ -131,7 +131,7 @@ function Equivalencias() {
                     </CardBody>
                 </Card>
 
-                <Card className="bg-primary-700 dark:bg-primary-300 girlie:bg-primary-700 boyie:bg-primary-700 border-none shadow-lg shadow-primary/20 text-white">
+                <Card className="bg-primary-700 dark:bg-primary-300 border-none shadow-lg shadow-primary/20 text-white">
                     <CardBody className="p-4 flex flex-row items-center gap-4">
                         <div className="bg-white/20 p-3 rounded-2xl">
                             <TrendingDown size={32} />

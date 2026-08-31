@@ -1,11 +1,9 @@
 import React from 'react'
 import { Input, Button, Badge, Popover, PopoverTrigger, PopoverContent, Checkbox, Chip } from '@heroui/react'
-import { Search, ListFilter, Network } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Search, ListFilter } from 'lucide-react'
 import materiasUtils from '../../utils/Progreso/materiasUtils'
 
 function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
-    const navigate = useNavigate();
     const searchInputRef = React.useRef(null);
     const estados = materiasUtils.estadosPosibles.concat(['Bloqueado', 'Cursando']);
 
@@ -160,19 +158,6 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
                         </PopoverContent>
                     </Popover>
                 </Badge>
-
-                {/* Botón Ver Red de Materias */}
-                <Button 
-                    color="primary" 
-                    variant="flat" 
-                    radius="full" 
-                    className="h-11 font-bold px-4 text-xs sm:text-sm bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary transition-all shrink-0"
-                    startContent={<Network size={18} />}
-                    onPress={() => navigate('/red')}
-                >
-                    <span className="hidden sm:inline">Ver Red de Materias</span>
-                    <span className="sm:hidden">Red</span>
-                </Button>
             </div>
 
             {/* Chips de filtros activos */}

@@ -263,9 +263,7 @@ export default function SettingsPage({ plan, setPlan }) {
                             <div className="grid grid-cols-2 gap-2">
                                 {[
                                     { id: 'light', label: 'Claro', icon: 'fa-sun', color: 'bg-white' },
-                                    { id: 'dark', label: 'Oscuro', icon: 'fa-moon', color: 'bg-slate-900' },
-                                    { id: 'girlie', label: 'Girlie', icon: 'fa-wand-magic-sparkles', color: 'bg-pink-100' },
-                                    { id: 'boyie', label: 'Boyie', icon: 'fa-snowflake', color: 'bg-blue-200' }
+                                    { id: 'dark', label: 'Oscuro', icon: 'fa-moon', color: 'bg-slate-900' }
                                 ].map((t) => (
                                     <button
                                         key={t.id}
