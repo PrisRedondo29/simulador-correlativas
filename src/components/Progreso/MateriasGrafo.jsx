@@ -273,21 +273,7 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [direction, nodes.length === 0]);
 
-  // CÁMARA: Auto-focalizar en materias del cuatrimestre simulado al cambiar de paso
-  useEffect(() => {
-    if (nodes.length === 0) return;
-    const activeStepNodes = nodes.filter(n => n.data?.estado === 'Seleccionada');
-    if (activeStepNodes.length > 0) {
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-      fitView({ 
-        nodes: activeStepNodes, 
-        padding: isMobile ? 0.25 : 0.35, 
-        duration: 600, 
-        maxZoom: 0.9,
-        minZoom: isMobile ? 0.75 : 0.4
-      });
-    }
-  }, [progreso, nodes, fitView]);
+  // Se mantiene la cámara fija donde la posicionó el usuario al interactuar con las materias
 
   const handleGoHome = () => {
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;

@@ -11,9 +11,10 @@ function HeaderSimulador({ plan, anioInicio, cuatriInicio, onOpenConfig, onImpor
                         Simulador de Avances
                     </h1>
                     {plan && (
-                        <Chip color="primary" variant="flat" size="sm" className="font-bold text-xs">
-                            Plan {plan}
-                        </Chip>
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-black text-xs shadow-md shadow-emerald-500/20 border border-emerald-400/40 shrink-0">
+                            <i className="fa-solid fa-graduation-cap text-xs" />
+                            <span>Plan {plan}</span>
+                        </div>
                     )}
                 </div>
                 <p className="text-slate-500 dark:text-zinc-400 font-normal text-[11px] sm:text-xs max-w-md">

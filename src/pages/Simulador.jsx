@@ -11,12 +11,13 @@ import ConfiguracionSimulador from '../components/Simulador/modals/Configuracion
 import GuardarSimulacion from '../components/Simulador/modals/GuardarSimulacion'
 import ConfirmarImportarModal from '../components/Simulador/modals/ConfirmarImportarModal'
 import MateriasGrafo from '../components/Progreso/MateriasGrafo'
+import MateriasMallaEstatica from '../components/Simulador/MateriasMallaEstatica'
 
 import useSimuladorEstado from '../hooks/Simulador/useSimuladorEstado'
 import useSimuladorMaterias from '../hooks/Simulador/useSimuladorMaterias'
 import useSimuladorPDF from '../hooks/Simulador/useSimuladorPDF'
 import usePlanData from '../hooks/usePlanData'
-import { LayoutGrid, Network, CloudDownload, Maximize2, Minimize2 } from 'lucide-react'
+import { LayoutGrid, Network, Columns, CloudDownload, Maximize2, Minimize2 } from 'lucide-react'
 import { calculateProjection } from '../utils/Simulador/projectionUtils'
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils'
 import importUtils from '../utils/Simulador/importUtils'
@@ -31,7 +32,24 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
     // ─── UI state ────────────────────────────────────────────────────────────
     const [openedAccordions, setOpenedAccordions] = useState(new Set())
     const [descargandoPDF, setDescargandoPDF] = useState(false)
-    const [viewMode, setViewMode] = useState('grafo') // 'grafo' o 'lista'
+    const [viewMode, setViewMode] = useState(() => {
+        const guardada = localStorage.getItem('simulador_vista_preferida');
+        if (guardada && ['malla', 'grafo', 'lista'].includes(guardada)) {
+            return guardada;
+        }
+        if (typeof window !== 'undefined' && window.innerWidth < 768) return 'malla';
+        return 'grafo';
+    })
+
+    const handleCambioVista = (nuevoModo) => {
+        setViewMode(nuevoModo);
+        try {
+            localStorage.setItem('simulador_vista_preferida', nuevoModo);
+        } catch {
+            // Ignorar errores si el almacenamiento local está restringido
+        }
+        trackCambioVista({ tipo: 'tipo_simulacion', valor: nuevoModo });
+    };
     const [isFullScreen, setIsFullScreen] = useState(false)
     const grafoContainerRef = React.useRef(null)
 
@@ -277,41 +295,53 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                         onImportarProgreso={handleImportarProgreso}
                     />
 
-                    {/* Disclaimer compacto + Toggle vista */}
+                    {/* Disclaimer compacto + Selector de vista con cartel invitatorio */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-2 bg-warning-50/50 dark:bg-warning-500/10 border border-warning-200/70 dark:border-warning-500/20 text-warning-700 dark:text-warning-300 rounded-xl px-3 py-2 text-[11px] sm:text-xs">
                             <i className="fa-solid fa-circle-info text-warning-500 shrink-0" />
                             <span>
-                                <strong>Modo Simulación</strong> — Los cambios no se guardan. Editá tu avance real en <Link to="/progreso" className="underline font-bold hover:text-warning-600">Mi Progreso</Link>.
+                                <strong>Modo Simulación</strong> — Editá tu avance real en <Link to="/progreso" className="underline font-bold hover:text-warning-600">Mi Progreso</Link>.
                             </span>
                         </div>
 
-                        {/* Selector de Vista */}
-                        <div className="flex p-0.5 bg-default-100 rounded-xl border border-default-200 shrink-0">
-                            <ButtonGroup size="sm" variant="flat">
-                                <Button
-                                    onPress={() => {
-                                        setViewMode('grafo');
-                                        trackCambioVista({ tipo: 'tipo_simulacion', valor: 'grafo' });
-                                    }}
-                                    color={viewMode === 'grafo' ? 'primary' : 'default'}
-                                    className={`font-bold transition-all text-xs ${viewMode === 'grafo' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
-                                    startContent={<Network size={16} />}
-                                >
-                                    Grafo
-                                </Button>
-                                <Button
-                                    onPress={() => {
-                                        setViewMode('lista');
-                                        trackCambioVista({ tipo: 'tipo_simulacion', valor: 'lista' });
-                                    }}
-                                    color={viewMode === 'lista' ? 'primary' : 'default'}
-                                    className={`font-bold transition-all text-xs ${viewMode === 'lista' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
-                                    startContent={<LayoutGrid size={16} />}
-                                >
-                                    Lista
-                                </Button>
-                            </ButtonGroup>
+                        {/* Contenedor del Selector de Vista + Cartel con Flecha */}
+                        <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+                            {/* Cartel explicativo con flecha animada apuntando a los botones de la derecha */}
+                            <div className="flex items-center gap-1.5 text-foreground/80 text-[11px] sm:text-xs bg-primary-50/90 dark:bg-primary-950/70 px-3 py-1.5 rounded-xl border border-primary-200 dark:border-primary-800/80 shadow-2xs">
+                                <i className="fa-solid fa-wand-magic-sparkles text-primary shrink-0" />
+                                <span className="font-semibold text-primary-900 dark:text-primary-200">Proba las vistas</span>
+                                <i className="fa-solid fa-arrow-right text-primary text-xs font-bold animate-pulse ml-0.5" />
+                            </div>
+
+                            {/* Selector de Vista */}
+                            <div className="flex p-0.5 bg-default-100 rounded-xl border border-default-200 shrink-0">
+                                <ButtonGroup size="sm" variant="flat">
+                                    <Button
+                                        onPress={() => handleCambioVista('malla')}
+                                        color={viewMode === 'malla' ? 'primary' : 'default'}
+                                        className={`font-bold transition-all text-xs ${viewMode === 'malla' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
+                                        startContent={<Columns size={15} />}
+                                    >
+                                        Malla
+                                    </Button>
+                                    <Button
+                                        onPress={() => handleCambioVista('grafo')}
+                                        color={viewMode === 'grafo' ? 'primary' : 'default'}
+                                        className={`font-bold transition-all text-xs ${viewMode === 'grafo' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
+                                        startContent={<Network size={15} />}
+                                    >
+                                        Grafo
+                                    </Button>
+                                    <Button
+                                        onPress={() => handleCambioVista('lista')}
+                                        color={viewMode === 'lista' ? 'primary' : 'default'}
+                                        className={`font-bold transition-all text-xs ${viewMode === 'lista' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
+                                        startContent={<LayoutGrid size={15} />}
+                                    >
+                                        Lista
+                                    </Button>
+                                </ButtonGroup>
+                            </div>
                         </div>
                     </div>
 
@@ -390,8 +420,52 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                                                     />
                                                 )}
                                             </div>
+                                        ) : viewMode === 'malla' ? (
+                                            /* Vista de Malla Estática con Scroll Horizontal Nativo */
+                                            <div className="animate-in fade-in zoom-in-95 duration-500 relative border border-default-200/80 shadow-md rounded-3xl overflow-hidden flex flex-col bg-background">
+                                                {/* Controles de Navegación Flotantes (Anterior / Simulando / Siguiente) */}
+                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 w-full px-4 max-w-sm sm:max-w-md">
+                                                    <div className="flex items-center bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 p-1.5 rounded-2xl shadow-xl gap-2 sm:gap-4 w-full justify-between">
+                                                        <Button
+                                                            onPress={handleAnterior}
+                                                            isDisabled={!estadoAnterior}
+                                                            color="primary" variant="flat" size="sm"
+                                                            className="font-bold rounded-xl px-3 sm:px-5 min-w-0 h-9"
+                                                            startContent={<i className="fa-solid fa-chevron-left text-xs" />}
+                                                        >
+                                                            <span className="text-xs sm:text-sm">Anterior</span>
+                                                        </Button>
+
+                                                        <div className="flex flex-col items-center px-1 sm:px-2 min-w-fit">
+                                                            <span className="text-[9px] text-foreground/50 font-black uppercase tracking-tighter leading-none">Simulando</span>
+                                                            <span className="text-xs sm:text-sm font-black text-primary truncate whitespace-nowrap">
+                                                                C{cuatri} {anioActual}
+                                                            </span>
+                                                        </div>
+
+                                                        <Button
+                                                            onPress={() => handleSiguiente(materiasCursables)}
+                                                            isDisabled={!estadoSiguiente}
+                                                            color="primary" variant="shadow" size="sm"
+                                                            className="font-bold rounded-xl px-3 sm:px-5 min-w-0 h-9 transition-transform hover:scale-105 active:scale-95"
+                                                            endContent={<i className="fa-solid fa-chevron-right text-xs" />}
+                                                        >
+                                                            <span className="text-xs sm:text-sm">Siguiente</span>
+                                                        </Button>
+                                                    </div>
+                                                </div>
+
+                                                <MateriasMallaEstatica
+                                                    materias={materias}
+                                                    progreso={progresoSimulado}
+                                                    onNodeClick={handleNodeClick}
+                                                    projection={projection}
+                                                    cambioDeEstado={cambioDeEstado}
+                                                    marcarTodasEnPantalla={marcarTodasEnPantalla}
+                                                />
+                                            </div>
                                         ) : (
-                                            /* Vista de Grafo (Malla Curricular) */
+                                            /* Vista de Grafo (Pizarra Interactiva ReactFlow) */
                                             <div 
                                                 ref={grafoContainerRef}
                                                 className={`animate-in fade-in zoom-in-95 duration-500 relative border border-default-200/80 shadow-md transition-all duration-300 flex flex-col bg-background ${isFullScreen ? 'fixed inset-0 z-[1000] bg-background p-0 rounded-none w-screen h-screen' : 'h-[650px] sm:h-[750px] rounded-3xl overflow-hidden'}`}
