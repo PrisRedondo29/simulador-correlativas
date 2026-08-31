@@ -13,6 +13,7 @@ import { Search } from 'lucide-react'
 import SyncCloud from './SyncCloud';
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
 import { trackSearch, trackCambioVista } from '../../services/analyticsService.js';
+import { esMateriaIncompleta } from './InfoStatusBanner.jsx';
 
 function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDetalles, materias, plan, busqueda = "", filtros = [], isAnioOpen, setIsAnioOpen, handleMostrarTodo }) {
     const { updateAuthProgreso } = useAuth();
@@ -33,7 +34,14 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
             normalize(m.nombre).includes(searchNormalized) ||
             normalize(m.codigo).includes(searchNormalized);
 
-        const matchFiltros = filtros.length === 0 || filtros.includes(progreso[m.codigo]);
+        const estadoMateria = progreso[m.codigo];
+        const detallesMateria = progresoDetalles ? progresoDetalles[m.codigo] : null;
+
+        const matchFiltros = filtros.length === 0 || (
+            filtros.includes('falta_info')
+                ? (esMateriaIncompleta(m, estadoMateria, detallesMateria) || (filtros.length > 1 && filtros.filter(f => f !== 'falta_info').includes(estadoMateria)))
+                : filtros.includes(estadoMateria)
+        );
 
         return matchBusqueda && matchFiltros;
     });

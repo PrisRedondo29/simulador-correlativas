@@ -22,37 +22,37 @@ export default function ConsejoAvanzadosBanner() {
     if (!visible) return null;
 
     return (
-        <div className="bg-primary-50/80 dark:bg-primary-950/40 border border-primary/20 rounded-2xl p-4 md:p-5 mb-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-all animate-in fade-in duration-300">
-            <div className="flex items-start gap-3 md:gap-4 flex-1">
-                <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 dark:bg-primary/20 text-primary rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                    <i className="fa-solid fa-wand-magic-sparkles text-xl" />
+        <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/50 rounded-2xl p-3.5 sm:p-4 mb-5 shadow-2xs flex flex-col md:flex-row items-start md:items-center justify-between gap-3 transition-all animate-in fade-in duration-300">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="w-8 h-8 md:w-9 md:h-9 bg-emerald-100 dark:bg-emerald-900/60 text-[#005a36] dark:text-emerald-400 rounded-xl flex items-center justify-center shrink-0">
+                    <i className="fa-solid fa-wand-magic-sparkles text-sm" />
                 </div>
-                <div className="flex flex-col gap-1">
-                    <h4 className="text-sm md:text-base font-bold text-foreground flex items-center gap-2">
-                        <span>💡 Tip para avanzados: Marcado automático en cascada</span>
+                <div className="flex flex-col gap-0.5 text-left min-w-0">
+                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-zinc-100 flex items-center gap-1.5 leading-snug">
+                        <span>Tip para avanzados: Marcado automático en cascada</span>
                     </h4>
-                    <p className="text-xs md:text-sm text-foreground/80 leading-relaxed">
-                        Si ya tenés materias avanzadas, <strong>marcá únicamente tus últimas materias</strong> aprobadas, regulares o promocionadas y el sistema actualizará todas sus correlativas en cascada automáticamente.
+                    <p className="text-[11px] sm:text-xs text-slate-600 dark:text-zinc-400 leading-normal">
+                        Marcá únicamente tus últimas materias y el sistema actualizará automáticamente todas las correlativas necesarias.
                     </p>
                 </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 shrink-0 w-full md:w-auto justify-between md:justify-end pt-2 md:pt-0 border-t md:border-t-0 border-primary/10">
+            <div className="flex items-center gap-3 shrink-0 w-full md:w-auto justify-end pt-2 md:pt-0 border-t md:border-t-0 border-emerald-200/40 dark:border-emerald-800/40">
                 <Checkbox 
                     isSelected={noMostrarMas} 
                     onValueChange={setNoMostrarMas}
                     size="sm"
-                    classNames={{ label: "text-xs text-foreground/70 font-medium" }}
+                    classNames={{ label: "text-[11px] text-slate-600 dark:text-zinc-400 font-medium" }}
                 >
                     No mostrar más
                 </Checkbox>
                 <Button 
                     size="sm" 
-                    color="primary"
+                    color="success"
                     variant="flat"
-                    className="font-bold text-xs rounded-xl" 
+                    className="font-bold text-xs h-7 px-3 rounded-lg" 
                     onPress={handleDismiss}
-                    startContent={<i className="fa-solid fa-check" />}
+                    startContent={<i className="fa-solid fa-check text-[10px]" />}
                 >
                     Entendido
                 </Button>

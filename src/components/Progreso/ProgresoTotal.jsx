@@ -1,4 +1,4 @@
-import { Progress, Button, Tooltip, Chip, Divider } from '@heroui/react'
+import { Progress, Button, Tooltip, Chip, Divider, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from '@heroui/react'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import MateriasProgreso from './MateriasProgreso'
@@ -7,6 +7,8 @@ import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
 
 function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, materias, isSticky, headerRef, setIsSticky }) {
     const [isStatsExpanded, setIsStatsExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
+    const { isOpen: isPromedioModalOpen, onOpen: onPromedioModalOpen, onOpenChange: onPromedioModalOpenChange } = useDisclosure();
+    const [tipoPromedioModal, setTipoPromedioModal] = useState('sinAplazos'); // 'sinAplazos' | 'conAplazos'
 
     const promedios = regularidadUtils.calcularPromedioGeneral(progresoDetalles, progreso);
 
@@ -67,99 +69,110 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
         <header ref={headerRef} className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-xs hover:shadow-sm rounded-3xl flex flex-col transition-all duration-300">
             {/* Contenedor con blur para la parte superior (No afecta al fixed de abajo) */}
             <div className="p-6 md:p-8 pb-4 flex flex-col gap-6 rounded-t-3xl w-full">
-                {/* Sección Superior: Pantalla completa centrada en móvil, horizontal en desktop */}
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-8">
-
-                    {/* Contenedor de Icono */}
-                    <div className="relative group shrink-0">
-                        <div className="w-16 h-16 lg:w-20 lg:h-20 bg-[#005a36] rounded-2xl flex items-center justify-center shadow-md text-white">
-                            <i className="fa-solid fa-graduation-cap text-3xl lg:text-4xl"></i>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left">
+                {/* Sección Superior: Limpia, alineada y jerárquica */}
+                <div className="flex flex-col gap-6 w-full">
+                    <div className="flex flex-col items-start text-left gap-2">
                         {/* Migas de pan / Ubicación */}
-                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-2">
-                            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#005a36] dark:text-emerald-400 font-black text-[10px] uppercase tracking-wider border border-emerald-200/50 shrink-0">UNLu</span>
-                            <span className="text-[#005a36] dark:text-emerald-300 font-bold text-xs lg:text-sm tracking-wide uppercase">{carrera}</span>
-                            <Divider orientation="vertical" className="h-4 bg-slate-200 hidden sm:block" />
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="text-slate-700 dark:text-zinc-300 font-semibold text-xs sm:text-sm tracking-wide uppercase">
+                                {carrera}
+                            </span>
+                            <Divider orientation="vertical" className="h-4 bg-slate-200 dark:bg-zinc-700 hidden sm:block" />
                             <Link to="/config" className="hover:opacity-80 transition-opacity" title="Cambiar Plan de Estudios">
                                 <Chip
-                                    size="sm"
+                                    size="md"
                                     variant="flat"
                                     color="warning"
-                                    className="font-bold text-[10px] h-5 border border-warning/20 cursor-pointer"
-                                    startContent={<i className="fa-solid fa-scroll text-[9px] mr-1" />}
+                                    className="font-extrabold text-xs sm:text-sm h-7 sm:h-8 px-2.5 sm:px-3 border border-warning/30 shadow-2xs cursor-pointer"
+                                    startContent={<i className="fa-solid fa-scroll text-xs sm:text-sm mr-1" />}
                                 >
                                     Plan {plan || '---'}
                                 </Chip>
                             </Link>
                         </div>
 
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground tracking-tight leading-tight mb-2">
+                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground tracking-tight leading-tight">
                             Mi Progreso Académico
                         </h1>
 
-                        <p className="text-slate-500 dark:text-zinc-400 font-normal text-xs sm:text-sm lg:text-base max-w-3xl leading-relaxed mb-6">
-                            Gestioná tu avance <strong>real y oficial</strong> en la <span className="text-foreground font-semibold">Licenciatura en Sistemas de Información</span>. <span className="inline-block mt-1 sm:mt-0">Si querés planificar cómo sería tu cursada futura, usá el <Link to="/simulador" className="font-bold text-[#005a36] dark:text-emerald-400 underline hover:opacity-80">Simulador</Link>.</span>
+                        <p className="text-slate-500 dark:text-zinc-400 font-normal text-xs sm:text-sm lg:text-base max-w-3xl leading-relaxed">
+                            Gestioná tu avance académico oficial. Si querés planificar tus materias futuras, probá el <Link to="/simulador" className="font-bold text-[#005a36] dark:text-emerald-400 underline hover:opacity-80 whitespace-nowrap">Simulador de Avance</Link>.
                         </p>
+                    </div>
 
-                        {/* Sección Estadísticas: Grilla en móvil, flex en desktop (Imagen 4) */}
-                        <div className="grid grid-cols-2 lg:flex gap-3 w-full sm:w-auto">
-                            <Tooltip content="Promedio de exámenes finales aprobados." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
-                                    <div className="w-9 h-9 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                                        <i className="fa-solid fa-chart-line text-sm" />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Sin Aplazos</span>
-                                        <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{promedios.promedioSinAplazos || '--'}</span>
+                    {/* Sección Estadísticas: Grilla responisva con tarjetas neutras y limpias */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+                        <Tooltip content="Hacé clic para entender cómo se calcula el promedio sin aplazos" placement="bottom">
+                            <div 
+                                onClick={() => {
+                                    setTipoPromedioModal('sinAplazos');
+                                    onPromedioModalOpen();
+                                }}
+                                className="group cursor-pointer flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl shadow-2xs hover:shadow-xs transition-all"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-emerald-100/70 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+                                    <i className="fa-solid fa-chart-line text-sm" />
+                                </div>
+                                <div className="flex flex-col items-start min-w-0">
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate flex items-center gap-1">
+                                        <span>Prom. Sin Aplazos</span>
+                                        <i className="fa-solid fa-circle-info text-[9px] text-slate-400 group-hover:text-emerald-600 transition-colors" />
+                                    </span>
+                                    <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{promedios.promedioSinAplazos || '--'}</span>
+                                </div>
+                            </div>
+                        </Tooltip>
+
+                        <Tooltip content="Hacé clic para entender cómo se calcula el promedio con aplazos" placement="bottom">
+                            <div 
+                                onClick={() => {
+                                    setTipoPromedioModal('conAplazos');
+                                    onPromedioModalOpen();
+                                }}
+                                className="group cursor-pointer flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl shadow-2xs hover:shadow-xs transition-all"
+                            >
+                                <div className="w-10 h-10 rounded-xl bg-amber-100/70 dark:bg-amber-950/60 flex items-center justify-center text-amber-700 dark:text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+                                    <i className="fa-solid fa-chart-area text-sm" />
+                                </div>
+                                <div className="flex flex-col items-start min-w-0">
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate flex items-center gap-1">
+                                        <span>Prom. Con Aplazos</span>
+                                        <i className="fa-solid fa-circle-info text-[9px] text-slate-400 group-hover:text-amber-600 transition-colors" />
+                                    </span>
+                                    <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{promedios.promedioConAplazos || '--'}</span>
+                                </div>
+                            </div>
+                        </Tooltip>
+
+                        <Tooltip content="Materias aprobadas y promocionadas respecto al plan." placement="bottom">
+                            <div className="flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 rounded-2xl shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
+                                <div className="w-10 h-10 rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 flex items-center justify-center text-slate-700 dark:text-zinc-200 shrink-0">
+                                    <i className="fa-solid fa-book-bookmark text-sm" />
+                                </div>
+                                <div className="flex flex-col items-start min-w-0">
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate">Total Materias</span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{totalMateriasFinalizadas}</span>
+                                        <span className="text-[11px] font-bold text-slate-400">/ {totalMateriasCarrera}</span>
                                     </div>
                                 </div>
-                            </Tooltip>
+                            </div>
+                        </Tooltip>
 
-                            <Tooltip content="Promedio de todos los intentos registrados." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
-                                    <div className="w-9 h-9 rounded-lg bg-rose-50 dark:bg-rose-950/50 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
-                                        <i className="fa-solid fa-chart-area text-sm" />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Con Aplazos</span>
-                                        <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{promedios.promedioConAplazos || '--'}</span>
+                        <Tooltip content="Carga horaria completada sobre el total del plan de estudios." placement="bottom">
+                            <div className="flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 rounded-2xl shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
+                                <div className="w-10 h-10 rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 flex items-center justify-center text-slate-700 dark:text-zinc-200 shrink-0">
+                                    <i className="fa-solid fa-clock text-sm" />
+                                </div>
+                                <div className="flex flex-col items-start min-w-0">
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate">Carga Horaria</span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{totalHorasProgreso}</span>
+                                        <span className="text-[11px] font-bold text-slate-400">/ {totalHorasCarrera} hs</span>
                                     </div>
                                 </div>
-                            </Tooltip>
-
-                            <Tooltip content="Materias finalizadas respecto al total de la carrera." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
-                                    <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-950/50 flex items-center justify-center text-[#005a36] dark:text-teal-400 shrink-0">
-                                        <i className="fa-solid fa-book-bookmark text-sm" />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Total Materias</span>
-                                        <div className="flex items-baseline gap-1">
-                                            <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{totalMateriasFinalizadas}</span>
-                                            <span className="text-[10px] font-bold text-slate-400">/ {totalMateriasCarrera}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Tooltip>
-
-                            <Tooltip content="Horas de materias regulares, aprobadas y promocionadas respecto al total." placement="bottom">
-                                <div className="flex items-center gap-3 p-3 bg-white dark:bg-zinc-800/80 border border-slate-200/80 dark:border-zinc-700 rounded-xl shadow-2xs hover:shadow-xs transition-all">
-                                    <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
-                                        <i className="fa-solid fa-clock text-sm" />
-                                    </div>
-                                    <div className="flex flex-col items-start">
-                                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider leading-none mb-1">Carga Horaria</span>
-                                        <div className="sm:flex items-baseline gap-1">
-                                            <span className="text-base font-black text-slate-800 dark:text-zinc-100 leading-none">{totalHorasProgreso}</span>
-                                            <span className="text-[10px] font-bold text-slate-400">/ {totalHorasCarrera} hs</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Tooltip>
-                        </div>
+                            </div>
+                        </Tooltip>
                     </div>
                 </div>
 
@@ -269,6 +282,65 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                     </div>
                 </div>
             </div>
+
+            {/* Modal Explicativo de Promedios */}
+            <Modal isOpen={isPromedioModalOpen} onOpenChange={onPromedioModalOpenChange} size="md">
+                <ModalContent>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2 text-primary">
+                                    <i className={`fa-solid ${tipoPromedioModal === 'sinAplazos' ? 'fa-chart-line text-emerald-600' : 'fa-chart-area text-amber-600'} text-lg`} />
+                                    <span className="font-extrabold text-base">
+                                        {tipoPromedioModal === 'sinAplazos' ? 'Promedio Sin Aplazos' : 'Promedio Con Aplazos'}
+                                    </span>
+                                </div>
+                            </ModalHeader>
+                            <ModalBody className="text-sm space-y-3">
+                                <div className="p-3 bg-slate-100 dark:bg-zinc-800 rounded-xl flex justify-between items-center">
+                                    <span className="font-bold text-slate-600 dark:text-zinc-400">Valor actual calculado:</span>
+                                    <span className="text-xl font-black text-foreground">
+                                        {tipoPromedioModal === 'sinAplazos' ? (promedios.promedioSinAplazos || '--') : (promedios.promedioConAplazos || '--')}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <h4 className="font-bold text-foreground">¿Qué representa esta métrica?</h4>
+                                    <p className="text-slate-600 dark:text-zinc-300 leading-relaxed text-xs sm:text-sm">
+                                        {tipoPromedioModal === 'sinAplazos' 
+                                            ? 'Es el promedio de las notas finales obtenidas únicamente en las materias que tenés registradas como Aprobadas o Promocionadas.'
+                                            : 'Es el promedio general considerando todas las notas de tus exámenes finales, incluyendo aplazos (notas menores a 4) e intentos reprobados.'}
+                                    </p>
+                                </div>
+
+                                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/40 rounded-xl space-y-1.5 text-xs text-amber-900 dark:text-amber-200">
+                                    <div className="font-bold flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                                        <i className="fa-solid fa-triangle-exclamation" />
+                                        <span>¿Por qué no veo reflejado mi promedio o me aparece "--"?</span>
+                                    </div>
+                                    <p className="leading-relaxed">
+                                        Para poder calcular tus promedios, tenés que <strong>ingresar la nota de final</strong> en cada materia.
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-1 pt-1 font-medium">
+                                        <li>Para <strong>Promedio Sin Aplazos</strong>: necesitás cargar la nota aprobada de cada materia.</li>
+                                        <li>Para <strong>Promedio Con Aplazos</strong>: necesitás ingresar las notas de <strong>todos los intentos</strong> de exámenes finales que hayas realizado.</li>
+                                    </ul>
+                                </div>
+
+                                <div className="text-xs text-slate-500 dark:text-zinc-400">
+                                    💡 <strong>¿Cómo ingresar las notas?</strong><br />
+                                    Hacé clic en cualquier materia aprobada o regular desde la lista para abrir sus detalles y registrar la nota del final o tus intentos.
+                                </div>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="primary" variant="flat" onPress={onClose} className="font-bold">
+                                    Entendido
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    )}
+                </ModalContent>
+            </Modal>
         </header>
     )
 }

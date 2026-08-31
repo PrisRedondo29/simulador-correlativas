@@ -7,7 +7,7 @@ import materiasUtils from "../../../utils/Progreso/materiasUtils";
 import regularidadUtils from "../../../utils/Progreso/regularidadUtils";
 import ConsejoMateria from "./ConsejoMateria";
 import useDetalleMateria from "../../../hooks/Progreso/useDetalleMateria";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const ESTADOS_CON_HISTORIAL = ['Regular', 'Libre', 'Aprobado', 'Promocionado'];
 
@@ -44,6 +44,18 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
         cambioDeEstado,
         estadoActual
     );
+
+    // Soporte para cerrar con tecla Escape
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onOpenChange?.(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onOpenChange]);
 
     if (!infoMateria) return null;
 
@@ -89,18 +101,6 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
         handleToggleEquivalencia(val);
         if (val) handleToggleLibre(false);
     };
-
-    // Soporte para cerrar con tecla Escape
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e) => {
-            if (e.key === 'Escape') {
-                onOpenChange?.(false);
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onOpenChange]);
 
     return (
         <Drawer

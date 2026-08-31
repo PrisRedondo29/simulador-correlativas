@@ -1,9 +1,11 @@
 import React from 'react'
 import { Input, Button, Badge, Popover, PopoverTrigger, PopoverContent, Checkbox, Chip } from '@heroui/react'
-import { Search, ListFilter } from 'lucide-react'
+import { Search, ListFilter, Network } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import materiasUtils from '../../utils/Progreso/materiasUtils'
 
 function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
+    const navigate = useNavigate();
     const searchInputRef = React.useRef(null);
     const estados = materiasUtils.estadosPosibles.concat(['Bloqueado', 'Cursando']);
 
@@ -80,6 +82,42 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
                                     )}
                                 </div>
                                 <div className="grid grid-cols-1 gap-1">
+                                    {/* Opción especial: Falta Información */}
+                                    {(() => {
+                                        const isFaltaInfoSelected = filtros.includes('falta_info');
+                                        return (
+                                            <div 
+                                                role="button"
+                                                tabIndex={0}
+                                                onClick={(e) => {
+                                                    if (e.target.tagName !== 'INPUT') {
+                                                        handleToggleFiltro('falta_info');
+                                                    }
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        handleToggleFiltro('falta_info');
+                                                    }
+                                                }}
+                                                className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors border mb-1 ${isFaltaInfoSelected ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300' : 'hover:bg-default-50 border-transparent'}`}
+                                            >
+                                                <div className={`size-8 rounded-lg flex items-center justify-center bg-amber-500/20 text-amber-600 dark:text-amber-400`}>
+                                                    <i className="fa-solid fa-triangle-exclamation text-sm"></i>
+                                                </div>
+                                                <span className="text-sm font-bold flex-1">
+                                                    Falta Información
+                                                </span>
+                                                <Checkbox 
+                                                    isSelected={isFaltaInfoSelected} 
+                                                    size="sm"
+                                                    onChange={() => handleToggleFiltro('falta_info')}
+                                                    classNames={{ wrapper: "rounded-md" }}
+                                                />
+                                            </div>
+                                        );
+                                    })()}
+
                                     {estados.map((estado) => {
                                         const estilo = materiasUtils.obtenerEstiloPorEstado(estado);
                                         const isSelected = filtros.includes(estado);
@@ -90,7 +128,6 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
                                                 role="button"
                                                 tabIndex={0}
                                                 onClick={(e) => {
-                                                    // Evitar que el clic en el checkbox dispare esto dos veces
                                                     if (e.target.tagName !== 'INPUT') {
                                                         handleToggleFiltro(estado);
                                                     }
@@ -123,26 +160,45 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
                         </PopoverContent>
                     </Popover>
                 </Badge>
+
+                {/* Botón Ver Red de Materias */}
+                <Button 
+                    color="primary" 
+                    variant="flat" 
+                    radius="full" 
+                    className="h-11 font-bold px-4 text-xs sm:text-sm bg-primary/10 border border-primary/20 hover:bg-primary/20 text-primary transition-all shrink-0"
+                    startContent={<Network size={18} />}
+                    onPress={() => navigate('/red')}
+                >
+                    <span className="hidden sm:inline">Ver Red de Materias</span>
+                    <span className="sm:hidden">Red</span>
+                </Button>
             </div>
 
             {/* Chips de filtros activos */}
             {filtros.length > 0 && (
                 <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
-                    {filtros.map(f => (
-                        <Chip
-                            key={f}
-                            size="sm"
-                            variant="flat"
-                            color={materiasUtils.obtenerEstiloPorEstado(f).accent}
-                            onClose={() => handleToggleFiltro(f)}
-                            classNames={{
-                                base: "h-7 border border-default-200",
-                                content: "font-bold text-[10px] uppercase"
-                            }}
-                        >
-                            {f}
-                        </Chip>
-                    ))}
+                    {filtros.map(f => {
+                        const isSpecial = f === 'falta_info';
+                        const label = isSpecial ? 'Falta Información' : f;
+                        const chipColor = isSpecial ? 'warning' : materiasUtils.obtenerEstiloPorEstado(f).accent;
+
+                        return (
+                            <Chip
+                                key={f}
+                                size="sm"
+                                variant="flat"
+                                color={chipColor}
+                                onClose={() => handleToggleFiltro(f)}
+                                classNames={{
+                                    base: "h-7 border border-default-200",
+                                    content: "font-bold text-[10px] uppercase"
+                                }}
+                            >
+                                {label}
+                            </Chip>
+                        );
+                    })}
                     {filtros.length > 1 && (
                         <Button 
                             size="sm" 

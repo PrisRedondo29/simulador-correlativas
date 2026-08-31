@@ -158,61 +158,74 @@ function MateriasProgreso({ progreso, materias }) {
     }, [isOpen, onOpenChange, isDetailOpen])
 
     return (
-        <div className="grid grid-cols-2 min-[425px]:grid-cols-3 min-[550px]:grid-cols-5 gap-3 sm:gap-4 mt-2 mb-6 uppercase tracking-wider">
-            {stats.map((stat, index) => {
+        <div className="grid grid-cols-2 min-[425px]:grid-cols-3 min-[550px]:grid-cols-5 gap-3 sm:gap-4 lg:gap-5 mt-2 mb-4 tracking-wider">
+            {stats.map((stat) => {
                 const porcentaje = Math.round(calcularPorcentaje(stat.count))
-                const textColors = {
-                    primary: "text-primary",
-                    warning: "text-warning",
-                    success: "text-success",
-                    default: "text-default-500"
-                }
-                const glowColors = {
-                    primary: "shadow-primary/20",
-                    warning: "shadow-warning/20",
-                    success: "shadow-success/20",
-                    default: "shadow-default-300/20"
-                }
-                const textColorClass = textColors[stat.color] || "text-default-500"
-                const glowClass = glowColors[stat.color] || "shadow-default-300/20"
+                const colorTheme = {
+                    primary: {
+                        text: "text-primary dark:text-primary-400",
+                        border: "border-primary/30 hover:border-primary",
+                        bg: "bg-primary-50/40 dark:bg-primary-950/20",
+                        badge: "bg-primary/10 text-primary"
+                    },
+                    warning: {
+                        text: "text-amber-600 dark:text-amber-400",
+                        border: "border-amber-400/30 hover:border-amber-500",
+                        bg: "bg-amber-50/40 dark:bg-amber-950/20",
+                        badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                    },
+                    success: {
+                        text: "text-emerald-600 dark:text-emerald-400",
+                        border: "border-emerald-400/30 hover:border-emerald-500",
+                        bg: "bg-emerald-50/40 dark:bg-emerald-950/20",
+                        badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                    },
+                    default: {
+                        text: "text-slate-500 dark:text-zinc-400",
+                        border: "border-slate-200 hover:border-slate-400 dark:border-zinc-700/80 dark:hover:border-zinc-500",
+                        bg: "bg-slate-50/50 dark:bg-zinc-800/40",
+                        badge: "bg-slate-200/60 dark:bg-zinc-700/60 text-slate-600 dark:text-zinc-300"
+                    }
+                }[stat.color] || colorTheme.default
 
                 return (
                     <Card
                         isPressable
                         key={stat.estado}
-                        className={`bg-background/80 dark:bg-zinc-800/80 border-2 border-default-200/80 hover:border-primary/60 transition-all duration-300 shadow-xs hover:shadow-lg hover:-translate-y-1 ${glowClass} w-full group relative overflow-visible rounded-2xl cursor-pointer`}
+                        className={`bg-white dark:bg-zinc-800/90 border ${colorTheme.border} transition-all duration-200 shadow-2xs hover:shadow-md hover:-translate-y-1 w-full group relative overflow-hidden rounded-2xl cursor-pointer`}
                         onPress={() => handleClick(stat.estado, stat.label)}
                     >
-                        {/* Ícono de acción en la esquina superior derecha */}
-                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-default-100 group-hover:bg-primary group-hover:text-white text-default-400 flex items-center justify-center transition-all duration-200 shadow-2xs">
-                            <i className="fa-solid fa-arrow-up-right-from-square text-[8px]" />
+                        {/* Indicador sutil superior derecho */}
+                        <div className="absolute top-2.5 right-2.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                            <i className="fa-solid fa-arrow-up-right-from-square text-[9px] lg:text-[10px] text-slate-400 group-hover:text-foreground" />
                         </div>
 
-                        <CardBody className="py-3 px-2 sm:py-3 sm:px-4 flex flex-col items-center gap-2 sm:gap-3 overflow-visible">
-                            <CircularProgress
-                                value={porcentaje}
-                                size="md"
-                                color={stat.color}
-                                showValueLabel={false}
-                                aria-label={`Progreso circular ${stat.label}`}
-                                classNames={{
-                                    svg: "w-8 h-8 sm:w-10 sm:h-10 drop-shadow-sm group-hover:scale-110 transition-transform duration-300",
-                                    track: "stroke-default-200/50",
-                                }}
-                            />
-
-                            <div className="flex flex-col text-center">
-                                <span className="text-[10px] sm:text-xs font-bold text-foreground/70 leading-tight">{stat.label}</span>
-                                <span className={`text-xs sm:text-base font-black ${textColorClass} tabular-nums`}>
-                                    {porcentaje}%
-                                </span>
-                                <span className="text-[8px] sm:text-[9px] font-bold text-foreground/40 tabular-nums">{stat.count} mat.</span>
+                        <CardBody className="py-3.5 sm:py-5 lg:py-6 px-3 lg:px-4 flex flex-col items-center justify-between gap-3 lg:gap-4 overflow-hidden">
+                            <div className="relative flex items-center justify-center">
+                                <CircularProgress
+                                    value={porcentaje}
+                                    size="lg"
+                                    color={stat.color}
+                                    showValueLabel={false}
+                                    aria-label={`Progreso circular ${stat.label}`}
+                                    classNames={{
+                                        svg: "w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 drop-shadow-2xs group-hover:scale-105 transition-transform duration-200",
+                                        track: "stroke-slate-100 dark:stroke-zinc-700/60",
+                                    }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <i className={`${stat.icon} text-xs lg:text-sm text-slate-400 dark:text-zinc-400 group-hover:scale-110 transition-transform`} />
+                                </div>
                             </div>
 
-                            {/* Botón / Indicador CTA de acción en la base de la tarjeta */}
-                            <div className="w-full pt-1.5 border-t border-default-100 flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-wider text-primary group-hover:text-primary-600 transition-colors">
-                                <span>Ver lista</span>
-                                <i className="fa-solid fa-chevron-right text-[8px] group-hover:translate-x-0.5 transition-transform" />
+                            <div className="flex flex-col items-center text-center w-full">
+                                <span className="text-[11px] lg:text-xs font-extrabold text-foreground/80 leading-tight uppercase tracking-wider">{stat.label}</span>
+                                <span className={`text-base sm:text-xl lg:text-2xl font-black ${colorTheme.text} tabular-nums mt-0.5 lg:mt-1`}>
+                                    {porcentaje}%
+                                </span>
+                                <span className="text-[9px] lg:text-[11px] font-bold text-slate-400 dark:text-zinc-400 tabular-nums mt-0.5">
+                                    {stat.count} {stat.count === 1 ? 'materia' : 'materias'}
+                                </span>
                             </div>
                         </CardBody>
                     </Card>

@@ -28,13 +28,16 @@ function LeyendaEstados({ materias }) {
     }
 
     return (
-        <div className='p-5 flex flex-col gap-6 w-full'>
+        <div className='flex flex-col gap-6 w-full'>
             <Card className="shadow-sm border border-default-100">
-                <CardHeader className='font-bold text-foreground px-6 pt-6 text-lg'>
-                    Leyenda de Estados
+                <CardHeader className='font-bold text-foreground px-6 pt-6 text-lg flex flex-row items-center justify-between gap-4 flex-wrap'>
+                    <span>Leyenda de Estados</span>
+                    <Chip variant='flat' color='success' size="sm" className="font-bold">
+                        Horas totales de la carrera: {horas_totales} hs
+                    </Chip>
                 </CardHeader>
                 <CardBody className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6'>
-                    {estados.map((estado, index) => {
+                    {estados.map((estado) => {
                         const estilo = materiasUtils.obtenerEstiloPorEstado(estado.name)
                         return (
                             <div key={estado.name} className="flex items-center gap-4">
@@ -53,15 +56,10 @@ function LeyendaEstados({ materias }) {
                         )
                     })}
                 </CardBody>
-                <CardFooter className='flex justify-center'>
-                    <Chip variant='flat' color='success'>
-                        Horas totales de la carrera: {horas_totales}
-                    </Chip>
-                </CardFooter>
             </Card>
 
             <Card className="shadow-sm border border-default-100 bg-primary/5">
-                <CardHeader className='font-bold text-foreground px-6 pt-6 text-lg flex flex-col items-start gap-1'>
+                <CardHeader className='font-bold text-foreground px-6 pt-6 text-lg flex flex-row items-center justify-between gap-2 flex-wrap'>
                     <div className="flex items-center gap-2">
                         <i className="fa-solid fa-scale-balanced text-primary"></i>
                         <span>Estatuto UNLu</span>
@@ -76,7 +74,7 @@ function LeyendaEstados({ materias }) {
                         Ver Estatuto Completo (PDF)
                     </a>
                 </CardHeader>
-                <CardBody className='px-6 py-4 flex flex-col gap-4'>
+                <CardBody className='px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4'>
                     <div className="flex gap-4 items-start bg-background/50 p-4 rounded-xl border border-primary/10">
                         <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
                             <span className="font-bold text-primary">16</span>

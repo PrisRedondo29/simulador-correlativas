@@ -9,6 +9,7 @@ import PlanSelectionModal from '../components/Progreso/modals/PlanSelectionModal
 import ConsejoAvanzadosModal from '../components/Progreso/modals/ConsejoAvanzadosModal';
 import usePlanData from '../hooks/usePlanData';
 import ProgresoSearchFilters from '../components/Progreso/ProgresoSearchFilters';
+import InfoStatusBanner from '../components/Progreso/InfoStatusBanner';
 
 function Progreso({ plan, setPlan }) {
     const navigate = useNavigate();
@@ -113,6 +114,13 @@ function Progreso({ plan, setPlan }) {
                     />
                     <div className='mx-5 md:mx-10 lg:mx-15 mt-6'>
                         <ConsejoAvanzadosModal />
+                        <InfoStatusBanner 
+                            materias={materias}
+                            progreso={progreso}
+                            progresoDetalles={progresoDetalles}
+                            filtros={filtros}
+                            setFiltros={setFiltros}
+                        />
                         <ProgresoSearchFilters 
                             busqueda={busqueda}
                             setBusqueda={setBusqueda}
@@ -136,24 +144,8 @@ function Progreso({ plan, setPlan }) {
                         />
                     </div>
 
-                    <div className="flex flex-col md:flex-row gap-6 items-center justify-between pb-12 mx-5 md:mx-10 lg:mx-15 pt-8 border-t border-default-200 mt-10">
-                        <div className="order-2 md:order-1">
-                            <LeyendaEstados materias={materias} />
-                        </div>
-                        
-                        <div className="order-1 md:order-2 flex flex-col items-center md:items-end gap-3">
-                            <p className="text-[11px] font-bold text-foreground/40 uppercase tracking-widest">Vista Alternativa</p>
-                            <Button 
-                                color="primary" 
-                                variant="shadow" 
-                                size="lg"
-                                className="font-bold px-8 shadow-primary/30"
-                                startContent={<Network size={20} />}
-                                onPress={() => navigate('/red')}
-                            >
-                                Ver Red de Materias
-                            </Button>
-                        </div>
+                    <div className="pb-12 mx-5 md:mx-10 lg:mx-15 pt-8 border-t border-default-200 mt-10">
+                        <LeyendaEstados materias={materias} />
                     </div>
                 </div>
             )}
