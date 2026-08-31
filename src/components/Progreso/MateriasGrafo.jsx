@@ -161,11 +161,14 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
       if (proj) {
         if (proj.estado === 'Presente') {
           // En el cuatrimestre actual, el color depende del click (progresoSimulado)
-          estadoFinal = prog === 'Cursado' ? 'Seleccionada' : 'Disponible';
+          estadoFinal = (prog === 'Cursado' || prog === 'Aprobado' || prog === 'Promocionado') ? 'Seleccionada' : 'Disponible';
         } else {
-          // En pasado y futuro, usamos lo que diga la proyección
+          // En pasado y futuro, usamos lo que diga la proyección (ej. 'Aprobada', 'Proyectada', 'Bloqueado')
           estadoFinal = proj.estado;
         }
+      } else {
+        // Fallback para cuando se visualiza fuera del simulador (ej. /progreso)
+        estadoFinal = prog || 'Disponible';
       }
 
       return {
@@ -310,6 +313,21 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
 
   return (
     <div className="w-full h-full bg-background/50 border border-default-200 rounded-2xl overflow-hidden relative shadow-inner">
+      {/* Skeleton overlay durante el armado inicial */}
+      {nodes.length === 0 && (
+        <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-xs flex flex-col items-center justify-center p-8 gap-4 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-bold text-foreground/70">Construyendo mapa visual de materias...</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl opacity-50">
+            <div className="h-20 bg-default-200 rounded-2xl" />
+            <div className="h-20 bg-default-200 rounded-2xl" />
+            <div className="h-20 bg-default-200 rounded-2xl" />
+          </div>
+        </div>
+      )}
+
       {/* Controles flotantes: Zoom, Home y Cambio de Dirección */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         <ButtonGroup size="sm" variant="flat" className="bg-background/80 backdrop-blur-md shadow-md border border-default-200">

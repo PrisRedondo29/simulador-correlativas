@@ -165,14 +165,15 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
 
                 {/* Materias Progreso (Cards) */}
                 <div className="pt-4">
-                    <div className="flex items-start sm:items-center justify-between mb-1 gap-2">
-                        <div className="flex flex-col">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-2">
+                        <div className="flex flex-col gap-1">
                             <p className="text-default-500 text-xs sm:text-sm uppercase tracking-widest font-black">Progresos generales</p>
-                            <p className="text-[10px] sm:text-xs text-primary-500/80 font-medium italic mt-0.5 flex items-center gap-1">
-                                <i className="fa-regular fa-hand-pointer text-[9px] sm:hidden" /> 
-                                <i className="fa-solid fa-mouse-pointer text-[9px] hidden sm:block" /> 
-                                Tocá una tarjeta para ver más info
-                            </p>
+                            <div className="flex items-center gap-1.5">
+                                <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary px-2.5 py-1 rounded-full border border-primary/20 text-[11px] font-bold">
+                                    <i className="fa-solid fa-hand-pointer text-xs animate-bounce" /> 
+                                    <span>Hacé clic en cualquier tarjeta para filtrar y ver sus materias</span>
+                                </span>
+                            </div>
                         </div>
                         {/* Toggle exclusivo para celular */}
                         <Button

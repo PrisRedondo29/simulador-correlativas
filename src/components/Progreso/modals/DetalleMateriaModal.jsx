@@ -90,6 +90,18 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
         if (val) handleToggleLibre(false);
     };
 
+    // Soporte para cerrar con tecla Escape
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                onOpenChange?.(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onOpenChange]);
+
     return (
         <Drawer
             isOpen={isOpen}
@@ -345,7 +357,11 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                                             <Button isIconOnly size="sm" variant="light" color="secondary" className="size-7" onPress={() => setEditingIntentoIndex(i)}>
                                                                                 <i className="fa-solid fa-pen text-[10px]" />
                                                                             </Button>
-                                                                            <Button isIconOnly size="sm" variant="light" color="danger" className="size-7" onPress={() => handleEliminarIntento(i)}>
+                                                                            <Button isIconOnly size="sm" variant="light" color="danger" className="size-7" onPress={() => {
+                                                                                if (window.confirm("¿Estás seguro de que deseas eliminar este intento de examen final?")) {
+                                                                                    handleEliminarIntento(i);
+                                                                                }
+                                                                            }}>
                                                                                 <i className="fa-solid fa-trash-can text-[10px]" />
                                                                             </Button>
                                                                         </div>
@@ -441,7 +457,11 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                                 <>
                                                                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                         <Button isIconOnly size="sm" variant="flat" className="size-6" onPress={() => setEditingHistorialIndex(actualIdx)}><i className="fa-solid fa-pen text-[10px]" /></Button>
-                                                                        <Button isIconOnly size="sm" variant="flat" color="danger" className="size-6" onPress={() => handleEliminarCursadaHistorial(actualIdx)}><i className="fa-solid fa-trash-can text-[10px]" /></Button>
+                                                                        <Button isIconOnly size="sm" variant="flat" color="danger" className="size-6" onPress={() => {
+                                                                            if (window.confirm("¿Estás seguro de que deseas eliminar este registro del historial de cursadas?")) {
+                                                                                handleEliminarCursadaHistorial(actualIdx);
+                                                                            }
+                                                                        }}><i className="fa-solid fa-trash-can text-[10px]" /></Button>
                                                                     </div>
                                                                     <div className="flex justify-between items-start mb-3">
                                                                         <div className="flex flex-col gap-0.5">

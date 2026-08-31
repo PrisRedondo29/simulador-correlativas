@@ -180,10 +180,15 @@ function MateriasProgreso({ progreso, materias }) {
                     <Card
                         isPressable
                         key={stat.estado}
-                        className={`bg-background/70 backdrop-blur-sm border border-default-200/60 hover:border-default-300/80 transition-all duration-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 ${glowClass} w-full group`}
+                        className={`bg-background/80 dark:bg-zinc-800/80 border-2 border-default-200/80 hover:border-primary/60 transition-all duration-300 shadow-xs hover:shadow-lg hover:-translate-y-1 ${glowClass} w-full group relative overflow-visible rounded-2xl cursor-pointer`}
                         onPress={() => handleClick(stat.estado, stat.label)}
                     >
-                        <CardBody className="py-2.5 px-3 sm:py-3 sm:px-4 flex flex-col items-center gap-3 sm:gap-4 overflow-visible">
+                        {/* Ícono de acción en la esquina superior derecha */}
+                        <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-default-100 group-hover:bg-primary group-hover:text-white text-default-400 flex items-center justify-center transition-all duration-200 shadow-2xs">
+                            <i className="fa-solid fa-arrow-up-right-from-square text-[8px]" />
+                        </div>
+
+                        <CardBody className="py-3 px-2 sm:py-3 sm:px-4 flex flex-col items-center gap-2 sm:gap-3 overflow-visible">
                             <CircularProgress
                                 value={porcentaje}
                                 size="md"
@@ -191,17 +196,23 @@ function MateriasProgreso({ progreso, materias }) {
                                 showValueLabel={false}
                                 aria-label={`Progreso circular ${stat.label}`}
                                 classNames={{
-                                    svg: "w-8 h-8 sm:w-10 sm:h-10 drop-shadow-sm group-hover:scale-105 transition-transform duration-200",
+                                    svg: "w-8 h-8 sm:w-10 sm:h-10 drop-shadow-sm group-hover:scale-110 transition-transform duration-300",
                                     track: "stroke-default-200/50",
                                 }}
                             />
 
                             <div className="flex flex-col text-center">
-                                <span className="text-[9px] sm:text-xs font-bold text-foreground/60 leading-tight">{stat.label}</span>
+                                <span className="text-[10px] sm:text-xs font-bold text-foreground/70 leading-tight">{stat.label}</span>
                                 <span className={`text-xs sm:text-base font-black ${textColorClass} tabular-nums`}>
                                     {porcentaje}%
                                 </span>
                                 <span className="text-[8px] sm:text-[9px] font-bold text-foreground/40 tabular-nums">{stat.count} mat.</span>
+                            </div>
+
+                            {/* Botón / Indicador CTA de acción en la base de la tarjeta */}
+                            <div className="w-full pt-1.5 border-t border-default-100 flex items-center justify-center gap-1 text-[9px] font-black uppercase tracking-wider text-primary group-hover:text-primary-600 transition-colors">
+                                <span>Ver lista</span>
+                                <i className="fa-solid fa-chevron-right text-[8px] group-hover:translate-x-0.5 transition-transform" />
                             </div>
                         </CardBody>
                     </Card>

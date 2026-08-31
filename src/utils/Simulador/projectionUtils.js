@@ -22,13 +22,16 @@ export const calculateProjection = ({
         labels[col] = `C${semestre.cuatri} ${semestre.anioActual}`;
         
         semestre.materiasDelSemestre.forEach(m => {
-            if (semestre.progresoSnapshot[m.codigo] === 'Cursado') {
+            const st = semestre.progresoSnapshot?.[m.codigo];
+            const isCompleted = st === 'Cursado' || st === 'Aprobado' || st === 'Promocionado' || st === 'Regular';
+            
+            if (isCompleted) {
                 items[m.codigo] = { 
                     columna: col, 
                     estado: 'Aprobada'
                 };
                 colocadas.add(m.codigo);
-            } else if (semestre.progresoBaseSnapshot?.[m.codigo] !== 'Cursado') {
+            } else if (semestre.progresoBaseSnapshot?.[m.codigo] !== 'Cursado' && semestre.progresoBaseSnapshot?.[m.codigo] !== 'Aprobado') {
                 // Fue ofrecida pero no cursada
                 skippedItems.push({
                     codigo: m.codigo,

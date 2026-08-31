@@ -23,10 +23,10 @@ import importUtils from '../utils/Simulador/importUtils'
 import { trackCambioVista } from '../services/analyticsService'
 
 function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
-    // ─── Configuración (viene del modal, no cambia durante la simulación) ────
-    const [plan, setPlan] = useState()
-    const [anioInicio, setAnioInicio] = useState()
-    const [cuatriInicio, setCuatriInicio] = useState()
+    // ─── Configuración (se inicializa con el plan activo para evitar modales bloqueantes) ────
+    const [plan, setPlan] = useState(() => initialPlan || localStorage.getItem('plan_activo') || "17.14")
+    const [anioInicio, setAnioInicio] = useState("2026")
+    const [cuatriInicio, setCuatriInicio] = useState("1")
 
     // ─── UI state ────────────────────────────────────────────────────────────
     const [openedAccordions, setOpenedAccordions] = useState(new Set())
@@ -182,10 +182,6 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
         setProgresoSimulado(nuevo)
     }
 
-    // Abrir configuración si aún no hay plan elegido
-    React.useEffect(() => {
-        if (!plan) onConfigOpen()
-    }, [plan])
 
     return (
         <div className="flex flex-col gap-12 py-12 px-4 md:px-12 max-w-7xl mx-auto min-h-screen">
@@ -269,23 +265,23 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
             {/* ── Contenido principal ── */}
             {plan && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                    {/* Header + botón de reconfigurar */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-0 gap-4">
-                        <HeaderSimulador plan={plan} />
-                        <div className="flex items-center gap-2 w-full sm:w-auto">
-                            <Button 
-                                variant="flat" 
-                                color="secondary" 
-                                onPress={handleImportarProgreso} 
-                                className="font-bold rounded-xl flex-1 sm:flex-none"
-                                startContent={<CloudDownload size={18} />}
-                            >
-                                Importar Progreso
-                            </Button>
-                            <Button isIconOnly variant="flat" color="primary" onPress={onConfigOpen} className="rounded-xl">
-                                <i className="fa-solid fa-sliders" />
-                            </Button>
-                        </div>
+                    {/* Header con controles inline integrados */}
+                    <HeaderSimulador 
+                        plan={plan} 
+                        anioInicio={anioInicio} 
+                        cuatriInicio={cuatriInicio} 
+                        onOpenConfig={onConfigOpen} 
+                    />
+                    <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center mb-6 gap-3">
+                        <Button 
+                            variant="flat" 
+                            color="secondary" 
+                            onPress={handleImportarProgreso} 
+                            className="font-bold rounded-2xl h-10 w-full sm:w-auto"
+                            startContent={<CloudDownload size={18} />}
+                        >
+                            Importar Mi Progreso Real
+                        </Button>
                     </div>
 
                     {/* Disclaimer Simulador vs Progreso */}

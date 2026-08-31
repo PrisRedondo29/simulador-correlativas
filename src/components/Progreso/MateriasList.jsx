@@ -689,35 +689,31 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                                                             {valor === "taller" ? "Talleres" : `${valor}° Año`}
                                                         </h2>
                                                     </div>
-                                                    <div className="flex items-center gap-1 ml-2">
-                                                        <Button size="sm" variant="flat" className="font-medium" onPress={() => handleMostrar(valor)}>{isAnioOpen.includes(valor) ? "Mostrar" : "Ocultar"}</Button>
-                                                        <Dropdown>
-                                                            <DropdownTrigger>
-                                                                <Button isIconOnly variant="flat" size="sm">
-                                                                    <i className="fa-solid fa-ellipsis-vertical"></i>
-                                                                </Button>
-                                                            </DropdownTrigger>
-                                                            <DropdownMenu aria-label="Acciones de año">
-                                                                <DropdownItem
-                                                                    key="aprobar"
-                                                                    color="success"
-                                                                    startContent={<i className="fa-solid fa-check-double" />}
-                                                                    onPress={() => {
-                                                                        const materiasConAnteriores = valor === "taller"
-                                                                            ? materiasParaMostrar
-                                                                            : materias.filter(m => Number(m.anio) <= valor && !m.tesis && m.codigo !== "N/A");
+                                                    <div className="flex items-center gap-2 ml-2">
+                                                        <Button
+                                                            size="sm"
+                                                            variant="flat"
+                                                            color="success"
+                                                            className="font-bold text-xs rounded-xl"
+                                                            startContent={<i className="fa-solid fa-check-double" />}
+                                                            onPress={() => {
+                                                                const materiasConAnteriores = valor === "taller"
+                                                                    ? materiasParaMostrar
+                                                                    : materias.filter(m => Number(m.anio) <= valor && !m.tesis && m.codigo !== "N/A");
 
-                                                                        setGrupoAAprobar({
-                                                                            label: valor === "taller" ? "Talleres" : `el ${valor}° Año`,
-                                                                            materias: materiasConAnteriores
-                                                                        });
-                                                                        onAprobarAnioOpen();
-                                                                    }}
-                                                                >
-                                                                    Aprobar materias de este año y anteriores
-                                                                </DropdownItem>
-                                                            </DropdownMenu>
-                                                        </Dropdown>
+                                                                setGrupoAAprobar({
+                                                                    label: valor === "taller" ? "Talleres" : `el ${valor}° Año`,
+                                                                    materias: materiasConAnteriores
+                                                                });
+                                                                onAprobarAnioOpen();
+                                                            }}
+                                                        >
+                                                            <span className="hidden sm:inline">Aprobar hasta este año</span>
+                                                            <span className="sm:hidden">Aprobar</span>
+                                                        </Button>
+                                                        <Button size="sm" variant="flat" className="font-medium text-xs rounded-xl" onPress={() => handleMostrar(valor)}>
+                                                            {isAnioOpen.includes(valor) ? "Mostrar" : "Ocultar"}
+                                                        </Button>
                                                     </div>
                                                 </div>
 

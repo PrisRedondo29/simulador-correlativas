@@ -1,18 +1,20 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Tabs, Tab, Card, CardBody, Button } from '@heroui/react'
+import { Tabs, Tab, Card, CardBody, Button, Input } from '@heroui/react'
+import { Search } from 'lucide-react'
 import ProgresoHelp from '../components/Tutorial/sections/ProgresoHelp'
 import SimuladorHelp from '../components/Tutorial/sections/SimuladorHelp'
 import EquivalenciasHelp from '../components/Tutorial/sections/EquivalenciasHelp'
 
 export default function ComoUsar() {
     const navigate = useNavigate()
+    const [busquedaAyuda, setBusquedaAyuda] = useState('')
 
     return (
         <div className="min-h-screen bg-background py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-5xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col items-center mb-10 text-center">
+                <div className="flex flex-col items-center mb-8 text-center">
                     <div className="w-16 h-16 bg-[#005a36] rounded-2xl flex items-center justify-center mb-4 shadow-md text-white">
                         <i className="fa-solid fa-book-open-reader text-2xl sm:text-3xl text-white"></i>
                     </div>
@@ -22,6 +24,24 @@ export default function ComoUsar() {
                     <p className="text-slate-500 dark:text-zinc-400 text-sm sm:text-base max-w-2xl">
                         Aprendé a exprimir al máximo todas las herramientas que el simulador tiene para ofrecerte.
                     </p>
+                </div>
+
+                {/* Buscador de Ayuda */}
+                <div className="max-w-xl mx-auto mb-8">
+                    <Input
+                        isClearable
+                        radius="full"
+                        size="lg"
+                        placeholder="Buscar tema en la ayuda... (ej. correlativas, promedios, equivalencias)"
+                        startContent={<Search size={20} className="text-default-400" />}
+                        value={busquedaAyuda}
+                        onValueChange={setBusquedaAyuda}
+                        onClear={() => setBusquedaAyuda("")}
+                        classNames={{
+                            input: "text-sm sm:text-base",
+                            inputWrapper: "bg-background border-default-200 shadow-md hover:border-default-300 focus-within:ring-2 ring-primary/20",
+                        }}
+                    />
                 </div>
 
                 {/* Tabs de Navegación */}

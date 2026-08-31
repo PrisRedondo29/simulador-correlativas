@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardBody, CardFooter, Chip, Popover, PopoverTrigger, PopoverContent, Button, Divider } from "@heroui/react"
+import { Card, CardHeader, CardBody, CardFooter, Chip, Popover, PopoverTrigger, PopoverContent, Button, Divider, addToast } from "@heroui/react"
 import { useState } from "react";
 import estadoUtils from "../../utils/Progreso/estadoUtils";
 import regularidadUtils from "../../utils/Progreso/regularidadUtils";
@@ -30,6 +30,19 @@ function MateriaCard({ materia, todasLasMaterias, estado, detalles, actualizarEs
         setIsOpen(false); // Cerramos el popover automáticamente
         if (actionType === 'estado') {
             actualizarEstados(arg);
+            const colorMap = {
+                'Aprobado': 'success',
+                'Promocionado': 'secondary',
+                'Regular': 'warning',
+                'Cursando': 'primary',
+                'Libre': 'danger',
+                'Disponible': 'default'
+            };
+            addToast({
+                title: 'Estado actualizado',
+                description: `${nombre}: cambiado a ${arg}`,
+                color: colorMap[arg] || 'primary'
+            });
         } else if (actionType === 'detalles') {
             abrirInfo(arg);
         }

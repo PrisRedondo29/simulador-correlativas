@@ -4,7 +4,19 @@ import { Search, ListFilter } from 'lucide-react'
 import materiasUtils from '../../utils/Progreso/materiasUtils'
 
 function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
+    const searchInputRef = React.useRef(null);
     const estados = materiasUtils.estadosPosibles.concat(['Bloqueado', 'Cursando']);
+
+    React.useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey && e.key.toLowerCase() === 'k') || (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA')) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
     
     const handleToggleFiltro = (estado) => {
         setFiltros(prev => prev.includes(estado) ? prev.filter(f => f !== estado) : [...prev, estado]);
@@ -18,10 +30,16 @@ function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
                 {/* Buscador */}
                 <div className="flex-1">
                     <Input
+                        ref={searchInputRef}
                         isClearable
                         radius="xl"
-                        placeholder="Buscar materia..."
+                        placeholder="Buscar materia... (Ctrl+K)"
                         startContent={<Search size={18} className="text-default-400" />}
+                        endContent={
+                            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-default-400 bg-default-100 border border-default-200 rounded-md">
+                                <span className="text-xs">⌘</span>K
+                            </kbd>
+                        }
                         value={busqueda}
                         onValueChange={setBusqueda}
                         onClear={() => setBusqueda("")}

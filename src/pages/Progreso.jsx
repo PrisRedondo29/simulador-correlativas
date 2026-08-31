@@ -92,11 +92,6 @@ function Progreso({ plan, setPlan }) {
                 onSelect={(selectedPlan) => setPlan(selectedPlan)} 
             />
 
-            <ConsejoAvanzadosModal 
-                isOpen={isAvanzadosModalOpen} 
-                onClose={() => setIsAvanzadosModalOpen(false)} 
-            />
-
             {cargando && (
                 <div className='flex justify-center items-center h-screen'>
                     <Spinner size="lg" label="Cargando materias..." />
@@ -117,6 +112,7 @@ function Progreso({ plan, setPlan }) {
                         setIsSticky={setIsSticky}
                     />
                     <div className='mx-5 md:mx-10 lg:mx-15 mt-6'>
+                        <ConsejoAvanzadosModal />
                         <ProgresoSearchFilters 
                             busqueda={busqueda}
                             setBusqueda={setBusqueda}
