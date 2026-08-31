@@ -77,9 +77,9 @@ const RedDeMaterias = ({ plan }) => {
                 </div>
             </div>
 
-            {/* Grafo */}
-            <div className="max-w-300 mx-auto px-4">
-                <div className="bg-background/50 backdrop-blur-sm rounded-[2.5rem] border border-default-200/60 p-2 shadow-2xl">
+            {/* Grafo / Malla Curricular Integrada */}
+            <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6">
+                <div className="bg-background/80 backdrop-blur-md rounded-3xl border border-default-200/80 p-2 sm:p-4 shadow-xl">
                     <MateriasGrafo
                         materias={materias}
                         progreso={progreso}

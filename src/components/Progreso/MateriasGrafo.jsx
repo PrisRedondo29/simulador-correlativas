@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
-  Controls,
   Background,
   useNodesState,
   useEdgesState,
@@ -12,12 +11,10 @@ import {
 import '@xyflow/react/dist/style.css';
 import MateriaNode from './MateriaNode';
 import { Button, ButtonGroup } from '@heroui/react';
-import { ArrowRight, ArrowDown, ZoomIn, ZoomOut, Home } from 'lucide-react';
+import { ArrowRight, ArrowDown, ZoomIn, ZoomOut, Home, Maximize } from 'lucide-react';
 
 /**
- * SemesterNode: Componente para renderizar los encabezados y separadores de cuatrimestre.
- * - 'header': Muestra una etiqueta (ej. "Cuatrimestre 1").
- * - 'separator': Dibuja una línea punteada entre cuatrimestres.
+ * SemesterNode: Encabezados y separadores de cuatrimestre, más grandes y prominentes.
  */
 const SemesterNode = ({ data }) => {
   const isHorizontal = data.direction === 'LR';
@@ -25,41 +22,36 @@ const SemesterNode = ({ data }) => {
   if (data.variant === 'separator') {
     return (
       <div className="pointer-events-none select-none flex items-center justify-center">
-        {/* Línea divisoria sutil entre cuatrimestres */}
-        <div className={`border-slate-200/60 dark:border-zinc-800 border-dashed ${isHorizontal ? 'border-l h-[500px]' : 'border-t w-[500px]'}`} />
+        <div className={`border-primary/30 dark:border-primary/20 border-dashed ${isHorizontal ? 'border-l-2 h-[900px]' : 'border-t-2 w-[900px]'}`} />
       </div>
     );
   }
 
   return (
     <div className="pointer-events-none select-none">
-      <div className="bg-slate-100/90 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 font-bold px-4 py-2 rounded-xl text-xs tracking-wider shadow-xs border border-slate-200/70 dark:border-zinc-700 text-center uppercase">
+      <div className="bg-primary text-white font-black px-6 py-3 rounded-2xl text-sm tracking-wider shadow-lg text-center uppercase min-w-[140px]">
         {data.label}
       </div>
     </div>
   );
 };
 
-// Definición de tipos de nodos personalizados para React Flow
 const nodeTypes = {
   materia: MateriaNode,
   semester: SemesterNode,
 };
 
 /**
- * getLayoutedElements: Calcula las posiciones de los nodos en base a su año y cuatrimestre.
- * Organiza las materias en una grilla según la dirección (LR: Izquierda-Derecha o TB: Arriba-Abajo).
+ * getLayoutedElements: Organiza materias en grilla según dirección.
  */
 const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = null) => {
   const isHorizontal = direction === 'LR';
   const { items, labels, maxCol } = projectionData || { items: {}, labels: {}, maxCol: 0 };
 
-  // Agrupar materias por columna (proyectada o fija del plan)
   const materiasPorColumna = {};
   nodes.forEach(node => {
     const m = node.data.materia;
     let col;
-
     if (node.data.columna) {
       col = node.data.columna;
     } else if (items && items[m.codigo]) {
@@ -67,56 +59,51 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
     } else {
       col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
     }
-
     if (!materiasPorColumna[col]) materiasPorColumna[col] = [];
     materiasPorColumna[col].push(node);
   });
 
-  // Espaciado entre columnas (X) y filas (Y)
-  const gapX = isHorizontal ? 300 : 250;
-  const gapY = isHorizontal ? 150 : 220;
+  // Espaciado generoso para las tarjetas (280px de ancho)
+  const gapX = isHorizontal ? 340 : 320;
+  const gapY = isHorizontal ? 170 : 200;
 
   const newNodes = [];
-
-  // Determinamos el rango de columnas a dibujar
   const startCol = 1;
   const endCol = maxCol || Math.max(...Object.keys(materiasPorColumna).map(Number), 0);
 
-  // Iteramos por TODAS las columnas del rango para no saltarnos las vacías
   for (let col = startCol; col <= endCol; col++) {
     const colIdx = col - startCol;
-
-    // 1. Crear nodo de encabezado para el cuatrimestre/columna
     const label = labels?.[col] || `Cuatrimestre ${col}`;
 
+    // Encabezado de cuatrimestre
     newNodes.push({
       id: `header-${col}`,
       type: 'semester',
-      data: { label, direction: direction, variant: 'header' },
+      data: { label, direction, variant: 'header' },
       position: {
-        x: isHorizontal ? colIdx * gapX + 30 : -220,
-        y: isHorizontal ? -100 : colIdx * gapY + 35,
+        x: isHorizontal ? colIdx * gapX + 40 : 60,
+        y: isHorizontal ? -80 : colIdx * gapY - 70,
       },
       zIndex: -1,
       draggable: false,
     });
 
-    // 2. Crear nodo separador
+    // Separador
     if (colIdx > 0) {
       newNodes.push({
         id: `sep-${col}`,
         type: 'semester',
-        data: { direction: direction, variant: 'separator' },
+        data: { direction, variant: 'separator' },
         position: {
-          x: isHorizontal ? (colIdx * gapX) - 40 : -220,
-          y: isHorizontal ? -100 : (colIdx * gapY) - 50,
+          x: isHorizontal ? (colIdx * gapX) - 20 : 60,
+          y: isHorizontal ? -80 : (colIdx * gapY) - 100,
         },
         zIndex: -2,
         draggable: false,
       });
     }
 
-    // 3. Posicionar las materias dentro de la columna (si existen)
+    // Materias
     const nodesInCol = materiasPorColumna[col] || [];
     nodesInCol.forEach((node, nodeIdx) => {
       newNodes.push({
@@ -136,18 +123,21 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
 };
 
 /**
- * FlowInner: Componente interno que maneja el estado del grafo y la lógica de interacción.
- * Se encuentra dentro de un ReactFlowProvider.
+ * FlowInner: Componente interno con la lógica de interacción del grafo.
  */
 const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
-  const [direction, setDirection] = useState('LR');
-  const [hoveredNode, setHoveredNode] = useState(null);
-  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  // Mobile First: modo Vertical en pantallas pequeñas
+  const [direction, setDirection] = useState(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) return 'TB';
+    return 'LR';
+  });
 
-  // El nodo activo es EXCLUSIVAMENTE el que tiene el mouse encima
+  const [hoveredNode, setHoveredNode] = useState(null);
+  const { zoomIn: rfZoomIn, zoomOut: rfZoomOut, fitView, setViewport } = useReactFlow();
+
   const activeNodeId = hoveredNode;
 
-  // Transformar la lista de materias en nodos iniciales para React Flow
+  // Nodos iniciales
   const initialNodes = useMemo(() => {
     const projItems = projection?.items || {};
     const skippedItems = projection?.skippedItems || [];
@@ -155,45 +145,31 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
     const baseNodes = materias.map((m) => {
       const proj = projItems[m.codigo];
       const prog = progreso?.[m.codigo];
-      
       let estadoFinal = 'Disponible';
 
       if (proj) {
         if (proj.estado === 'Presente') {
-          // En el cuatrimestre actual, el color depende del click (progresoSimulado)
           estadoFinal = (prog === 'Cursado' || prog === 'Aprobado' || prog === 'Promocionado') ? 'Seleccionada' : 'Disponible';
         } else {
-          // En pasado y futuro, usamos lo que diga la proyección (ej. 'Aprobada', 'Proyectada', 'Bloqueado')
           estadoFinal = proj.estado;
         }
       } else {
-        // Fallback para cuando se visualiza fuera del simulador (ej. /progreso)
         estadoFinal = prog || 'Disponible';
       }
 
       return {
         id: m.codigo,
         type: 'materia',
-        data: {
-          materia: m,
-          estado: estadoFinal,
-          onClick: onNodeClick
-        },
+        data: { materia: m, estado: estadoFinal, onClick: onNodeClick },
         position: { x: 0, y: 0 },
       };
     });
 
-    // Añadir nodos para materias no cursadas en semestres pasados
     skippedItems.forEach((skip, idx) => {
       baseNodes.push({
         id: `skipped-${skip.codigo}-${skip.columna}-${idx}`,
         type: 'materia',
-        data: {
-          materia: skip.materia,
-          estado: skip.estado,
-          columna: skip.columna,
-          onClick: null // No interactuable
-        },
+        data: { materia: skip.materia, estado: skip.estado, columna: skip.columna, onClick: null },
         position: { x: 0, y: 0 },
       });
     });
@@ -201,24 +177,20 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
     return baseNodes;
   }, [materias, progreso, onNodeClick, projection]);
 
-  // Transformar las relaciones de correlatividad en conexiones (edges)
+  // Edges
   const initialEdges = useMemo(() => {
     const edges = [];
     materias.forEach((m) => {
       if (m.correlativas && m.correlativas.length > 0) {
         m.correlativas.forEach((corrCodigo) => {
-          // Solo crear la conexión si la materia de origen existe en el plan actual
           if (materias.some(mat => mat.codigo === corrCodigo)) {
             edges.push({
               id: `e-${corrCodigo}-${m.codigo}`,
               source: corrCodigo,
               target: m.codigo,
               animated: false,
-              style: { strokeWidth: 2, stroke: '#94a3b8' },
-              markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: '#94a3b8',
-              },
+              style: { strokeWidth: 1.5, stroke: '#cbd5e1', opacity: 0.4 },
+              markerEnd: { type: MarkerType.ArrowClosed, color: '#cbd5e1', width: 12, height: 12 },
             });
           }
         });
@@ -230,157 +202,183 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // 1. Efecto para actualizar los elementos del grafo (nodos y flechas)
+  // Calcular layout
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      initialNodes,
-      initialEdges,
-      direction,
-      projection
+      initialNodes, initialEdges, direction, projection
     );
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
   }, [initialNodes, initialEdges, direction, setNodes, setEdges, projection]);
 
-  // 2. Efecto para el manejo de la cámara (Centrado)
-  // Se dispara al cambiar la dirección o cuando los nodos se cargan por primera vez.
+  // CÁMARA: Focalizar en los primeros 2-3 cuatrimestres al cargar (legible, no microscópico)
   useEffect(() => {
     if (nodes.length === 0) return;
-
     const timer = setTimeout(() => {
-      const firstSemesterNodes = nodes.filter(n =>
-        n.id === 'header-1' ||
-        (n.data?.materia && ((Number(n.data.materia.anio) - 1) * 2 + (Number(n.data.materia.cuatrimestre) % 2 === 0 ? 2 : 1)) === 1)
-      );
+      // Encontrar nodos de los primeros 3 cuatrimestres (o 2 en móvil)
+      const maxInitialCols = direction === 'TB' ? 2 : 3;
+      const focusNodes = nodes.filter(n => {
+        if (n.type === 'semester') {
+          const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
+          return !isNaN(colNum) && colNum <= maxInitialCols;
+        }
+        if (n.data?.materia) {
+          const m = n.data.materia;
+          const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
+          return col <= maxInitialCols;
+        }
+        return false;
+      });
 
-      if (firstSemesterNodes.length > 0) {
-        fitView({ nodes: firstSemesterNodes, padding: 0.5, duration: 800 });
+      if (focusNodes.length > 0) {
+        fitView({ nodes: focusNodes, padding: 0.3, duration: 700, maxZoom: 0.85 });
       } else {
-        fitView({ padding: 0.2, duration: 800 });
+        fitView({ padding: 0.3, duration: 700, maxZoom: 0.85 });
       }
-    }, 100);
-
+    }, 150);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [direction, nodes.length === 0]); // Se activa al cambiar dirección o cuando pasamos de 0 a N nodos.
+  }, [direction, nodes.length === 0]);
 
-  // Función para volver al inicio del grafo manualmente
+  // Home: Volver a los primeros cuatrimestres
   const handleGoHome = () => {
-    const firstSemesterNodes = nodes.filter(n =>
-      n.id === 'header-1' ||
-      (n.data?.materia && ((Number(n.data.materia.anio) - 1) * 2 + (Number(n.data.materia.cuatrimestre) % 2 === 0 ? 2 : 1)) === 1)
-    );
-
-    if (firstSemesterNodes.length > 0) {
-      fitView({ nodes: firstSemesterNodes, padding: 0.5, duration: 800 });
+    const maxInitialCols = direction === 'TB' ? 2 : 3;
+    const focusNodes = nodes.filter(n => {
+      if (n.type === 'semester') {
+        const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
+        return !isNaN(colNum) && colNum <= maxInitialCols;
+      }
+      if (n.data?.materia) {
+        const m = n.data.materia;
+        const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
+        return col <= maxInitialCols;
+      }
+      return false;
+    });
+    if (focusNodes.length > 0) {
+      fitView({ nodes: focusNodes, padding: 0.3, duration: 700, maxZoom: 0.85 });
     } else {
-      fitView({ padding: 0.2, duration: 800 });
+      fitView({ padding: 0.3, duration: 700, maxZoom: 0.85 });
     }
   };
 
-  // Manejo de hover para resaltar conexiones
+  // Fit all: Ver toda la malla (botón de "ver todo")
+  const handleFitAll = () => {
+    fitView({ padding: 0.1, duration: 700 });
+  };
+
   const onNodeMouseEnter = useCallback((event, node) => setHoveredNode(node.id), []);
   const onNodeMouseLeave = useCallback(() => setHoveredNode(null), []);
 
-  const processedNodes = useMemo(() => {
-    return nodes;
-  }, [nodes]);
-
   /**
-   * processedEdges: Resalta las conexiones que entran o salen del nodo activo (hover).
-   * Solo son visibles cuando el mouse está sobre una materia.
+   * processedEdges: Arcos ocultos por defecto, se muestran SOLO al hacer hover/tap en un nodo.
+   * Esto elimina la telaraña visual y deja la malla limpia.
    */
   const processedEdges = useMemo(() => {
-    if (!activeNodeId) return [];
+    // Sin hover → no mostrar arcos (malla limpia)
+    if (!activeNodeId) {
+      return edges.map(e => ({
+        ...e,
+        style: { ...e.style, opacity: 0, strokeWidth: 0 },
+        markerEnd: { ...e.markerEnd, color: 'transparent' },
+      }));
+    }
 
-    return edges
-      .filter(e => e.source === activeNodeId || e.target === activeNodeId)
-      .map(e => {
+    // Con hover → mostrar solo las conexiones de la materia activa
+    return edges.map(e => {
+      const isRelated = e.source === activeNodeId || e.target === activeNodeId;
+      if (isRelated) {
         return {
           ...e,
-          type: 'straight', // Flechas rectas por pedido del usuario
+          type: 'straight',
           animated: true,
-          style: {
-            ...e.style,
-            stroke: '#3b82f6',
-            strokeWidth: 3,
-            opacity: 1
-          },
-          markerEnd: { ...e.markerEnd, color: '#3b82f6' }
+          style: { stroke: '#2563eb', strokeWidth: 3, opacity: 1 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#2563eb', width: 16, height: 16 },
         };
-      });
+      }
+      // Edges no relacionados se atenúan
+      return {
+        ...e,
+        style: { ...e.style, opacity: 0, strokeWidth: 0 },
+        markerEnd: { ...e.markerEnd, color: 'transparent' },
+      };
+    });
   }, [edges, activeNodeId]);
 
   return (
-    <div className="w-full h-full bg-background/50 border border-default-200 rounded-2xl overflow-hidden relative shadow-inner">
-      {/* Skeleton overlay durante el armado inicial */}
+    <div className="w-full h-full min-h-[600px] sm:min-h-[700px] relative overflow-hidden bg-slate-50/30 dark:bg-zinc-950/30 rounded-3xl">
+      {/* Loading skeleton */}
       {nodes.length === 0 && (
         <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-xs flex flex-col items-center justify-center p-8 gap-4 animate-pulse">
           <div className="flex items-center gap-3">
             <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-bold text-foreground/70">Construyendo mapa visual de materias...</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-2xl opacity-50">
-            <div className="h-20 bg-default-200 rounded-2xl" />
-            <div className="h-20 bg-default-200 rounded-2xl" />
-            <div className="h-20 bg-default-200 rounded-2xl" />
+            <span className="text-sm font-bold text-foreground/70">Cargando malla curricular...</span>
           </div>
         </div>
       )}
 
-      {/* Controles flotantes: Zoom, Home y Cambio de Dirección */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-        <ButtonGroup size="sm" variant="flat" className="bg-background/80 backdrop-blur-md shadow-md border border-default-200">
-          <Button isIconOnly onPress={() => zoomIn()} title="Acercar"><ZoomIn size={18} /></Button>
-          <Button isIconOnly onPress={() => zoomOut()} title="Alejar"><ZoomOut size={18} /></Button>
-          <Button isIconOnly onPress={handleGoHome} title="Ir al Inicio"><Home size={18} /></Button>
+      {/* Controles flotantes */}
+      <div className="absolute top-3 left-3 z-10 flex flex-col sm:flex-row gap-1.5">
+        <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-zinc-700 rounded-xl">
+          <Button isIconOnly onPress={() => rfZoomIn()} title="Acercar" className="min-w-9 h-9"><ZoomIn size={16} /></Button>
+          <Button isIconOnly onPress={() => rfZoomOut()} title="Alejar" className="min-w-9 h-9"><ZoomOut size={16} /></Button>
+          <Button isIconOnly onPress={handleGoHome} title="Inicio" className="min-w-9 h-9"><Home size={16} /></Button>
+          <Button isIconOnly onPress={handleFitAll} title="Ver toda la malla" className="min-w-9 h-9"><Maximize size={16} /></Button>
         </ButtonGroup>
 
-        <ButtonGroup size="sm" variant="flat" className="bg-background/80 backdrop-blur-md shadow-md border border-default-200">
+        <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-zinc-700 rounded-xl">
           <Button
             isIconOnly
             color={direction === 'LR' ? 'primary' : 'default'}
             onPress={() => setDirection('LR')}
-            title="Vista Horizontal"
+            title="Horizontal"
+            className="min-w-9 h-9"
           >
-            <ArrowRight size={18} />
+            <ArrowRight size={16} />
           </Button>
           <Button
             isIconOnly
             color={direction === 'TB' ? 'primary' : 'default'}
             onPress={() => setDirection('TB')}
-            title="Vista Vertical"
+            title="Vertical"
+            className="min-w-9 h-9"
           >
-            <ArrowDown size={18} />
+            <ArrowDown size={16} />
           </Button>
         </ButtonGroup>
       </div>
 
-      {/* Componente principal de React Flow */}
+      {/* Hint flotante: Indicar que se puede hacer hover */}
+      {!activeNodeId && nodes.length > 0 && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-foreground/60 text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-md border border-slate-200/60 dark:border-zinc-700 flex items-center gap-1.5">
+            <i className="fa-solid fa-hand-pointer text-primary/70" />
+            Tocá una materia para ver sus correlativas
+          </div>
+        </div>
+      )}
+
       <ReactFlow
-        nodes={processedNodes}
+        nodes={nodes}
         edges={processedEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         onNodeMouseEnter={onNodeMouseEnter}
         onNodeMouseLeave={onNodeMouseLeave}
-        minZoom={0.05}
+        minZoom={0.15}
         maxZoom={1.5}
         nodesDraggable={false}
-        elementsSelectable={false} // Desactivar selección para evitar flechas persistentes
+        elementsSelectable={false}
         nodesConnectable={false}
         selectionMode="none"
       >
-        <Background color="#94a3b8" variant="dots" gap={20} size={1} />
+        <Background color="#e2e8f0" variant="dots" gap={28} size={1.5} />
       </ReactFlow>
     </div>
   );
 };
 
-/**
- * MateriasGrafo: Exporta el FlowInner envuelto en un ReactFlowProvider para usar los hooks de la librería.
- */
 const MateriasGrafo = (props) => (
   <ReactFlowProvider>
     <FlowInner {...props} />
@@ -388,3 +386,5 @@ const MateriasGrafo = (props) => (
 );
 
 export default MateriasGrafo;
+
+

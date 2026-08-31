@@ -184,7 +184,7 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
 
 
     return (
-        <div className="flex flex-col gap-12 py-12 px-4 md:px-12 max-w-7xl mx-auto min-h-screen">
+        <div className="flex flex-col gap-12 py-12 px-4 sm:px-6 md:px-10 lg:px-16 mx-auto min-h-screen w-full">
 
             {/* ── Modales ── */}
             <ConfiguracionSimulador
@@ -401,45 +401,45 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                                                 )}
                                             </div>
                                         ) : (
-                                            /* Vista de Grafo */
+                                            /* Vista de Grafo (Malla Curricular) */
                                             <div 
                                                 ref={grafoContainerRef}
-                                                className={`animate-in fade-in zoom-in-95 duration-500 relative border border-default-200 shadow-sm transition-all duration-300 flex flex-col ${isFullScreen ? 'fixed inset-0 z-[1000] bg-background p-0 rounded-none w-screen h-screen' : 'h-[700px] rounded-3xl overflow-hidden'}`}
+                                                className={`animate-in fade-in zoom-in-95 duration-500 relative border border-default-200/80 shadow-md transition-all duration-300 flex flex-col bg-background/50 ${isFullScreen ? 'fixed inset-0 z-[1000] bg-background p-0 rounded-none w-screen h-screen' : 'h-[650px] sm:h-[750px] rounded-3xl overflow-hidden'}`}
                                             >
-                                                {/* Botón Pantalla Completa */}
-                                                <div className="absolute top-4 right-4 z-[1001]">
-                                                    <Button
-                                                        isIconOnly
-                                                        variant="flat"
-                                                        className="bg-background/80 backdrop-blur-md shadow-md border border-default-200"
-                                                        onPress={toggleFullScreen}
-                                                        title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
-                                                    >
-                                                        {isFullScreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-                                                    </Button>
-                                                </div>
-
-                                                {/* Controles de Navegación Flotantes - Integrados en el Canva */}
-                                                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 w-full px-4 max-w-md">
+                                                {/* Encabezado Superior flotante del Grafo: Pantalla Completa + Titulo Intermedio */}
+                                                <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
                                                     {progresoIntermedio.totales > 0 && (
-                                                        <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg backdrop-blur-md border ${isIntermedioCompletado ? 'bg-success/20 text-success border-success/30' : 'bg-primary/20 text-primary border-primary/30'}`}>
-                                                            <i className="fa-solid fa-graduation-cap" />
+                                                        <div className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md backdrop-blur-md border ${isIntermedioCompletado ? 'bg-success/20 text-success border-success/30' : 'bg-primary/20 text-primary border-primary/30'}`}>
+                                                            <i className="fa-solid fa-graduation-cap text-xs" />
                                                             <span>{tituloIntermedioNombre}: {progresoIntermedio.completadas}/{progresoIntermedio.totales}</span>
                                                         </div>
                                                     )}
-                                                    <div className="flex items-center bg-background/60 backdrop-blur-xl border border-default-200 p-1.5 rounded-2xl shadow-2xl gap-2 sm:gap-4 w-full justify-between">
+                                                    <Button
+                                                        isIconOnly
+                                                        variant="flat"
+                                                        className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md border border-default-200 min-w-9 h-9"
+                                                        onPress={toggleFullScreen}
+                                                        title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                                                    >
+                                                        {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                                                    </Button>
+                                                </div>
+
+                                                {/* Controles de Navegación Flotantes (Anterior / Simulando / Siguiente) */}
+                                                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 w-full px-4 max-w-sm sm:max-w-md">
+                                                    <div className="flex items-center bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 p-1.5 rounded-2xl shadow-xl gap-2 sm:gap-4 w-full justify-between">
                                                         <Button
                                                             onPress={handleAnterior}
                                                             isDisabled={!estadoAnterior}
-                                                            color="primary" variant="flat" size="lg"
-                                                            className="font-bold rounded-xl px-4 sm:px-6 min-w-0"
-                                                            startContent={<i className="fa-solid fa-chevron-left" />}
+                                                            color="primary" variant="flat" size="sm"
+                                                            className="font-bold rounded-xl px-3 sm:px-5 min-w-0 h-9"
+                                                            startContent={<i className="fa-solid fa-chevron-left text-xs" />}
                                                         >
-                                                            <span className="hidden sm:inline">Anterior</span>
+                                                            <span className="text-xs sm:text-sm">Anterior</span>
                                                         </Button>
 
                                                         <div className="flex flex-col items-center px-1 sm:px-2 min-w-fit">
-                                                            <span className="text-[9px] sm:text-[10px] text-foreground/50 font-black uppercase tracking-tighter leading-none">Simulando</span>
+                                                            <span className="text-[9px] text-foreground/50 font-black uppercase tracking-tighter leading-none">Simulando</span>
                                                             <span className="text-xs sm:text-sm font-black text-primary truncate whitespace-nowrap">
                                                                 C{cuatri} {anioActual}
                                                             </span>
@@ -448,11 +448,11 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                                                         <Button
                                                             onPress={() => handleSiguiente(materiasCursables)}
                                                             isDisabled={!estadoSiguiente}
-                                                            color="primary" variant="shadow" size="lg"
-                                                            className="font-bold rounded-xl px-4 sm:px-6 min-w-0 transition-transform hover:scale-105 active:scale-95"
-                                                            endContent={<i className="fa-solid fa-chevron-right" />}
+                                                            color="primary" variant="shadow" size="sm"
+                                                            className="font-bold rounded-xl px-3 sm:px-5 min-w-0 h-9 transition-transform hover:scale-105 active:scale-95"
+                                                            endContent={<i className="fa-solid fa-chevron-right text-xs" />}
                                                         >
-                                                            <span className="hidden sm:inline">Siguiente</span>
+                                                            <span className="text-xs sm:text-sm">Siguiente</span>
                                                         </Button>
                                                     </div>
                                                 </div>

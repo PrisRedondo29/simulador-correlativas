@@ -3,85 +3,131 @@ import { Handle, Position } from '@xyflow/react';
 import { Card } from "@heroui/react";
 
 /**
- * MateriaNode: Componente personalizado para renderizar cada materia como un nodo en el grafo de React Flow.
- * Estilo visual alineado con las tarjetas de materia del Portal Estudiantil (Imagen 5).
+ * MateriaNode: Componente para renderizar cada materia en el grafo.
+ * Rediseñado con enfoque Mobile-First para alta legibilidad y contraste.
  */
 const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Position.Right }) => {
     const { materia, estado, onClick } = data;
 
-    // Estados y badges
+    // Estados, colores y badges de contraste elevado
     const getBadgeInfo = () => {
         switch (estado) {
             case 'Seleccionada':
             case 'Cursando':
             case 'Cursado':
-                return { label: '• Cursando', badgeClass: 'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border border-blue-200 dark:border-blue-800', borderClass: 'border-2 border-blue-500 bg-blue-50/20 shadow-md shadow-blue-500/10 ring-2 ring-blue-400/20' };
+                return {
+                    label: 'Cursando',
+                    icon: 'fa-solid fa-play',
+                    badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-300 dark:border-blue-700',
+                    borderClass: 'border-2 border-blue-500 bg-blue-50/40 dark:bg-blue-950/30 shadow-md shadow-blue-500/15 ring-2 ring-blue-400/20'
+                };
             case 'Aprobado':
             case 'Aprobada':
             case 'Promocionado':
             case 'Promocionada':
-                return { label: '• Aprobada', badgeClass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800', borderClass: 'border-emerald-500/60 bg-emerald-50/10 shadow-xs' };
+                return {
+                    label: 'Aprobada',
+                    icon: 'fa-solid fa-circle-check',
+                    badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700',
+                    borderClass: 'border-2 border-emerald-500/80 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-xs'
+                };
             case 'Regular':
-                return { label: '• Regular', badgeClass: 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800', borderClass: 'border-amber-400/60 bg-amber-50/10 shadow-xs' };
+                return {
+                    label: 'Regular',
+                    icon: 'fa-solid fa-clock',
+                    badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-700',
+                    borderClass: 'border-2 border-amber-400/80 bg-amber-50/30 dark:bg-amber-950/20 shadow-xs'
+                };
             case 'Proyectada':
             case 'Por Cursar':
-                return { label: '• Por Cursar', badgeClass: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-200 dark:border-purple-800', borderClass: 'border-purple-300/60 bg-purple-50/10 shadow-xs' };
+                return {
+                    label: 'Por Cursar',
+                    icon: 'fa-solid fa-calendar-plus',
+                    badgeClass: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border border-purple-300 dark:border-purple-700',
+                    borderClass: 'border-2 border-purple-400/70 bg-purple-50/30 dark:bg-purple-950/20 shadow-xs'
+                };
             case 'NoCursada':
             case 'No Cursada':
-                return { label: '• No Cursada', badgeClass: 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border border-rose-200 dark:border-rose-800', borderClass: 'border-rose-300/60 bg-rose-50/10 shadow-xs' };
+                return {
+                    label: 'No Cursada',
+                    icon: 'fa-solid fa-xmark',
+                    badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300 dark:border-rose-700',
+                    borderClass: 'border-2 border-rose-300/70 bg-rose-50/30 dark:bg-rose-950/20 shadow-xs'
+                };
             case 'Bloqueado':
             case 'Bloqueada':
-                return { label: '• Bloqueada', badgeClass: 'bg-slate-100 text-slate-500 dark:bg-zinc-800 dark:text-zinc-500', borderClass: 'border-slate-200 dark:border-zinc-800 opacity-60' };
+                return {
+                    label: 'Bloqueada',
+                    icon: 'fa-solid fa-lock',
+                    badgeClass: 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700',
+                    borderClass: 'border-2 border-slate-300/80 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/60 opacity-75'
+                };
             case 'Disponible':
             default:
-                return { label: '• Pendiente', badgeClass: 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400', borderClass: 'border-slate-200/90 dark:border-zinc-800 hover:border-slate-300' };
+                return {
+                    label: 'Disponible',
+                    icon: 'fa-solid fa-unlock',
+                    badgeClass: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200 border border-teal-300 dark:border-teal-700',
+                    borderClass: 'border-2 border-teal-400/70 dark:border-teal-600/70 bg-teal-50/20 dark:bg-teal-950/10 hover:border-teal-500 shadow-xs'
+                };
         }
     };
 
-    const { label, badgeClass, borderClass } = getBadgeInfo();
+    const { label, icon, badgeClass, borderClass } = getBadgeInfo();
+    const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
 
     return (
         <button 
             type="button"
-            className={`transition-all duration-200 hover:scale-[1.02] bg-transparent p-0 border-0 text-left ${onClick ? 'cursor-pointer active:scale-98' : 'cursor-default'}`}
+            className={`transition-all duration-200 hover:scale-[1.02] bg-transparent p-0 border-0 text-left w-[260px] sm:w-[280px] ${onClick ? 'cursor-pointer active:scale-98' : 'cursor-default'}`}
             onClick={() => onClick && onClick(materia.codigo)}
             aria-label={`Ver detalle de ${materia.nombre}`}
         >
-            <Handle type="target" position={targetPosition} style={{ background: '#94a3b8', width: 6, height: 6 }} />
+            <Handle type="target" position={targetPosition} style={{ background: '#3b82f6', width: 8, height: 8, borderRadius: '50%' }} />
 
-            {/* Tarjeta visual de la materia (Imagen 5) */}
-            <Card className={`w-[240px] bg-white dark:bg-zinc-900 rounded-xl p-3.5 shadow-xs transition-all duration-200 ${borderClass}`}>
-                {/* Fila Superior: Nombre a la izquierda, Código + Ojo a la derecha */}
+            {/* Tarjeta visual de la materia amplia y legible */}
+            <Card className={`w-full bg-white dark:bg-zinc-900 rounded-2xl p-3.5 sm:p-4 shadow-sm transition-all duration-200 ${borderClass}`}>
+                {/* Fila Superior: Nombre + Código */}
                 <div className="flex justify-between items-start gap-2">
-                    <h4 className="text-xs font-bold text-slate-800 dark:text-zinc-100 leading-snug line-clamp-2 flex-1" title={materia.nombre}>
+                    <h4 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-zinc-100 leading-snug line-clamp-2 flex-1 tracking-tight" title={materia.nombre}>
                         {materia.nombre}
                     </h4>
-                    <div className="flex items-center gap-1 text-[11px] font-mono text-slate-400 dark:text-zinc-500 shrink-0">
+                    <div className="flex items-center gap-1 text-[11px] sm:text-xs font-mono font-bold text-slate-500 dark:text-zinc-400 shrink-0 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md border border-slate-200 dark:border-zinc-700">
                         <span>{materia.codigo}</span>
-                        <i className="fa-regular fa-eye text-[10px] opacity-70" />
                     </div>
                 </div>
 
                 {/* Fila Media: Año y Cuatrimestre */}
-                <div className="mt-1">
-                    <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
-                        {materia.anio}° Año · C{materia.cuatrimestre}
+                <div className="mt-1.5 flex items-center justify-between">
+                    <span className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 font-semibold">
+                        {materia.anio}° Año · {materia.cuatrimestre}° Cuatrimestre
                     </span>
+                    {materia.horas_semanales && (
+                        <span className="text-[10px] text-slate-400 dark:text-zinc-500">
+                            {materia.horas_semanales}h/sem
+                        </span>
+                    )}
                 </div>
 
-                {/* Fila Inferior: Pill Badge de Estado */}
-                <div className="mt-2.5 flex items-center">
-                    <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-1 ${badgeClass}`}>
+                {/* Fila Inferior: Pill Badge de Estado + Correlativas si existen */}
+                <div className="mt-3 flex items-center justify-between gap-1 flex-wrap pt-2 border-t border-slate-100 dark:border-zinc-800/80">
+                    <span className={`text-[11px] sm:text-xs px-2.5 py-0.5 rounded-full font-bold inline-flex items-center gap-1.5 ${badgeClass}`}>
+                        <i className={`${icon} text-[10px]`} />
                         {label}
                     </span>
+
+                    {hasCorrelativas && (
+                        <span className="text-[10px] font-mono text-slate-400 dark:text-zinc-500 truncate max-w-[120px]" title={`Correlativas: ${materia.correlativas.join(', ')}`}>
+                            Req: {materia.correlativas.join(', ')}
+                        </span>
+                    )}
                 </div>
             </Card>
 
-            <Handle type="source" position={sourcePosition} style={{ background: '#94a3b8', width: 6, height: 6 }} />
+            <Handle type="source" position={sourcePosition} style={{ background: '#3b82f6', width: 8, height: 8, borderRadius: '50%' }} />
         </button>
     );
 };
 
-// Se usa memo para evitar re-renderizados innecesarios de los nodos si sus datos no cambian
 export default memo(MateriaNode);
 
