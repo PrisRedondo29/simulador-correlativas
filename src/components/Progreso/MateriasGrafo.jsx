@@ -63,60 +63,94 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
     materiasPorColumna[col].push(node);
   });
 
-  // Espaciado generoso para las tarjetas (280px de ancho)
   const gapX = isHorizontal ? 340 : 320;
-  const gapY = isHorizontal ? 170 : 200;
+  const gapY = isHorizontal ? 170 : 270;
 
   const newNodes = [];
   const startCol = 1;
   const endCol = maxCol || Math.max(...Object.keys(materiasPorColumna).map(Number), 0);
+  
+  if (isHorizontal) {
+    for (let col = startCol; col <= endCol; col++) {
+      const colIdx = col - startCol;
+      const label = labels?.[col] || `Cuatrimestre ${col}`;
 
-  for (let col = startCol; col <= endCol; col++) {
-    const colIdx = col - startCol;
-    const label = labels?.[col] || `Cuatrimestre ${col}`;
-
-    // Encabezado de cuatrimestre
-    newNodes.push({
-      id: `header-${col}`,
-      type: 'semester',
-      data: { label, direction, variant: 'header' },
-      position: {
-        x: isHorizontal ? colIdx * gapX + 40 : 60,
-        y: isHorizontal ? -80 : colIdx * gapY - 70,
-      },
-      zIndex: -1,
-      draggable: false,
-    });
-
-    // Separador
-    if (colIdx > 0) {
       newNodes.push({
-        id: `sep-${col}`,
+        id: `header-${col}`,
         type: 'semester',
-        data: { direction, variant: 'separator' },
-        position: {
-          x: isHorizontal ? (colIdx * gapX) - 20 : 60,
-          y: isHorizontal ? -80 : (colIdx * gapY) - 100,
-        },
-        zIndex: -2,
+        data: { label, direction, variant: 'header' },
+        position: { x: colIdx * gapX + 40, y: -80 },
+        zIndex: -1,
         draggable: false,
+      });
+
+      if (colIdx > 0) {
+        newNodes.push({
+          id: `sep-${col}`,
+          type: 'semester',
+          data: { direction, variant: 'separator' },
+          position: { x: (colIdx * gapX) - 20, y: -80 },
+          zIndex: -2,
+          draggable: false,
+        });
+      }
+
+      const nodesInCol = materiasPorColumna[col] || [];
+      nodesInCol.forEach((node, nodeIdx) => {
+        newNodes.push({
+          ...node,
+          targetPosition: 'left',
+          sourcePosition: 'right',
+          position: { x: colIdx * gapX, y: nodeIdx * gapY },
+          draggable: false,
+        });
       });
     }
+  } else {
+    // Malla Vertical para Móvil (Feed continuo de cuatrimestres en 1 columna)
+    let currentY = 0;
 
-    // Materias
-    const nodesInCol = materiasPorColumna[col] || [];
-    nodesInCol.forEach((node, nodeIdx) => {
+    for (let col = startCol; col <= endCol; col++) {
+      const colIdx = col - startCol;
+      const label = labels?.[col] || `Cuatrimestre ${col}`;
+      const nodesInCol = materiasPorColumna[col] || [];
+
+      // Header del cuatrimestre
       newNodes.push({
-        ...node,
-        targetPosition: isHorizontal ? 'left' : 'top',
-        sourcePosition: isHorizontal ? 'right' : 'bottom',
-        position: {
-          x: isHorizontal ? colIdx * gapX : nodeIdx * gapX,
-          y: isHorizontal ? (nodeIdx * gapY) : colIdx * gapY,
-        },
+        id: `header-${col}`,
+        type: 'semester',
+        data: { label, direction, variant: 'header' },
+        position: { x: 20, y: currentY },
+        zIndex: -1,
         draggable: false,
       });
-    });
+
+      if (colIdx > 0) {
+        newNodes.push({
+          id: `sep-${col}`,
+          type: 'semester',
+          data: { direction, variant: 'separator' },
+          position: { x: 20, y: currentY - 25 },
+          zIndex: -2,
+          draggable: false,
+        });
+      }
+
+      currentY += 60; // Espacio entre header y primera materia
+
+      nodesInCol.forEach((node) => {
+        newNodes.push({
+          ...node,
+          targetPosition: 'top',
+          sourcePosition: 'bottom',
+          position: { x: 20, y: currentY },
+          draggable: false,
+        });
+        currentY += 150; // Espacio entre materias del mismo cuatrimestre
+      });
+
+      currentY += 50; // Espacio entre cuatrimestres
+    }
   }
 
   return { nodes: newNodes, edges };
@@ -125,8 +159,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
 /**
  * FlowInner: Componente interno con la lógica de interacción del grafo.
  */
-const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
-  // Mobile First: modo Vertical en pantallas pequeñas
+const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightContent }) => {
   const [direction, setDirection] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) return 'TB';
     return 'LR';
@@ -137,7 +170,6 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
 
   const activeNodeId = hoveredNode;
 
-  // Nodos iniciales
   const initialNodes = useMemo(() => {
     const projItems = projection?.items || {};
     const skippedItems = projection?.skippedItems || [];
@@ -177,7 +209,6 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
     return baseNodes;
   }, [materias, progreso, onNodeClick, projection]);
 
-  // Edges
   const initialEdges = useMemo(() => {
     const edges = [];
     materias.forEach((m) => {
@@ -202,7 +233,6 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Calcular layout
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
       initialNodes, initialEdges, direction, projection
@@ -211,58 +241,79 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
     setEdges(layoutedEdges);
   }, [initialNodes, initialEdges, direction, setNodes, setEdges, projection]);
 
-  // CÁMARA: Focalizar en los primeros 2-3 cuatrimestres al cargar (legible, no microscópico)
   useEffect(() => {
     if (nodes.length === 0) return;
     const timer = setTimeout(() => {
-      // Encontrar nodos de los primeros 3 cuatrimestres (o 2 en móvil)
-      const maxInitialCols = direction === 'TB' ? 2 : 3;
-      const focusNodes = nodes.filter(n => {
-        if (n.type === 'semester') {
-          const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
-          return !isNaN(colNum) && colNum <= maxInitialCols;
-        }
-        if (n.data?.materia) {
-          const m = n.data.materia;
-          const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
-          return col <= maxInitialCols;
-        }
-        return false;
-      });
-
-      if (focusNodes.length > 0) {
-        fitView({ nodes: focusNodes, padding: 0.3, duration: 700, maxZoom: 0.85 });
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      if (isMobile) {
+        setViewport({ x: 25, y: 40, zoom: 0.85 });
       } else {
-        fitView({ padding: 0.3, duration: 700, maxZoom: 0.85 });
+        const maxInitialCols = direction === 'TB' ? 2 : 3;
+        const focusNodes = nodes.filter(n => {
+          if (n.type === 'semester') {
+            const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
+            return !isNaN(colNum) && colNum <= maxInitialCols;
+          }
+          if (n.data?.materia) {
+            const m = n.data.materia;
+            const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
+            return col <= maxInitialCols;
+          }
+          return false;
+        });
+
+        if (focusNodes.length > 0) {
+          fitView({ nodes: focusNodes, padding: 0.2, duration: 600, maxZoom: 0.85 });
+        } else {
+          fitView({ padding: 0.2, duration: 600, maxZoom: 0.85 });
+        }
       }
     }, 150);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [direction, nodes.length === 0]);
 
-  // Home: Volver a los primeros cuatrimestres
+  // CÁMARA: Auto-focalizar en materias del cuatrimestre simulado al cambiar de paso
+  useEffect(() => {
+    if (nodes.length === 0) return;
+    const activeStepNodes = nodes.filter(n => n.data?.estado === 'Seleccionada');
+    if (activeStepNodes.length > 0) {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      fitView({ 
+        nodes: activeStepNodes, 
+        padding: isMobile ? 0.25 : 0.35, 
+        duration: 600, 
+        maxZoom: 0.9,
+        minZoom: isMobile ? 0.75 : 0.4
+      });
+    }
+  }, [progreso, nodes, fitView]);
+
   const handleGoHome = () => {
-    const maxInitialCols = direction === 'TB' ? 2 : 3;
-    const focusNodes = nodes.filter(n => {
-      if (n.type === 'semester') {
-        const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
-        return !isNaN(colNum) && colNum <= maxInitialCols;
-      }
-      if (n.data?.materia) {
-        const m = n.data.materia;
-        const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
-        return col <= maxInitialCols;
-      }
-      return false;
-    });
-    if (focusNodes.length > 0) {
-      fitView({ nodes: focusNodes, padding: 0.3, duration: 700, maxZoom: 0.85 });
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    if (isMobile) {
+      setViewport({ x: 25, y: 40, zoom: 0.85 });
     } else {
-      fitView({ padding: 0.3, duration: 700, maxZoom: 0.85 });
+      const focusNodes = nodes.filter(n => {
+        if (n.type === 'semester') {
+          const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
+          return !isNaN(colNum) && colNum <= 2;
+        }
+        if (n.data?.materia) {
+          const m = n.data.materia;
+          const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
+          return col <= 2;
+        }
+        return false;
+      });
+      if (focusNodes.length > 0) {
+        fitView({ nodes: focusNodes, padding: 0.2, duration: 600, maxZoom: 0.85 });
+      } else {
+        fitView({ padding: 0.2, duration: 600, maxZoom: 0.85 });
+      }
     }
   };
 
-  // Fit all: Ver toda la malla (botón de "ver todo")
   const handleFitAll = () => {
     fitView({ padding: 0.1, duration: 700 });
   };
@@ -270,12 +321,7 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
   const onNodeMouseEnter = useCallback((event, node) => setHoveredNode(node.id), []);
   const onNodeMouseLeave = useCallback(() => setHoveredNode(null), []);
 
-  /**
-   * processedEdges: Arcos ocultos por defecto, se muestran SOLO al hacer hover/tap en un nodo.
-   * Esto elimina la telaraña visual y deja la malla limpia.
-   */
   const processedEdges = useMemo(() => {
-    // Sin hover → no mostrar arcos (malla limpia)
     if (!activeNodeId) {
       return edges.map(e => ({
         ...e,
@@ -284,7 +330,6 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
       }));
     }
 
-    // Con hover → mostrar solo las conexiones de la materia activa
     return edges.map(e => {
       const isRelated = e.source === activeNodeId || e.target === activeNodeId;
       if (isRelated) {
@@ -296,7 +341,6 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
           markerEnd: { type: MarkerType.ArrowClosed, color: '#2563eb', width: 16, height: 16 },
         };
       }
-      // Edges no relacionados se atenúan
       return {
         ...e,
         style: { ...e.style, opacity: 0, strokeWidth: 0 },
@@ -306,8 +350,7 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
   }, [edges, activeNodeId]);
 
   return (
-    <div className="w-full h-full min-h-[600px] sm:min-h-[700px] relative overflow-hidden bg-slate-50/30 dark:bg-zinc-950/30 rounded-3xl">
-      {/* Loading skeleton */}
+    <div className="w-full h-full min-h-[600px] sm:min-h-[700px] relative overflow-hidden bg-slate-50 dark:bg-zinc-950 rounded-3xl">
       {nodes.length === 0 && (
         <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-xs flex flex-col items-center justify-center p-8 gap-4 animate-pulse">
           <div className="flex items-center gap-3">
@@ -317,41 +360,47 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
         </div>
       )}
 
-      {/* Controles flotantes */}
-      <div className="absolute top-3 left-3 z-10 flex flex-col sm:flex-row gap-1.5">
-        <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-zinc-700 rounded-xl">
-          <Button isIconOnly onPress={() => rfZoomIn()} title="Acercar" className="min-w-9 h-9"><ZoomIn size={16} /></Button>
-          <Button isIconOnly onPress={() => rfZoomOut()} title="Alejar" className="min-w-9 h-9"><ZoomOut size={16} /></Button>
-          <Button isIconOnly onPress={handleGoHome} title="Inicio" className="min-w-9 h-9"><Home size={16} /></Button>
-          <Button isIconOnly onPress={handleFitAll} title="Ver toda la malla" className="min-w-9 h-9"><Maximize size={16} /></Button>
-        </ButtonGroup>
+      <div className="absolute top-2 left-2 right-2 z-30 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
+        <div className="flex items-center gap-1.5 pointer-events-auto">
+          <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-md border border-slate-200/80 dark:border-zinc-700 rounded-xl">
+            <Button isIconOnly onPress={() => rfZoomIn()} title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={16} /></Button>
+            <Button isIconOnly onPress={() => rfZoomOut()} title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={16} /></Button>
+            <Button isIconOnly onPress={handleGoHome} title="Inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={16} /></Button>
+            <Button isIconOnly onPress={handleFitAll} title="Ver toda la malla" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Maximize size={16} /></Button>
+          </ButtonGroup>
 
-        <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-lg border border-slate-200/80 dark:border-zinc-700 rounded-xl">
-          <Button
-            isIconOnly
-            color={direction === 'LR' ? 'primary' : 'default'}
-            onPress={() => setDirection('LR')}
-            title="Horizontal"
-            className="min-w-9 h-9"
-          >
-            <ArrowRight size={16} />
-          </Button>
-          <Button
-            isIconOnly
-            color={direction === 'TB' ? 'primary' : 'default'}
-            onPress={() => setDirection('TB')}
-            title="Vertical"
-            className="min-w-9 h-9"
-          >
-            <ArrowDown size={16} />
-          </Button>
-        </ButtonGroup>
+          <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-md border border-slate-200/80 dark:border-zinc-700 rounded-xl">
+            <Button
+              isIconOnly
+              color={direction === 'LR' ? 'primary' : 'default'}
+              onPress={() => setDirection('LR')}
+              title="Horizontal"
+              className="min-w-8 h-8 sm:min-w-9 sm:h-9"
+            >
+              <ArrowRight size={16} />
+            </Button>
+            <Button
+              isIconOnly
+              color={direction === 'TB' ? 'primary' : 'default'}
+              onPress={() => setDirection('TB')}
+              title="Vertical"
+              className="min-w-8 h-8 sm:min-w-9 sm:h-9"
+            >
+              <ArrowDown size={16} />
+            </Button>
+          </ButtonGroup>
+        </div>
+
+        {topRightContent && (
+          <div className="flex items-center gap-1.5 pointer-events-auto ml-auto shrink-0">
+            {topRightContent}
+          </div>
+        )}
       </div>
 
-      {/* Hint flotante: Indicar que se puede hacer hover */}
       {!activeNodeId && nodes.length > 0 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-foreground/60 text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-md border border-slate-200/60 dark:border-zinc-700 flex items-center gap-1.5">
+        <div className="absolute top-14 sm:top-auto sm:bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-foreground/60 text-[10px] sm:text-[11px] font-semibold px-3 py-1 rounded-full shadow-md border border-slate-200/60 dark:border-zinc-700 flex items-center gap-1.5 whitespace-nowrap">
             <i className="fa-solid fa-hand-pointer text-primary/70" />
             Tocá una materia para ver sus correlativas
           </div>
@@ -372,6 +421,7 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection }) => {
         elementsSelectable={false}
         nodesConnectable={false}
         selectionMode="none"
+        proOptions={{ hideAttribution: true }}
       >
         <Background color="#e2e8f0" variant="dots" gap={28} size={1.5} />
       </ReactFlow>

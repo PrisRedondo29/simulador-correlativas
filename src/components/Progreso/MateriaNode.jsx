@@ -18,8 +18,8 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                 return {
                     label: 'Cursando',
                     icon: 'fa-solid fa-play',
-                    badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border border-blue-300 dark:border-blue-700',
-                    borderClass: 'border-2 border-blue-500 bg-blue-50/40 dark:bg-blue-950/30 shadow-md shadow-blue-500/15 ring-2 ring-blue-400/20'
+                    badgeClass: 'bg-blue-600 text-white font-bold shadow-xs',
+                    borderClass: 'border-2 border-blue-500 bg-blue-50/70 dark:bg-blue-950/50 shadow-md shadow-blue-500/20 ring-2 ring-blue-400/40'
                 };
             case 'Aprobado':
             case 'Aprobada':
@@ -28,15 +28,15 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                 return {
                     label: 'Aprobada',
                     icon: 'fa-solid fa-circle-check',
-                    badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700',
-                    borderClass: 'border-2 border-emerald-500/80 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-xs'
+                    badgeClass: 'bg-emerald-600 text-white font-bold shadow-xs',
+                    borderClass: 'border-2 border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 shadow-xs'
                 };
             case 'Regular':
                 return {
                     label: 'Regular',
                     icon: 'fa-solid fa-clock',
-                    badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-200 border border-amber-300 dark:border-amber-700',
-                    borderClass: 'border-2 border-amber-400/80 bg-amber-50/30 dark:bg-amber-950/20 shadow-xs'
+                    badgeClass: 'bg-amber-500 text-white font-bold shadow-xs',
+                    borderClass: 'border-2 border-amber-400 bg-amber-50/50 dark:bg-amber-950/30 shadow-xs'
                 };
             case 'Proyectada':
             case 'Por Cursar':
@@ -44,7 +44,7 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                     label: 'Por Cursar',
                     icon: 'fa-solid fa-calendar-plus',
                     badgeClass: 'bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border border-purple-300 dark:border-purple-700',
-                    borderClass: 'border-2 border-purple-400/70 bg-purple-50/30 dark:bg-purple-950/20 shadow-xs'
+                    borderClass: 'border-2 border-purple-300 dark:border-purple-800 bg-purple-50/20 dark:bg-purple-950/20 shadow-xs'
                 };
             case 'NoCursada':
             case 'No Cursada':
@@ -59,16 +59,16 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                 return {
                     label: 'Bloqueada',
                     icon: 'fa-solid fa-lock',
-                    badgeClass: 'bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700',
-                    borderClass: 'border-2 border-slate-300/80 dark:border-zinc-800 bg-slate-100/50 dark:bg-zinc-900/60 opacity-75'
+                    badgeClass: 'bg-slate-200 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400 border border-slate-300 dark:border-zinc-700',
+                    borderClass: 'border border-slate-200 dark:border-zinc-800/80 bg-slate-100/60 dark:bg-zinc-900/60 opacity-60'
                 };
             case 'Disponible':
             default:
                 return {
                     label: 'Disponible',
                     icon: 'fa-solid fa-unlock',
-                    badgeClass: 'bg-teal-100 text-teal-800 dark:bg-teal-900/60 dark:text-teal-200 border border-teal-300 dark:border-teal-700',
-                    borderClass: 'border-2 border-teal-400/70 dark:border-teal-600/70 bg-teal-50/20 dark:bg-teal-950/10 hover:border-teal-500 shadow-xs'
+                    badgeClass: 'bg-sky-100 text-sky-800 dark:bg-sky-900/60 dark:text-sky-200 border border-sky-300 dark:border-sky-700',
+                    borderClass: 'border-2 border-sky-400 dark:border-sky-600 bg-sky-50/40 dark:bg-sky-950/20 hover:border-sky-500 shadow-xs'
                 };
         }
     };

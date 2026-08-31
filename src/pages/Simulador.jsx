@@ -184,7 +184,7 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
 
 
     return (
-        <div className="flex flex-col gap-12 py-12 px-4 sm:px-6 md:px-10 lg:px-16 mx-auto min-h-screen w-full">
+        <div className="flex flex-col gap-5 py-6 px-4 sm:px-6 md:px-10 lg:px-16 mx-auto min-h-screen w-full">
 
             {/* ── Modales ── */}
             <ConfiguracionSimulador
@@ -213,6 +213,9 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                 isOpen={isConfirmImportOpen}
                 onOpenChange={onConfirmImportOpenChange}
                 onConfirm={ejecutarImportacion}
+                progresoReal={progresoReal}
+                progresoDetalles={progresoDetallesReal}
+                materias={materias}
             />
 
             {/* Modal que muestra el estado de descarga de PDF sin afectar el render base */}
@@ -264,49 +267,36 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
 
             {/* ── Contenido principal ── */}
             {plan && (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col gap-3">
                     {/* Header con controles inline integrados */}
                     <HeaderSimulador 
                         plan={plan} 
                         anioInicio={anioInicio} 
                         cuatriInicio={cuatriInicio} 
-                        onOpenConfig={onConfigOpen} 
+                        onOpenConfig={onConfigOpen}
+                        onImportarProgreso={handleImportarProgreso}
                     />
-                    <div className="flex flex-col sm:flex-row justify-end items-start sm:items-center mb-6 gap-3">
-                        <Button 
-                            variant="flat" 
-                            color="secondary" 
-                            onPress={handleImportarProgreso} 
-                            className="font-bold rounded-2xl h-10 w-full sm:w-auto"
-                            startContent={<CloudDownload size={18} />}
-                        >
-                            Importar Mi Progreso Real
-                        </Button>
-                    </div>
 
-                    {/* Disclaimer Simulador vs Progreso */}
-                    <div className="flex flex-col md:flex-row gap-4 mt-6 mb-2 items-stretch md:items-start">
-                        <div className="flex-1 flex bg-warning-50/50 dark:bg-warning-500/10 border border-warning-200 dark:border-warning-500/30 text-warning-800 dark:text-warning-300 rounded-xl p-4 items-start gap-3 shadow-sm">
-                            <i className="fa-solid fa-circle-info text-xl mt-0.5 text-warning-500" />
-                            <div className="flex-1">
-                                <h4 className="font-bold text-sm md:text-base text-warning-900 dark:text-warning-400">Modo de Prueba (Simulador)</h4>
-                                <p className="text-xs md:text-sm mt-1 opacity-90">
-                                    Aquí puedes experimentar diferentes escenarios. <strong>Tus selecciones en esta pantalla no se guardan como tu avance real.</strong> Si quieres actualizar las materias que ya aprobaste o regularizaste, hazlo desde la sección <Link to="/progreso" className="underline font-bold hover:text-warning-700 dark:hover:text-warning-200">Mi Progreso</Link>.
-                                </p>
-                            </div>
+                    {/* Disclaimer compacto + Toggle vista */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 bg-warning-50/50 dark:bg-warning-500/10 border border-warning-200/70 dark:border-warning-500/20 text-warning-700 dark:text-warning-300 rounded-xl px-3 py-2 text-[11px] sm:text-xs">
+                            <i className="fa-solid fa-circle-info text-warning-500 shrink-0" />
+                            <span>
+                                <strong>Modo Simulación</strong> — Los cambios no se guardan. Editá tu avance real en <Link to="/progreso" className="underline font-bold hover:text-warning-600">Mi Progreso</Link>.
+                            </span>
                         </div>
 
                         {/* Selector de Vista */}
-                        <div className="flex flex-col gap-2 p-1 bg-default-100 rounded-2xl border border-default-200 h-fit self-center">
-                            <ButtonGroup size="lg" variant="flat">
+                        <div className="flex p-0.5 bg-default-100 rounded-xl border border-default-200 shrink-0">
+                            <ButtonGroup size="sm" variant="flat">
                                 <Button
                                     onPress={() => {
                                         setViewMode('grafo');
                                         trackCambioVista({ tipo: 'tipo_simulacion', valor: 'grafo' });
                                     }}
                                     color={viewMode === 'grafo' ? 'primary' : 'default'}
-                                    className={`font-bold transition-all ${viewMode === 'grafo' ? 'shadow-md' : 'bg-transparent text-foreground/50'}`}
-                                    startContent={<Network size={20} />}
+                                    className={`font-bold transition-all text-xs ${viewMode === 'grafo' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
+                                    startContent={<Network size={16} />}
                                 >
                                     Grafo
                                 </Button>
@@ -316,8 +306,8 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                                         trackCambioVista({ tipo: 'tipo_simulacion', valor: 'lista' });
                                     }}
                                     color={viewMode === 'lista' ? 'primary' : 'default'}
-                                    className={`font-bold transition-all ${viewMode === 'lista' ? 'shadow-md' : 'bg-transparent text-foreground/50'}`}
-                                    startContent={<LayoutGrid size={20} />}
+                                    className={`font-bold transition-all text-xs ${viewMode === 'lista' ? 'shadow-sm' : 'bg-transparent text-foreground/50'}`}
+                                    startContent={<LayoutGrid size={16} />}
                                 >
                                     Lista
                                 </Button>
@@ -330,7 +320,7 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                             <Spinner size="lg" label="Preparando simulación..." color="primary" labelColor="primary" />
                         </div>
                     ) : (
-                        <div className="mt-8 flex flex-col pt-4 relative">
+                        <div className="mt-2 flex flex-col relative">
 
                             {/* ── Historial ── */}
                             <HistorialAcademico
@@ -404,27 +394,8 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                                             /* Vista de Grafo (Malla Curricular) */
                                             <div 
                                                 ref={grafoContainerRef}
-                                                className={`animate-in fade-in zoom-in-95 duration-500 relative border border-default-200/80 shadow-md transition-all duration-300 flex flex-col bg-background/50 ${isFullScreen ? 'fixed inset-0 z-[1000] bg-background p-0 rounded-none w-screen h-screen' : 'h-[650px] sm:h-[750px] rounded-3xl overflow-hidden'}`}
+                                                className={`animate-in fade-in zoom-in-95 duration-500 relative border border-default-200/80 shadow-md transition-all duration-300 flex flex-col bg-background ${isFullScreen ? 'fixed inset-0 z-[1000] bg-background p-0 rounded-none w-screen h-screen' : 'h-[650px] sm:h-[750px] rounded-3xl overflow-hidden'}`}
                                             >
-                                                {/* Encabezado Superior flotante del Grafo: Pantalla Completa + Titulo Intermedio */}
-                                                <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
-                                                    {progresoIntermedio.totales > 0 && (
-                                                        <div className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-md backdrop-blur-md border ${isIntermedioCompletado ? 'bg-success/20 text-success border-success/30' : 'bg-primary/20 text-primary border-primary/30'}`}>
-                                                            <i className="fa-solid fa-graduation-cap text-xs" />
-                                                            <span>{tituloIntermedioNombre}: {progresoIntermedio.completadas}/{progresoIntermedio.totales}</span>
-                                                        </div>
-                                                    )}
-                                                    <Button
-                                                        isIconOnly
-                                                        variant="flat"
-                                                        className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md border border-default-200 min-w-9 h-9"
-                                                        onPress={toggleFullScreen}
-                                                        title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
-                                                    >
-                                                        {isFullScreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                                                    </Button>
-                                                </div>
-
                                                 {/* Controles de Navegación Flotantes (Anterior / Simulando / Siguiente) */}
                                                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2 w-full px-4 max-w-sm sm:max-w-md">
                                                     <div className="flex items-center bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-slate-200 dark:border-zinc-800 p-1.5 rounded-2xl shadow-xl gap-2 sm:gap-4 w-full justify-between">
@@ -463,6 +434,26 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
                                                         progreso={progresoSimulado}
                                                         onNodeClick={handleNodeClick}
                                                         projection={projection}
+                                                        topRightContent={
+                                                            <>
+                                                                {progresoIntermedio.totales > 0 && (
+                                                                    <div className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 sm:gap-2 shadow-md backdrop-blur-md border ${isIntermedioCompletado ? 'bg-success/20 text-success border-success/30' : 'bg-primary/20 text-primary border-primary/30'}`}>
+                                                                        <i className="fa-solid fa-graduation-cap text-xs" />
+                                                                        <span className="hidden sm:inline">{tituloIntermedioNombre}:</span>
+                                                                        <span>{progresoIntermedio.completadas}/{progresoIntermedio.totales}</span>
+                                                                    </div>
+                                                                )}
+                                                                <Button
+                                                                    isIconOnly
+                                                                    variant="flat"
+                                                                    className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-md border border-default-200 min-w-8 h-8 sm:min-w-9 sm:h-9"
+                                                                    onPress={toggleFullScreen}
+                                                                    title={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                                                                >
+                                                                    {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                                                </Button>
+                                                            </>
+                                                        }
                                                     />
                                                 </div>
                                             </div>
