@@ -3,6 +3,7 @@ import { useEquivalencias } from '../hooks/useEquivalencias';
 import HeaderEquivalencias from '../components/Equivalencias/HeaderEquivalencias';
 import ListaMaterias from '../components/Equivalencias/ListaMaterias';
 import SearchMateria from '../components/Equivalencias/SearchMateria';
+import TransicionModal from '../components/Progreso/modals/TransicionModal';
 import { trackSearch } from '../services/analyticsService';
 import { Tabs, Tab, Card, CardBody, Switch, Button, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Progress, Chip, Checkbox } from "@heroui/react";
 import { ListFilter, Save, RotateCcw, Download, Info, Edit3, Clock, TrendingDown, AlertTriangle, ArrowRight } from "lucide-react";
@@ -35,6 +36,11 @@ function Equivalencias() {
         onOpen: onWarningOpen, 
         onOpenChange: onWarningOpenChange,
         onClose: onWarningClose 
+    } = useDisclosure();
+    const {
+        isOpen: isTransicionOpen,
+        onOpen: onTransicionOpen,
+        onOpenChange: onTransicionOpenChange
     } = useDisclosure();
 
     const [materiaPendiente, setMateriaPendiente] = useState(null);
@@ -83,6 +89,33 @@ function Equivalencias() {
                 totalMaterias={stats.totalNuevas}
                 equivalenciasAprobadas={stats.aprobadasNuevas}
             />
+
+            {/* Banner de Simulación de Transición (Res. 89/2025) */}
+            <div className="mt-4 mb-2 p-4 sm:p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/30 border border-[#F5B82E]/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-[#F5B82E]/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
+                        <i className="fa-solid fa-scale-balanced text-base" />
+                    </div>
+                    <div>
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                            RESOLUCIÓN HCS 89/2025
+                        </span>
+                        <h4 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-zinc-100">
+                            ¿Te conviene cambiar de plan en este momento?
+                        </h4>
+                        <p className="text-xs text-slate-600 dark:text-zinc-400">
+                            Verificá si tu cohorte y materias habilitadas tienen oferta activa en Plan 17.14 o si conviene esperar.
+                        </p>
+                    </div>
+                </div>
+                <Button
+                    onPress={() => navigate('/cambio-plan')}
+                    className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-extrabold text-xs sm:text-sm px-5 py-2.5 rounded-xl shrink-0 shadow-2xs self-end sm:self-center"
+                    endContent={<i className="fa-solid fa-arrow-right text-xs" />}
+                >
+                    Simular cambio de plan
+                </Button>
+            </div>
 
             {/* Comparativa de Carga Horaria - Restaurado al formato preferido */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">

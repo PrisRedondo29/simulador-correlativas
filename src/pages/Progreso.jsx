@@ -81,7 +81,7 @@ function Progreso({ plan, setPlan }) {
         if (isAnioOpen.length > 0) {
             setIsAnioOpen([]);
         } else {
-            const anios = [...new Set(materias.map((m) => Number(m.anio)))].toSorted((a, b) => a - b);
+            const anios = ["taller", ...Array.from(new Set(materias.map((m) => String(m.anio || "")))).filter(Boolean)];
             setIsAnioOpen(anios);
         }
     };

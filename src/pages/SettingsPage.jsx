@@ -17,6 +17,9 @@ import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
 import { trackSeleccionCarrera } from '../services/analyticsService';
 
+import TransicionModal from '../components/Progreso/modals/TransicionModal';
+import { useDisclosure } from '@heroui/react';
+
 export default function SettingsPage({ plan, setPlan }) {
     const {
         user,
@@ -28,6 +31,7 @@ export default function SettingsPage({ plan, setPlan }) {
     } = useAuth();
     const { theme, setTheme } = useTheme();
 
+    const { isOpen: isTransicionOpen, onOpen: onTransicionOpen, onOpenChange: onTransicionOpenChange } = useDisclosure();
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -241,6 +245,31 @@ export default function SettingsPage({ plan, setPlan }) {
                             <p className="text-xs text-default-500 px-1 italic">
                                 * Cambiar el plan afecta los datos mostrados en el Simulador y Progreso.
                             </p>
+
+                            {/* Banner Informativo de Transición */}
+                            <div className="p-3.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/30 border border-[#F5B82E]/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-1 shadow-2xs">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-lg bg-[#F5B82E]/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
+                                        <i className="fa-solid fa-scale-balanced text-sm" />
+                                    </div>
+                                    <div>
+                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 block">
+                                            TRANSICIÓN DE PLAN (RES. HCS 89/2025)
+                                        </span>
+                                        <p className="text-xs text-slate-700 dark:text-zinc-300">
+                                            ¿Dudas sobre cambiar entre planes? Verificá con tu avance si la transición es viable hoy.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    onPress={() => navigate('/cambio-plan')}
+                                    className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-extrabold text-xs px-3.5 py-1.5 rounded-lg shrink-0 shadow-2xs self-end sm:self-center"
+                                    endContent={<i className="fa-solid fa-arrow-right text-[10px]" />}
+                                >
+                                    Simular cambio
+                                </Button>
+                            </div>
                         </div>
                     </CardBody>
                 </Card>

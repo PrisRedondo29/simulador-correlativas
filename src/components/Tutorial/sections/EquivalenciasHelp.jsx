@@ -1,12 +1,41 @@
-import React from 'react'
-import { Card, CardBody, Divider } from '@heroui/react'
+import { useNavigate } from 'react-router-dom'
 
 export default function EquivalenciasHelp() {
+    const navigate = useNavigate()
+
     return (
         <div className="py-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Explicación General */}
                 <div className="lg:col-span-2 space-y-8">
+                    {/* Banner de Resolución HCS 89/2025 */}
+                    <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent dark:from-amber-950/40 border-2 border-[#F5B82E] rounded-3xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                        <div className="flex items-start gap-3.5">
+                            <div className="w-10 h-10 rounded-xl bg-[#F5B82E]/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
+                                <i className="fa-solid fa-scale-balanced text-base" />
+                            </div>
+                            <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                                    NUEVO MARCO OFICIAL
+                                </span>
+                                <h4 className="font-black text-sm sm:text-base text-slate-900 dark:text-zinc-100">
+                                    Resolución HCS 89/2025: Transición Progresiva de Planes
+                                </h4>
+                                <p className="text-xs text-slate-600 dark:text-zinc-300">
+                                    La universidad dispuso un calendario gradual de 2024 a 2029. Evaluá con tu avance real si te conviene migrar hoy o si tendrías baches de cursada.
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            onPress={() => navigate('/cambio-plan')}
+                            className="bg-[#005a36] hover:bg-[#004a2c] text-white font-black text-xs px-4 py-5 rounded-xl shrink-0 shadow-sm"
+                            startContent={<i className="fa-solid fa-arrows-rotate text-xs text-[#F5B82E]" />}
+                        >
+                            Simular cambio de plan
+                        </Button>
+                    </div>
+
                     <div>
                         <h3 className="text-2xl font-bold text-foreground mb-4">Transición entre Planes (17.13 → 17.14)</h3>
                         <p className="text-foreground/70 leading-relaxed mb-4">

@@ -177,22 +177,57 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
         { name: 'Progreso', icon: 'fa-graduation-cap', path: '/progreso', isDeactivated: false },
         { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador', isDeactivated: false },
         { name: 'Equivalencias', icon: 'fa-right-left', path: '/equivalencias', isDeactivated: false },
+        { 
+            name: 'Cambio de Plan', 
+            icon: 'fa-arrows-rotate', 
+            path: '/cambio-plan', 
+            badge: 'Res. 89/25', 
+            isDeactivated: false 
+        },
         { name: 'Chat IA', icon: 'fa-robot', path: '/chatbot', isDeactivated: true },
         { name: 'Cómo usar', icon: 'fa-circle-question', path: '/como-usar', isDeactivated: false, id: 'btn-como-usar' },
         { name: 'Reportar error', icon: 'fa-bug', path: '/contacto', isDeactivated: false },
         { name: 'CODES', imgIcon: '/imgs/logo-codes.png', path: 'https://www.codesunlu.tech/', isExternal: true, isDeactivated: false },
     ];
 
-    const handleClick = (path) => {
-        navigate(path);
+    const handleClick = (item) => {
+        navigate(item.path);
         if (onItemClick) onItemClick();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     return (
         <nav className={`flex flex-col gap-1.5 transition-all duration-300 ${isCollapsed ? 'px-2' : 'px-3 py-2'}`}>
+            {/* Botón Destacado Simular Transición en Sidebar */}
+            <div className="mb-2">
+                <button
+                    onClick={() => {
+                        navigate('/cambio-plan');
+                        if (onItemClick) onItemClick();
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`w-full rounded-2xl bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950 font-black shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2.5 border border-amber-300 ${
+                        isCollapsed ? 'p-3 justify-center' : 'p-2.5 px-3.5 text-left'
+                    }`}
+                >
+                    <div className="w-7 h-7 rounded-xl bg-black/10 flex items-center justify-center shrink-0">
+                        <i className="fa-solid fa-arrows-rotate text-xs text-slate-950" />
+                    </div>
+                    {!isCollapsed && (
+                        <div className="min-w-0 flex-1">
+                            <span className="text-[9px] font-black uppercase tracking-wider block leading-none text-slate-900/80">
+                                Res. HCS 89/2025
+                            </span>
+                            <span className="text-xs font-black block truncate text-slate-950">
+                                Simular Cambio de Plan
+                            </span>
+                        </div>
+                    )}
+                </button>
+            </div>
+
             {menuItems.map((item) => {
-                const isActive = !item.isExternal && location.pathname === item.path;
+                const isActive = !item.isExternal && !item.isTransicionAction && location.pathname === item.path;
                 const isDisabled = !isActive && item.isDeactivated;
 
                 if (item.isExternal) {
@@ -224,18 +259,32 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
 
                 const content = (
                     <button
-                        key={item.path}
+                        key={item.path || item.name}
                         id={item.id}
-                        onClick={() => isDisabled ? addToast({ title: 'En progreso', description: 'Esta página aún no está disponible', color: 'warning' }) : handleClick(item.path)}
-                        className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'px-3.5 py-2.5'} ${isActive
-                            ? 'bg-white/20 text-white font-bold shadow-sm border border-white/20 backdrop-blur-md'
-                            : isDisabled
-                                ? 'bg-black/10 text-white/30 cursor-not-allowed'
-                                : 'text-white/80 hover:bg-white/10 hover:text-white'
-                            }`}
+                        onClick={() => isDisabled ? addToast({ title: 'En progreso', description: 'Esta página aún no está disponible', color: 'warning' }) : handleClick(item)}
+                        className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'px-3.5 py-2.5'} ${
+                            item.isTransicionAction 
+                                ? 'text-amber-300 hover:bg-white/10 hover:text-amber-200 font-bold'
+                                : isActive
+                                    ? 'bg-white/20 text-white font-bold shadow-sm border border-white/20 backdrop-blur-md'
+                                    : isDisabled
+                                        ? 'bg-black/10 text-white/30 cursor-not-allowed'
+                                        : 'text-white/80 hover:bg-white/10 hover:text-white'
+                        }`}
                     >
-                        <i className={`fa-solid ${item.icon} w-5 text-base shrink-0 ${isActive ? 'text-white drop-shadow-sm' : 'group-hover:scale-110 transition-transform'}`} />
-                        {!isCollapsed && <span className="text-sm font-medium transition-opacity duration-300 whitespace-nowrap overflow-hidden">{item.name}</span>}
+                        <i className={`fa-solid ${item.icon} w-5 text-base shrink-0 ${
+                            item.isTransicionAction ? 'text-amber-400' : isActive ? 'text-white drop-shadow-sm' : 'group-hover:scale-110 transition-transform'
+                        }`} />
+                        {!isCollapsed && (
+                            <div className="flex items-center justify-between w-full min-w-0">
+                                <span className="text-sm font-medium transition-opacity duration-300 whitespace-nowrap overflow-hidden">{item.name}</span>
+                                {item.badge && (
+                                    <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#F5B82E] text-slate-950 ml-2 shrink-0">
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </div>
+                        )}
                         {isActive && !isCollapsed && (
                             <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_6px_2px] shadow-emerald-300/80 animate-pulse" />
                         )}
@@ -246,7 +295,7 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
                 );
 
                 return isCollapsed ? (
-                    <Tooltip key={item.path} content={item.name} placement="right">
+                    <Tooltip key={item.path || item.name} content={item.name} placement="right">
                         {content}
                     </Tooltip>
                 ) : content;
@@ -283,12 +332,40 @@ SidebarFooter.propTypes = {
     isCollapsed: PropTypes.bool,
 };
 
+import TransicionModal from './Progreso/modals/TransicionModal';
+
 // ─── NavBar principal ─────────────────────────────────────────────────────────
 export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
     const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onOpenChange: onDrawerOpenChange } = useDisclosure();
     const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
+    const { isOpen: isTransicionOpen, onOpen: onTransicionOpen, onOpenChange: onTransicionOpenChange } = useDisclosure();
     const { signIn, firestoreWarning, clearFirestoreWarning } = useAuth();
     const navigate = useNavigate();
+
+    const [progresoGlobal, setProgresoGlobal] = useState({});
+
+    // Cargar progreso del alumno desde localStorage para pasarlo a la simulación
+    useEffect(() => {
+        const cargarProgreso = () => {
+            const p1713 = localStorage.getItem('progreso+17.13');
+            const pPlan = plan ? localStorage.getItem(`progreso+${plan}`) : null;
+            const data = p1713 || pPlan;
+            if (data) {
+                try {
+                    setProgresoGlobal(JSON.parse(data));
+                } catch {
+                    setProgresoGlobal({});
+                }
+            }
+        };
+        cargarProgreso();
+        window.addEventListener('storage', cargarProgreso);
+        window.addEventListener('progress-hydrated', cargarProgreso);
+        return () => {
+            window.removeEventListener('storage', cargarProgreso);
+            window.removeEventListener('progress-hydrated', cargarProgreso);
+        };
+    }, [plan]);
 
     const handleSignIn = async (rememberMe) => {
         try {
@@ -362,7 +439,7 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
                 </div>
 
                 <div className="flex-1 overflow-y-auto overflow-x-hidden">
-                    <NavLinks isCollapsed={isCollapsed} />
+                    <NavLinks onTransicionClick={onTransicionOpen} isCollapsed={isCollapsed} />
                 </div>
 
                 <SidebarFooter
@@ -402,7 +479,7 @@ export default function NavBar({ setPlan, plan, isCollapsed, setIsCollapsed }) {
                             </DrawerHeader>
 
                             <DrawerBody className="py-4">
-                                <NavLinks onItemClick={onClose} isCollapsed={false} />
+                                <NavLinks onItemClick={onClose} onTransicionClick={onTransicionOpen} isCollapsed={false} />
                             </DrawerBody>
 
                             <DrawerFooter className="p-0 block">

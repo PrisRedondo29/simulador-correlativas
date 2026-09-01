@@ -531,12 +531,13 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                         <DropdownTrigger>
                             <Button
                                 size="sm"
-                                variant="flat"
-                                color="primary"
-                                className="font-bold rounded-xl"
+                                variant="solid"
+                                color="success"
+                                className="bg-[#005a36] hover:bg-[#004a2c] text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5"
+                                startContent={<i className="fa-solid fa-check-double text-[#F5B82E] text-xs"></i>}
+                                endContent={<i className="fa-solid fa-chevron-down text-[10px] ml-0.5 opacity-80"></i>}
                             >
                                 <span>Aprobar hasta...</span>
-                                <i className="fa-solid fa-chevron-down ml-1"></i>
                             </Button>
                         </DropdownTrigger>
                         <DropdownMenu aria-label="Aprobar hasta">
@@ -544,7 +545,7 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                                 <DropdownItem
                                     key="titulo_intermedio"
                                     color="success"
-                                    startContent={<i className="fa-solid fa-graduation-cap"></i>}
+                                    startContent={<i className="fa-solid fa-graduation-cap text-[#005a36]"></i>}
                                     onPress={() => {
                                         setGrupoAAprobar({
                                             label: tituloIntermedioText,
@@ -562,7 +563,7 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                                     <DropdownItem
                                         key={`anio_${anio}`}
                                         color="success"
-                                        startContent={<i className="fa-solid fa-check-double" />}
+                                        startContent={<i className="fa-solid fa-check-double text-[#005a36]" />}
                                         onPress={() => {
                                             setGrupoAAprobar({
                                                 label: `el ${anio}° Año`,
@@ -585,7 +586,7 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                         startContent={<i className={`fa-solid ${isAnioOpen.length > 0 ? 'fa-eye' : 'fa-eye-slash'}`}></i>}
                         onPress={handleMostrarTodo}
                     >
-                        <span className="max-sm:hidden">{isAnioOpen.length > 0 ? "Ocultar" : "Mostrar"}</span>
+                        <span className="max-sm:hidden">{isAnioOpen.length > 0 ? "Mostrar todo" : "Ocultar todo"}</span>
                     </Button>
                     <Button
                         size="sm"

@@ -1,13 +1,48 @@
-import { Button, addToast } from '@heroui/react'
+import { Button, addToast, useDisclosure } from '@heroui/react'
 import { Card, CardBody, CardHeader } from '@heroui/card'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ContactForm from '../components/Shared/ContactForm'
+import TransicionModal from '../components/Progreso/modals/TransicionModal'
 
 function Inicio() {
     const navigate = useNavigate()
+    const { isOpen: isTransicionOpen, onOpen: onTransicionOpen, onOpenChange: onTransicionOpenChange } = useDisclosure()
+    const [progresoGlobal, setProgresoGlobal] = useState({})
+
+    useEffect(() => {
+        const cargarProgreso = () => {
+            const p1713 = localStorage.getItem('progreso+17.13')
+            const pActivo = localStorage.getItem('plan_activo')
+            const pPlan = pActivo ? localStorage.getItem(`progreso+${pActivo}`) : null
+            const data = p1713 || pPlan
+            if (data) {
+                try {
+                    setProgresoGlobal(JSON.parse(data))
+                } catch {
+                    setProgresoGlobal({})
+                }
+            }
+        }
+        cargarProgreso()
+        window.addEventListener('storage', cargarProgreso)
+        window.addEventListener('progress-hydrated', cargarProgreso)
+        return () => {
+            window.removeEventListener('storage', cargarProgreso)
+            window.removeEventListener('progress-hydrated', cargarProgreso)
+        }
+    }, [])
 
     const portalCards = [
+        {
+            title: "Cambio de Plan (Res. 89/25)",
+            description: "Verificá con tu avance si te conviene migrar al nuevo Plan 17.14 o esperar",
+            icon: "fa-solid fa-arrows-rotate",
+            iconBg: "bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950",
+            titleColor: "text-amber-700 dark:text-amber-300 font-black",
+            path: "/cambio-plan",
+            badge: "NUEVO"
+        },
         {
             title: "Simulador de Avances",
             description: "Proyectá tu trayectoria académica y explorá distintos escenarios de cursado",
@@ -76,6 +111,7 @@ function Inicio() {
     ];
 
     const buttonItems = [
+        { name: 'Simular cambio de plan', icon: 'fa-arrows-rotate', path: '/cambio-plan', color: 'warning' },
         { name: 'Ver mi progreso', icon: 'fa-graduation-cap', path: '/progreso', isDeactivated: false, color: 'primary' },
         { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador', isDeactivated: false, color: 'secondary' },
         { name: 'Consultar Equivalencias', icon: 'fa-right-left', path: '/equivalencias', isDeactivated: false, color: 'success' },
@@ -122,7 +158,38 @@ function Inicio() {
 
     return (
         <div className="flex flex-col gap-12 md:gap-16 py-6 md:py-10 px-4 md:px-10 max-w-7xl mx-auto animate-in fade-in duration-500 overflow-hidden">
-            {/* Sección Portal Estudiantil - Grid de Accesos Rápidos (Imagen 1) */}
+            
+            {/* Banner Destacado Superior: Transición de Plan Res. HCS 89/2025 */}
+            <section className="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent dark:from-amber-950/40 dark:via-amber-950/20 border-2 border-[#F5B82E] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
+                <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
+                        <i className="fa-solid fa-scale-balanced text-2xl" />
+                    </div>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-black uppercase tracking-wider bg-[#F5B82E] text-slate-950 px-2 py-0.5 rounded-full">
+                                OFICIAL UNLu
+                            </span>
+                            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">Resolución HCS 89/2025</span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-zinc-50 tracking-tight">
+                            ¿Te conviene cambiar de plan en este momento?
+                        </h2>
+                        <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 max-w-2xl leading-relaxed">
+                            Analizá con tu progreso real si el nuevo Plan 17.14 tiene oferta inmediata para tu avance o si te conviene quedarte en el Plan 17.13 para evitar baches de cursada.
+                        </p>
+                    </div>
+                </div>
+                <Button
+                    onPress={() => navigate('/cambio-plan')}
+                    className="bg-[#005a36] hover:bg-[#004a2c] text-white font-black text-xs sm:text-sm px-6 py-6 rounded-2xl shadow-md hover:shadow-lg transition-all shrink-0 self-stretch md:self-center flex items-center justify-center gap-2"
+                    startContent={<i className="fa-solid fa-arrows-rotate text-sm text-[#F5B82E]" />}
+                >
+                    Simular Transición de Plan
+                </Button>
+            </section>
+
+            {/* Sección Portal Estudiantil - Grid de Accesos Rápidos */}
             <section className="flex flex-col gap-6 w-full">
                 <div className="flex flex-col gap-1">
                     <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#005a36] dark:text-emerald-400 tracking-tight">

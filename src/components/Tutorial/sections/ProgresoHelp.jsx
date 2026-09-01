@@ -57,13 +57,13 @@ export default function ProgresoHelp() {
                     <Card className="bg-linear-to-br from-secondary/10 to-primary/10 border-none shadow-none">
                         <CardBody className="p-6 flex flex-col sm:flex-row gap-5 items-center">
                             <div className="p-4 bg-background/50 rounded-2xl text-secondary shadow-sm shrink-0">
-                                <i className="fa-solid fa-wand-magic-sparkles text-2xl"></i>
+                                <i className="fa-solid fa-check-double text-2xl text-emerald-600"></i>
                             </div>
                             <div>
-                                <h4 className="font-bold text-foreground text-lg mb-1">¡Tip para avanzados!</h4>
+                                <h4 className="font-bold text-foreground text-lg mb-1">¡Tip para avanzados: Botón "Aprobar hasta..."!</h4>
                                 <p className="text-sm text-foreground/70 leading-relaxed">
-                                    ¿Ya tenés muchas materias hechas? No hace falta marcar una por una.
-                                    Si marcás tus <b>últimas materias</b> aprobadas, regulares o promocionadas, el sistema <b>actualizará automáticamente</b> todas sus correlativas previas en cascada.
+                                    ¿Ya tenés muchos años cursados? No hace falta marcar una por una.
+                                    Usá el botón <b>"Aprobar hasta..."</b> para aprobar años completos o el título intermedio con un solo clic. Además, si marcás tus <b>últimas materias</b> aprobadas, el sistema <b>actualizará automáticamente</b> todas sus correlativas previas en cascada.
                                 </p>
                             </div>
                         </CardBody>

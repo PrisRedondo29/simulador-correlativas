@@ -23,11 +23,16 @@ import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils'
 import importUtils from '../utils/Simulador/importUtils'
 import { trackCambioVista } from '../services/analyticsService'
 
+import TransicionModal from '../components/Progreso/modals/TransicionModal'
+
 function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
     // ─── Configuración (se inicializa con el plan activo para evitar modales bloqueantes) ────
     const [plan, setPlan] = useState(() => initialPlan || localStorage.getItem('plan_activo') || "17.14")
     const [anioInicio, setAnioInicio] = useState("2026")
     const [cuatriInicio, setCuatriInicio] = useState("1")
+
+    // ─── Modal de Transición ────
+    const { isOpen: isTransicionOpen, onOpen: onTransicionOpen, onOpenChange: onTransicionOpenChange } = useDisclosure()
 
     // ─── UI state ────────────────────────────────────────────────────────────
     const [openedAccordions, setOpenedAccordions] = useState(new Set())
@@ -286,6 +291,31 @@ function Simulador({ plan: initialPlan, setPlan: setGlobalPlan }) {
             {/* ── Contenido principal ── */}
             {plan && (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-col gap-3">
+                    {/* Banner Destacado: Transición de Plan Res. HCS 89/2025 */}
+                    <div className="p-3.5 sm:p-4 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/30 border border-[#F5B82E]/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-[#F5B82E]/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
+                                <i className="fa-solid fa-arrows-rotate text-sm" />
+                            </div>
+                            <div className="space-y-0.5">
+                                <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                                    TRANSICIÓN DE PLAN (RES. HCS 89/2025)
+                                </span>
+                                <p className="text-xs text-slate-700 dark:text-zinc-300 font-medium">
+                                    ¿Dudas sobre cambiarte al nuevo Plan 17.14? Verificá con tu avance si te conviene o si tendrías baches de cursada.
+                                </p>
+                            </div>
+                        </div>
+                        <Button
+                            size="sm"
+                            onPress={() => navigate('/cambio-plan')}
+                            className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-extrabold text-xs px-4 py-2 rounded-xl shrink-0 shadow-2xs self-end sm:self-center"
+                            endContent={<i className="fa-solid fa-arrow-right text-[11px]" />}
+                        >
+                            Simular cambio de plan
+                        </Button>
+                    </div>
+
                     {/* Header con controles inline integrados */}
                     <HeaderSimulador 
                         plan={plan} 

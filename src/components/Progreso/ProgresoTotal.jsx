@@ -4,10 +4,12 @@ import { Link } from 'react-router-dom'
 import MateriasProgreso from './MateriasProgreso'
 import regularidadUtils from '../../utils/Progreso/regularidadUtils'
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
+import TransicionModal from './modals/TransicionModal'
 
 function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, materias, isSticky, headerRef, setIsSticky }) {
     const [isStatsExpanded, setIsStatsExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 768);
     const { isOpen: isPromedioModalOpen, onOpen: onPromedioModalOpen, onOpenChange: onPromedioModalOpenChange } = useDisclosure();
+    const { isOpen: isTransicionModalOpen, onOpen: onTransicionModalOpen, onOpenChange: onTransicionModalOpenChange } = useDisclosure();
     const [tipoPromedioModal, setTipoPromedioModal] = useState('sinAplazos'); // 'sinAplazos' | 'conAplazos'
 
     const promedios = regularidadUtils.calcularPromedioGeneral(progresoDetalles, progreso);
@@ -69,35 +71,56 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
         <header ref={headerRef} className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-xs hover:shadow-sm rounded-3xl flex flex-col transition-all duration-300">
             {/* Contenedor con blur para la parte superior (No afecta al fixed de abajo) */}
             <div className="p-6 md:p-8 pb-4 flex flex-col gap-6 rounded-t-3xl w-full">
-                {/* Sección Superior: Limpia, alineada y jerárquica */}
+                {/* Sección Superior: Limpia, alineada y jerárquica con botón de simulación */}
                 <div className="flex flex-col gap-6 w-full">
-                    <div className="flex flex-col items-start text-left gap-2">
-                        {/* Migas de pan / Ubicación */}
-                        <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <span className="text-slate-700 dark:text-zinc-300 font-semibold text-xs sm:text-sm tracking-wide uppercase">
-                                {carrera}
-                            </span>
-                            <Divider orientation="vertical" className="h-4 bg-slate-200 dark:bg-zinc-700 hidden sm:block" />
-                            <Link to="/config" className="hover:opacity-80 transition-opacity" title="Cambiar Plan de Estudios">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
+                        <div className="flex flex-col items-start text-left gap-2">
+                            {/* Migas de pan / Ubicación */}
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <span className="text-slate-700 dark:text-zinc-300 font-semibold text-xs sm:text-sm tracking-wide uppercase">
+                                    {carrera}
+                                </span>
+                                <Divider orientation="vertical" className="h-4 bg-slate-200 dark:bg-zinc-700 hidden sm:block" />
+                                <Link to="/config" className="hover:opacity-80 transition-opacity" title="Cambiar Plan de Estudios">
+                                    <Chip
+                                        size="md"
+                                        variant="flat"
+                                        color="warning"
+                                        className="font-extrabold text-xs sm:text-sm h-7 sm:h-8 px-2.5 sm:px-3 border border-warning/30 shadow-2xs cursor-pointer"
+                                        startContent={<i className="fa-solid fa-scroll text-xs sm:text-sm mr-1" />}
+                                    >
+                                        Plan {plan || '---'}
+                                    </Chip>
+                                </Link>
                                 <Chip
-                                    size="md"
+                                    size="sm"
                                     variant="flat"
-                                    color="warning"
-                                    className="font-extrabold text-xs sm:text-sm h-7 sm:h-8 px-2.5 sm:px-3 border border-warning/30 shadow-2xs cursor-pointer"
-                                    startContent={<i className="fa-solid fa-scroll text-xs sm:text-sm mr-1" />}
+                                    color="success"
+                                    className="font-extrabold text-[11px] h-6 px-2 text-emerald-800 dark:text-emerald-300"
                                 >
-                                    Plan {plan || '---'}
+                                    En curso
                                 </Chip>
-                            </Link>
+                            </div>
+
+                            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground tracking-tight leading-tight">
+                                Mi Progreso Académico
+                            </h1>
+
+                            <p className="text-slate-500 dark:text-zinc-400 font-normal text-xs sm:text-sm lg:text-base max-w-2xl leading-relaxed">
+                                Gestioná tu avance académico oficial. Si querés planificar tus materias futuras, probá el <Link to="/simulador" className="font-bold text-[#005a36] dark:text-emerald-400 underline hover:opacity-80 whitespace-nowrap">Simulador de Avance</Link>.
+                            </p>
                         </div>
 
-                        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-foreground tracking-tight leading-tight">
-                            Mi Progreso Académico
-                        </h1>
-
-                        <p className="text-slate-500 dark:text-zinc-400 font-normal text-xs sm:text-sm lg:text-base max-w-3xl leading-relaxed">
-                            Gestioná tu avance académico oficial. Si querés planificar tus materias futuras, probá el <Link to="/simulador" className="font-bold text-[#005a36] dark:text-emerald-400 underline hover:opacity-80 whitespace-nowrap">Simulador de Avance</Link>.
-                        </p>
+                        {/* Botón Destacado Simular cambio de plan (Amarillo institucional) */}
+                        <div className="shrink-0 flex items-center gap-2">
+                            <Button
+                                onPress={() => navigate('/cambio-plan')}
+                                className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-black text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-6 rounded-2xl shadow-xs hover:shadow-md transition-all flex items-center gap-2"
+                                startContent={<i className="fa-solid fa-arrows-rotate text-sm text-slate-900" />}
+                            >
+                                Simular cambio de plan
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Sección Estadísticas: Grilla responisva con tarjetas neutras y limpias */}
@@ -176,8 +199,36 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                     </div>
                 </div>
 
+                {/* Banner Destacado: TU PRÓXIMO PASO */}
+                <div className="p-4 sm:p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/30 dark:via-amber-950/15 border border-[#F5B82E]/40 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs hover:shadow-xs transition-all">
+                    <div className="flex items-start sm:items-center gap-3.5">
+                        <div className="w-11 h-11 rounded-2xl bg-[#F5B82E]/20 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
+                            <i className="fa-solid fa-map-location-dot text-lg" />
+                        </div>
+                        <div className="space-y-0.5">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-400">
+                                TU PRÓXIMO PASO
+                            </span>
+                            <h4 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-zinc-100">
+                                Explorá una nueva posibilidad
+                            </h4>
+                            <p className="text-xs text-slate-600 dark:text-zinc-400">
+                                Simulá cómo impactaría el Plan 17.14 en tu recorrido académico según la Res. HCS 89/2025.
+                            </p>
+                        </div>
+                    </div>
+                    <Button
+                        size="sm"
+                        onPress={() => navigate('/cambio-plan')}
+                        className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-extrabold text-xs px-4 py-2 rounded-xl shrink-0 shadow-2xs self-end sm:self-center"
+                        endContent={<i className="fa-solid fa-arrow-right text-[11px]" />}
+                    >
+                        Iniciar simulación
+                    </Button>
+                </div>
+
                 {/* Materias Progreso (Cards) */}
-                <div className="pt-4">
+                <div className="pt-2">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-2">
                         <div className="flex flex-col gap-1">
                             <p className="text-default-500 text-xs sm:text-sm uppercase tracking-widest font-black">Progresos generales</p>
