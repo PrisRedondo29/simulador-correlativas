@@ -134,7 +134,7 @@ function Inicio() {
 
     return (
         <div className="flex flex-col gap-6 sm:gap-8 py-4 sm:py-8 px-3 sm:px-6 md:px-10 max-w-7xl mx-auto animate-in fade-in duration-300">
-            
+
             {/* 1. Header de Bienvenida & Saludo */}
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
                 <div className="space-y-1">
@@ -142,7 +142,7 @@ function Inicio() {
                         <i className="fa-solid fa-graduation-cap text-xs" /> UNLu Sistemas de Información
                     </div>
                     <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-zinc-50 tracking-tight">
-                        {nombreUsuario ? `¡Hola, ${nombreUsuario}! 👋` : "Portal Estudiantil 🚀"}
+                        {nombreUsuario ? `¡Hola, ${nombreUsuario}! 🐧` : "Portal Estudiantil"}
                     </h1>
                     <p className="text-slate-500 dark:text-zinc-400 text-xs sm:text-sm max-w-xl leading-relaxed">
                         Tu centro de control académico para proyectar cursadas, verificar correlatividades y simular escenarios.
@@ -151,7 +151,7 @@ function Inicio() {
 
                 {/* Micro-Widget de Progreso Rápido o CTA inicial */}
                 {stats.tieneProgreso ? (
-                    <div 
+                    <div
                         onClick={() => navigate('/progreso')}
                         className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-4 shrink-0 group max-w-md"
                     >
@@ -167,12 +167,12 @@ function Inicio() {
                                     Plan {planActivo}
                                 </span>
                             </div>
-                            <Progress 
-                                size="sm" 
-                                value={stats.porcentaje} 
-                                color="success" 
+                            <Progress
+                                size="sm"
+                                value={stats.porcentaje}
+                                color="success"
                                 aria-label="Porcentaje de avance"
-                                className="max-w-md" 
+                                className="max-w-md"
                             />
                         </div>
                         <i className="fa-solid fa-chevron-right text-xs text-slate-400 dark:text-zinc-500 group-hover:text-[#005a36] dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
