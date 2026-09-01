@@ -1,354 +1,334 @@
-import { Button, addToast, useDisclosure } from '@heroui/react'
-import { Card, CardBody, CardHeader } from '@heroui/card'
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import ContactForm from '../components/Shared/ContactForm'
-import TransicionModal from '../components/Progreso/modals/TransicionModal'
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button, Progress } from '@heroui/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 function Inicio() {
-    const navigate = useNavigate()
-    const { isOpen: isTransicionOpen, onOpen: onTransicionOpen, onOpenChange: onTransicionOpenChange } = useDisclosure()
-    const [progresoGlobal, setProgresoGlobal] = useState({})
+    const navigate = useNavigate();
+    const { user, userData } = useAuth();
+    const [progresoGlobal, setProgresoGlobal] = useState({});
+    const [planActivo, setPlanActivo] = useState('17.13');
 
+    // Cargar progreso del almacenamiento local
     useEffect(() => {
         const cargarProgreso = () => {
-            const p1713 = localStorage.getItem('progreso+17.13')
-            const pActivo = localStorage.getItem('plan_activo')
-            const pPlan = pActivo ? localStorage.getItem(`progreso+${pActivo}`) : null
-            const data = p1713 || pPlan
+            const pActivo = localStorage.getItem('plan_activo') || '17.13';
+            setPlanActivo(pActivo);
+            const pPlan = localStorage.getItem(`progreso+${pActivo}`);
+            const p1713 = localStorage.getItem('progreso+17.13');
+            const data = pPlan || p1713;
             if (data) {
                 try {
-                    setProgresoGlobal(JSON.parse(data))
+                    setProgresoGlobal(JSON.parse(data));
                 } catch {
-                    setProgresoGlobal({})
+                    setProgresoGlobal({});
                 }
+            } else {
+                setProgresoGlobal({});
             }
-        }
-        cargarProgreso()
-        window.addEventListener('storage', cargarProgreso)
-        window.addEventListener('progress-hydrated', cargarProgreso)
-        return () => {
-            window.removeEventListener('storage', cargarProgreso)
-            window.removeEventListener('progress-hydrated', cargarProgreso)
-        }
-    }, [])
+        };
 
-    const portalCards = [
+        cargarProgreso();
+        window.addEventListener('storage', cargarProgreso);
+        window.addEventListener('progress-hydrated', cargarProgreso);
+        return () => {
+            window.removeEventListener('storage', cargarProgreso);
+            window.removeEventListener('progress-hydrated', cargarProgreso);
+        };
+    }, []);
+
+    // Calcular estadísticas rápidas del estudiante
+    const stats = useMemo(() => {
+        const values = Object.values(progresoGlobal);
+        const aprobadas = values.filter(v => v === 'Aprobado' || v === 'Promocionado').length;
+        const regulares = values.filter(v => v === 'Regular' || v === 'Cursando').length;
+        const totalEstimado = planActivo === '17.14' ? 36 : 37;
+        const porcentaje = Math.min(100, Math.round((aprobadas / totalEstimado) * 100));
+        return {
+            aprobadas,
+            regulares,
+            porcentaje,
+            tieneProgreso: values.length > 0 && (aprobadas > 0 || regulares > 0)
+        };
+    }, [progresoGlobal, planActivo]);
+
+    // Obtener nombre para el saludo personalizado
+    const nombreUsuario = useMemo(() => {
+        if (userData?.config?.alias) return userData.config.alias;
+        if (user?.displayName) return user.displayName.split(' ')[0];
+        return null;
+    }, [user, userData]);
+
+    // 4 Módulos Core Principales
+    const mainTools = [
         {
-            title: "Cambio de Plan (Res. 89/25)",
-            description: "Verificá con tu avance si te conviene migrar al nuevo Plan 17.14 o esperar",
+            title: "Cambio de Plan",
+            subtitle: "Simulá la migración al nuevo Plan 17.14",
+            tag: "Res. 89/25",
+            badgeColor: "bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-400/40",
             icon: "fa-solid fa-arrows-rotate",
             iconBg: "bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950",
-            titleColor: "text-amber-700 dark:text-amber-300 font-black",
+            borderHover: "hover:border-amber-400 dark:hover:border-amber-500/60",
             path: "/cambio-plan",
-            badge: "NUEVO"
+            highlight: true,
         },
         {
-            title: "Simulador de Avances",
-            description: "Proyectá tu trayectoria académica y explorá distintos escenarios de cursado",
+            title: "Simulador de Avance",
+            subtitle: "Proyectá correlatividades y cuatrimestres",
+            tag: "Estrategia",
+            badgeColor: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-400/30",
             icon: "fa-solid fa-code-branch",
-            iconBg: "bg-[#005a36] text-white",
-            titleColor: "text-[#005a36] dark:text-emerald-400",
+            iconBg: "bg-gradient-to-br from-[#005a36] to-emerald-700 text-white",
+            borderHover: "hover:border-[#005a36]/50 dark:hover:border-emerald-500/60",
             path: "/simulador",
         },
         {
-            title: "Equivalencias",
-            description: "Consultá equivalencias entre materias y carreras dentro de la institución",
-            icon: "fa-solid fa-book-open",
-            iconBg: "bg-[#1e40af] text-white",
-            titleColor: "text-[#1e40af] dark:text-blue-400",
-            path: "/equivalencias",
-        },
-        {
-            title: "Progreso",
-            description: "Visualizá tu avance en la carrera, materias aprobadas y créditos acumulados",
+            title: "Mi Progreso",
+            subtitle: "Materias aprobadas, finales y avance",
+            tag: "Académico",
+            badgeColor: "bg-purple-500/15 text-purple-800 dark:text-purple-300 border-purple-400/30",
             icon: "fa-solid fa-arrow-trend-up",
-            iconBg: "bg-[#7e22ce] text-white",
-            titleColor: "text-[#7e22ce] dark:text-purple-400",
+            iconBg: "bg-gradient-to-br from-[#7e22ce] to-indigo-600 text-white",
+            borderHover: "hover:border-purple-400 dark:hover:border-purple-500/60",
             path: "/progreso",
         },
         {
-            title: "Ayuda / FAQs",
-            description: "Encontrá respuestas a las preguntas más frecuentes y recursos de soporte",
-            icon: "fa-solid fa-circle-question",
-            iconBg: "bg-[#c2410c] text-white",
-            titleColor: "text-[#c2410c] dark:text-amber-500",
-            path: "/como-usar",
-        },
-        {
-            title: "Calendario Académico",
-            description: "Fechas clave, exámenes, inscripciones y eventos institucionales",
-            icon: "fa-solid fa-calendar-days",
-            iconBg: "bg-[#d97706] text-white",
-            titleColor: "text-[#d97706] dark:text-yellow-500",
-            isInfoModal: true,
-        },
-        {
-            title: "Documentos",
-            description: "Certificados, constancias y trámites administrativos en un solo lugar",
-            icon: "fa-solid fa-file-lines",
-            iconBg: "bg-[#991b1b] text-white",
-            titleColor: "text-[#991b1b] dark:text-rose-400",
-            isInfoModal: true,
-        },
-        {
-            title: "Comunidad",
-            description: "Grupos de estudio, foros y recursos colaborativos entre estudiantes",
-            icon: "fa-solid fa-users",
-            iconBg: "bg-[#0e7490] text-white",
-            titleColor: "text-[#0e7490] dark:text-teal-400",
-            path: "https://www.codesunlu.tech/",
-            isExternal: true,
-        },
-        {
-            title: "Configuración",
-            description: "Personalizá tu perfil, notificaciones y preferencias de la plataforma",
-            icon: "fa-solid fa-gear",
-            iconBg: "bg-[#4338ca] text-white",
-            titleColor: "text-[#4338ca] dark:text-indigo-400",
-            path: "/config",
+            title: "Equivalencias",
+            subtitle: "Compará materias entre planes y carreras",
+            tag: "Planes",
+            badgeColor: "bg-blue-500/15 text-blue-800 dark:text-blue-300 border-blue-400/30",
+            icon: "fa-solid fa-book-open",
+            iconBg: "bg-gradient-to-br from-[#1e40af] to-sky-600 text-white",
+            borderHover: "hover:border-blue-400 dark:hover:border-blue-500/60",
+            path: "/equivalencias",
         },
     ];
 
-    const buttonItems = [
-        { name: 'Simular cambio de plan', icon: 'fa-arrows-rotate', path: '/cambio-plan', color: 'warning' },
-        { name: 'Ver mi progreso', icon: 'fa-graduation-cap', path: '/progreso', isDeactivated: false, color: 'primary' },
-        { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador', isDeactivated: false, color: 'secondary' },
-        { name: 'Consultar Equivalencias', icon: 'fa-right-left', path: '/equivalencias', isDeactivated: false, color: 'success' },
-    ]
-
-    const infoItems = [
+    // Recursos secundarios rápidos
+    const quickResources = [
         {
-            title: "Adiós al Laberinto Académico",
-            description: 'Una interfaz gráfica dinámica reemplaza los PDFs estáticos, mostrando el impacto instantáneo de escenarios "What-If" en futuros semestres. Navega tu plan de estudios de forma visual e intuitiva.',
-            icon: "fa-solid fa-sitemap text-[#005a36]",
-            color: "bg-background border-slate-200/80 hover:border-emerald-500/40"
+            title: "Guía y Tutoriales",
+            desc: "Cómo usar el simulador paso a paso",
+            icon: "fa-solid fa-circle-question",
+            iconColor: "text-amber-600 dark:text-amber-400",
+            path: "/como-usar",
+            isExternal: false
         },
         {
-            title: "Automatización de Correlativas",
-            description: "Un motor inteligente gestiona automáticamente la cadena compleja de requisitos previos con actualizaciones en cascada. Olvídate de verificar manualmente cada correlatividad.",
-            icon: "fa-solid fa-gears text-emerald-600",
-            color: "bg-background border-slate-200/80 hover:border-emerald-500/40"
+            title: "Centro de Estudiantes (CODES)",
+            desc: "Comunidad, dudas y acompañamiento",
+            icon: "fa-solid fa-users",
+            iconColor: "text-emerald-600 dark:text-emerald-400",
+            path: "https://www.codesunlu.tech/",
+            isExternal: true
         },
         {
-            title: "Persistencia sin Logins",
-            description: "Experiencia de usuario rápida usando el almacenamiento local del navegador. Tu progreso se mantiene guardado incluso si cierras la pestaña, sin necesidad de cuentas complejas.",
-            icon: "fa-solid fa-floppy-disk text-amber-600",
-            color: "bg-background border-slate-200/80 hover:border-amber-500/40"
+            title: "Configuración & Respaldos",
+            desc: "Sincronización en la nube y preferencias",
+            icon: "fa-solid fa-gear",
+            iconColor: "text-indigo-600 dark:text-indigo-400",
+            path: "/config",
+            isExternal: false
         }
-    ]
-
-    const handleClick = (item) => {
-        if (item.isDeactivated) {
-            addToast({ title: "En progreso", description: "Esta página aún no está disponible", color: "warning" })
-        } else {
-            navigate(item.path)
-        }
-    }
-
-    const handlePortalClick = (card) => {
-        if (card.isExternal) {
-            window.open(card.path, '_blank', 'noopener,noreferrer');
-        } else if (card.isInfoModal) {
-            addToast({ title: card.title, description: "Próximamente disponible en el portal estudiantil.", color: "primary" });
-        } else if (card.path) {
-            navigate(card.path);
-        }
-    }
+    ];
 
     return (
-        <div className="flex flex-col gap-12 md:gap-16 py-6 md:py-10 px-4 md:px-10 max-w-7xl mx-auto animate-in fade-in duration-500 overflow-hidden">
+        <div className="flex flex-col gap-6 sm:gap-8 py-4 sm:py-8 px-3 sm:px-6 md:px-10 max-w-7xl mx-auto animate-in fade-in duration-300">
             
-            {/* Banner Destacado Superior: Transición de Plan Res. HCS 89/2025 */}
-            <section className="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent dark:from-amber-950/40 dark:via-amber-950/20 border-2 border-[#F5B82E] rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 shadow-sm">
-                <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-md">
-                        <i className="fa-solid fa-scale-balanced text-2xl" />
+            {/* 1. Header de Bienvenida & Saludo */}
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 pt-1">
+                <div className="space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#005a36] dark:text-emerald-400 font-bold text-[11px] uppercase tracking-wider border border-emerald-200/50">
+                        <i className="fa-solid fa-graduation-cap text-xs" /> UNLu Sistemas de Información
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 dark:text-zinc-50 tracking-tight">
+                        {nombreUsuario ? `¡Hola, ${nombreUsuario}! 👋` : "Portal Estudiantil 🚀"}
+                    </h1>
+                    <p className="text-slate-500 dark:text-zinc-400 text-xs sm:text-sm max-w-xl leading-relaxed">
+                        Tu centro de control académico para proyectar cursadas, verificar correlatividades y simular escenarios.
+                    </p>
+                </div>
+
+                {/* Micro-Widget de Progreso Rápido o CTA inicial */}
+                {stats.tieneProgreso ? (
+                    <div 
+                        onClick={() => navigate('/progreso')}
+                        className="bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-4 shrink-0 group max-w-md"
+                    >
+                        <div className="w-11 h-11 rounded-xl bg-emerald-500/10 dark:bg-emerald-950/60 text-[#005a36] dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                            <i className="fa-solid fa-chart-pie text-lg" />
+                        </div>
+                        <div className="flex-1 min-w-[170px]">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="text-xs font-bold text-slate-700 dark:text-zinc-200">
+                                    {stats.aprobadas} materias ({stats.porcentaje}%)
+                                </span>
+                                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                    Plan {planActivo}
+                                </span>
+                            </div>
+                            <Progress 
+                                size="sm" 
+                                value={stats.porcentaje} 
+                                color="success" 
+                                aria-label="Porcentaje de avance"
+                                className="max-w-md" 
+                            />
+                        </div>
+                        <i className="fa-solid fa-chevron-right text-xs text-slate-400 dark:text-zinc-500 group-hover:text-[#005a36] dark:group-hover:text-emerald-400 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                ) : (
+                    <Button
+                        size="md"
+                        variant="flat"
+                        color="success"
+                        onPress={() => navigate('/progreso')}
+                        className="font-bold text-xs sm:text-sm self-start md:self-center shrink-0 rounded-xl"
+                        startContent={<i className="fa-solid fa-list-check" />}
+                    >
+                        Cargar mis materias aprobadas
+                    </Button>
+                )}
+            </header>
+
+            {/* 2. Banner Destacado Oficial: Transición de Plan Res. HCS 89/2025 */}
+            <section className="bg-gradient-to-r from-amber-500/15 via-amber-500/5 to-transparent dark:from-amber-950/40 dark:via-amber-950/20 border-2 border-[#F5B82E] rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 sm:gap-6 shadow-xs relative overflow-hidden">
+                <div className="flex items-start gap-3.5 sm:gap-4">
+                    <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950 flex items-center justify-center shrink-0 shadow-sm mt-0.5 sm:mt-0">
+                        <i className="fa-solid fa-scale-balanced text-xl sm:text-2xl" />
                     </div>
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                            <span className="text-[11px] font-black uppercase tracking-wider bg-[#F5B82E] text-slate-950 px-2 py-0.5 rounded-full">
+                            <span className="text-[10px] font-black uppercase tracking-wider bg-[#F5B82E] text-slate-950 px-2 py-0.5 rounded-full">
                                 OFICIAL UNLu
                             </span>
-                            <span className="text-xs font-bold text-slate-500 dark:text-zinc-400">Resolución HCS 89/2025</span>
+                            <span className="text-[11px] font-bold text-slate-600 dark:text-zinc-400">Resolución HCS 89/2025</span>
                         </div>
-                        <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-zinc-50 tracking-tight">
-                            ¿Te conviene cambiar de plan en este momento?
+                        <h2 className="text-base sm:text-xl md:text-2xl font-black text-slate-900 dark:text-zinc-50 tracking-tight leading-snug">
+                            ¿Te conviene cambiar al nuevo Plan 17.14?
                         </h2>
                         <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-300 max-w-2xl leading-relaxed">
-                            Analizá con tu progreso real si el nuevo Plan 17.14 tiene oferta inmediata para tu avance o si te conviene quedarte en el Plan 17.13 para evitar baches de cursada.
+                            Analizá con tu avance real si el nuevo plan tiene oferta inmediata o si te conviene mantener el Plan 17.13 para evitar baches.
                         </p>
                     </div>
                 </div>
                 <Button
                     onPress={() => navigate('/cambio-plan')}
-                    className="bg-[#005a36] hover:bg-[#004a2c] text-white font-black text-xs sm:text-sm px-6 py-6 rounded-2xl shadow-md hover:shadow-lg transition-all shrink-0 self-stretch md:self-center flex items-center justify-center gap-2"
-                    startContent={<i className="fa-solid fa-arrows-rotate text-sm text-[#F5B82E]" />}
+                    className="bg-[#005a36] hover:bg-[#004a2c] text-white font-black text-xs sm:text-sm px-5 py-5 sm:px-6 sm:py-6 rounded-xl sm:rounded-2xl shadow-sm hover:shadow-md transition-all shrink-0 self-stretch md:self-center flex items-center justify-center gap-2"
+                    startContent={<i className="fa-solid fa-arrows-rotate text-xs sm:text-sm text-[#F5B82E]" />}
                 >
-                    Simular Transición de Plan
+                    Simular Cambio de Plan
                 </Button>
             </section>
 
-            {/* Sección Portal Estudiantil - Grid de Accesos Rápidos */}
-            <section className="flex flex-col gap-6 w-full">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-[#005a36] dark:text-emerald-400 tracking-tight">
-                        ¿A dónde querés ir hoy?
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base font-medium">
-                        Seleccioná una sección para comenzar
-                    </p>
+            {/* 3. Módulos Principales (Grid 2x2 en móviles / 4 columnas en desktop) */}
+            <section className="flex flex-col gap-3 sm:gap-4 w-full">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100 tracking-tight flex items-center gap-2">
+                        <span>Herramientas Académicas</span>
+                    </h2>
+                    <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium hidden sm:inline">
+                        Acceso directo a tus simulaciones
+                    </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {portalCards.map((card, idx) => (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    {mainTools.map((tool, idx) => (
                         <div
                             key={idx}
-                            onClick={() => handlePortalClick(card)}
-                            className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 hover:border-[#005a36]/40 dark:hover:border-emerald-500/40 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all duration-300 cursor-pointer flex flex-col justify-between group min-h-[160px] relative overflow-hidden"
+                            onClick={() => navigate(tool.path)}
+                            className={`bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 ${tool.borderHover} rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col justify-between group relative overflow-hidden min-h-[140px] sm:min-h-[160px]`}
                         >
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-2.5 sm:gap-3">
                                 <div className="flex items-center justify-between">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-xs ${card.iconBg} group-hover:scale-105 transition-transform duration-300`}>
-                                        <i className={`${card.icon} text-lg`} />
+                                    <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center shadow-xs ${tool.iconBg} group-hover:scale-105 transition-transform duration-200`}>
+                                        <i className={`${tool.icon} text-base sm:text-lg`} />
                                     </div>
+                                    <span className={`text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full border ${tool.badgeColor}`}>
+                                        {tool.tag}
+                                    </span>
                                 </div>
-                                <h3 className={`font-bold text-base ${card.titleColor} leading-snug`}>
-                                    {card.title}
-                                </h3>
-                                <p className="text-slate-500 dark:text-zinc-400 text-xs leading-relaxed font-normal">
-                                    {card.description}
+                                <div>
+                                    <h3 className="font-black text-sm sm:text-base text-slate-900 dark:text-zinc-100 leading-snug group-hover:text-[#005a36] dark:group-hover:text-emerald-400 transition-colors">
+                                        {tool.title}
+                                    </h3>
+                                    <p className="text-slate-500 dark:text-zinc-400 text-[11px] sm:text-xs leading-relaxed font-normal mt-1 line-clamp-2">
+                                        {tool.subtitle}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 mt-auto border-t border-slate-100 dark:border-zinc-800/80">
+                                <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 dark:text-zinc-500 group-hover:text-[#005a36] dark:group-hover:text-emerald-400 transition-colors">
+                                    Abrir
+                                </span>
+                                <i className="fa-solid fa-arrow-right text-[10px] sm:text-xs text-slate-400 dark:text-zinc-500 group-hover:text-[#005a36] dark:group-hover:text-emerald-400 group-hover:translate-x-1 transition-all" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            {/* 4. Recursos y Enlaces Rápidos (3 Tarjetas Horizontales Limpias) */}
+            <section className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 w-full">
+                {quickResources.map((res, idx) => (
+                    <div
+                        key={idx}
+                        onClick={() => {
+                            if (res.isExternal) {
+                                window.open(res.path, '_blank', 'noopener,noreferrer');
+                            } else {
+                                navigate(res.path);
+                            }
+                        }}
+                        className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 rounded-2xl p-3.5 sm:p-4 shadow-xs hover:shadow-sm transition-all cursor-pointer flex items-center justify-between gap-3 group"
+                    >
+                        <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                <i className={`${res.icon} text-base ${res.iconColor}`} />
+                            </div>
+                            <div className="min-w-0">
+                                <h4 className="font-bold text-xs sm:text-sm text-slate-800 dark:text-zinc-200 truncate group-hover:text-[#005a36] dark:group-hover:text-emerald-400 transition-colors">
+                                    {res.title}
+                                </h4>
+                                <p className="text-[11px] text-slate-400 dark:text-zinc-400 truncate">
+                                    {res.desc}
                                 </p>
                             </div>
-                            <div className="flex justify-end mt-3 pt-2">
-                                <i className="fa-solid fa-chevron-right text-slate-300 dark:text-zinc-600 text-xs group-hover:text-[#005a36] dark:group-hover:text-emerald-400 group-hover:translate-x-1 transition-all duration-200" />
-                            </div>
                         </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Hero Section Banner */}
-            <section className="bg-linear-to-br from-[#005a36] to-[#004227] text-white rounded-3xl p-6 sm:p-10 shadow-lg relative overflow-hidden flex flex-col items-center text-center gap-6">
-                <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-emerald-400/10 rounded-full blur-2xl pointer-events-none" />
-
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-emerald-200 text-xs font-semibold uppercase tracking-wider">
-                    <i className="fa-solid fa-graduation-cap" /> UNLu Sistemas de Información
-                </div>
-
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight max-w-4xl leading-tight">
-                    Planificá tu carrera en Sistemas <br className="hidden md:block" />
-                    <span className="text-emerald-300">sin errores ni sorpresas</span>
-                </h2>
-                
-                <p className="text-base md:text-xl text-white/85 max-w-2xl leading-relaxed">
-                    Visualizá tu progreso, simula correlatividades automáticamente y tomá decisiones informadas sobre tu futuro académico.
-                </p>
-
-                <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-2 w-full">
-                    {buttonItems.map((item, index) => (
-                        <Button
-                            key={index}
-                            color={item.isDeactivated ? "default" : item.color}
-                            variant={index === 0 ? "solid" : "flat"}
-                            size="lg"
-                            className={`font-bold rounded-xl px-6 sm:px-8 shadow-sm ${index === 0 ? "bg-white text-[#005a36] hover:bg-emerald-50" : "bg-white/15 text-white hover:bg-white/25 border border-white/20"} ${item.isDeactivated ? "opacity-60" : "hover:scale-105 transition-transform"}`}
-                            onPress={() => handleClick(item)}
-                            startContent={<i className={`fa-solid ${item.icon}`}></i>}
-                        >
-                            {item.name}
-                        </Button>
-                    ))}
-                </div>
-            </section>
-
-            {/* Features Section */}
-            <section className="flex flex-col gap-8 w-full">
-                <div className="text-center space-y-2">
-                    <div className="inline-block px-3 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-[#005a36] dark:text-emerald-400 font-bold text-xs uppercase tracking-widest rounded-md border border-emerald-200/50">
-                        Características
+                        <i className={`text-xs text-slate-400 dark:text-zinc-500 group-hover:translate-x-0.5 transition-all ${res.isExternal ? 'fa-solid fa-arrow-up-right-from-square' : 'fa-solid fa-chevron-right'}`} />
                     </div>
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
-                        ¿Cómo te ayuda esta herramienta?
-                    </h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-                        Resolvemos los problemas más comunes que enfrentan los estudiantes al planificar su carrera universitaria.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {infoItems.map((item, index) => (
-                        <Card
-                            key={index}
-                            className={`bg-white dark:bg-zinc-900 shadow-xs border border-slate-200/80 dark:border-zinc-800 rounded-2xl transition-all duration-300 hover:-translate-y-1.5 hover:shadow-md group ${item.color}`}
-                        >
-                            <CardHeader className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 px-6 pt-6 pb-2">
-                                <div className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center bg-slate-50 dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700 group-hover:scale-110 transition-transform duration-300">
-                                    <i className={`${item.icon} text-xl`}></i>
-                                </div>
-                                <h3 className="text-lg font-bold text-foreground leading-tight">
-                                    {item.title}
-                                </h3>
-                            </CardHeader>
-                            <CardBody className="px-6 pb-6 pt-2 text-slate-500 dark:text-zinc-400 text-sm leading-relaxed font-normal">
-                                {item.description}
-                            </CardBody>
-                        </Card>
-                    ))}
-                </div>
+                ))}
             </section>
 
-            {/* Promo CODES Section */}
-            <section className="flex flex-col items-center w-full">
-                <div className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 rounded-3xl p-6 sm:p-8 flex flex-col md:flex-row items-center gap-6 max-w-5xl w-full shadow-xs hover:shadow-md transition-all relative overflow-hidden group">
-                    <div className="shrink-0 bg-slate-50 dark:bg-zinc-800 p-3 rounded-2xl shadow-xs border border-slate-200 dark:border-zinc-700 z-10 transform group-hover:scale-105 transition-transform duration-500">
-                        <img src="/imgs/logo-codes.png" alt="Logo CODES" className="w-16 h-16 sm:w-20 sm:h-20 object-contain" />
+            {/* 5. Banner Compacto de Soporte / Reportar Errores (Reemplaza el formulario gigante) */}
+            <section className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800">
+                <div className="flex items-center gap-4">
+                    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                        <i className="fa-solid fa-comments text-lg sm:text-xl" />
                     </div>
-                    <div className="flex-1 text-center md:text-left space-y-1.5 z-10">
-                        <div className="inline-block text-[10px] font-bold text-[#005a36] dark:text-emerald-400 uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/40">
-                            Comunidad Estudiantil
-                        </div>
-                        <h3 className="text-xl sm:text-2xl font-bold text-foreground">Centro de Estudiantes (CODES)</h3>
-                        <p className="text-slate-500 dark:text-zinc-400 text-sm leading-relaxed">
-                            ¿Tenés dudas sobre correlativas, inscripciones o trámites? ¡Acercate al CODES! El centro de estudiantes de Sistemas está para ayudarte y guiarte en tu camino universitario.
+                    <div className="space-y-0.5">
+                        <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                            ¿Dudas con una correlativa o sugerencias de mejora?
+                        </h3>
+                        <p className="text-xs sm:text-sm text-slate-300 max-w-xl font-normal">
+                            Reportá errores en el plan o envianos tu mensaje a través del formulario de soporte.
                         </p>
                     </div>
-                    <div className="z-10 shrink-0">
-                        <Button
-                            as="a"
-                            href="https://www.codesunlu.tech/"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            color="primary"
-                            variant="shadow"
-                            className="font-bold rounded-xl px-6 h-11 shadow-sm hover:scale-105 transition-transform"
-                            endContent={<i className="fa-solid fa-arrow-up-right-from-square text-xs ml-1" />}
-                        >
-                            Visitar Página
-                        </Button>
-                    </div>
+                </div>
+                <div className="flex items-center gap-2 self-stretch sm:self-auto shrink-0">
+                    <Button
+                        onPress={() => navigate('/contacto')}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm px-5 h-10 sm:h-11 rounded-xl shadow-sm hover:scale-102 transition-transform flex-1 sm:flex-initial"
+                        endContent={<i className="fa-solid fa-paper-plane text-xs" />}
+                    >
+                        Reportar / Contacto
+                    </Button>
                 </div>
             </section>
 
-            {/* Contact Form Section */}
-            <section className="flex flex-col items-center gap-8 mb-6 w-full">
-                <div className="text-center space-y-2">
-                    <div className="inline-block px-3 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-[#005a36] dark:text-emerald-400 font-bold text-xs uppercase tracking-widest rounded-md border border-emerald-200/50">
-                        Soporte y Consultas
-                    </div>
-                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-foreground tracking-tight">
-                        ¿Dudas, sugerencias o problemas?
-                    </h2>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-                        Ayudanos a mejorar la herramienta o reportá un error enviando un mensaje directo.
-                    </p>
-                </div>
-
-                <ContactForm />
-            </section>
         </div>
-    )
+    );
 }
 
-export default Inicio
+export default Inicio;
