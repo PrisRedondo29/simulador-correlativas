@@ -40,51 +40,6 @@ const isSessionExpired = () => {
     }
 };
 
-/**
- * Sobrescribe el localStorage local con los datos de la nube.
- * Dispara un evento 'progress-hydrated' para que la UI reaccione y se actualice.
- * @param {object} cloudData - Los datos del documento del usuario en Firestore.
- */
-const hydrateLocalData = (cloudData) => {
-    let hasChanged = false;
-
-    if (cloudData?.progreso) {
-        for (const [plan, progreso] of Object.entries(cloudData.progreso)) {
-            const key = `progreso+${plan}`;
-            const current = localStorage.getItem(key);
-            const next = JSON.stringify(progreso);
-            if (current !== next) {
-                localStorage.setItem(key, next);
-                hasChanged = true;
-            }
-        }
-    }
-
-    if (cloudData?.progresoDetalles) {
-        for (const [plan, detalles] of Object.entries(cloudData.progresoDetalles)) {
-            const key = `detalles_progreso+${plan}`;
-            const current = localStorage.getItem(key);
-            const next = JSON.stringify(detalles);
-            if (current !== next) {
-                localStorage.setItem(key, next);
-                hasChanged = true;
-            }
-        }
-    }
-    
-    if (cloudData?.config?.tema) {
-        const current = localStorage.getItem('theme');
-        if (current !== cloudData.config.tema) {
-            localStorage.setItem('theme', cloudData.config.tema);
-            window.dispatchEvent(new Event('storage'));
-        }
-    }
-    
-    // Solo disparamos el evento si realmente hubo cambios, para evitar re-renders innecesarios.
-    if (hasChanged) {
-        window.dispatchEvent(new Event('progress-hydrated'));
-    }
-};
 
 // ============================================================================
 // CONTEXTO
@@ -216,7 +171,7 @@ export function AuthProvider({ children }) {
         if (!user) return;
         try {
             const [cloudData, role] = await Promise.all([
-                getUserData(user.uid),
+                downloadAllProgress(user.uid),
                 getUserRole(user.uid)
             ]);
             if (cloudData) setUserData(cloudData);

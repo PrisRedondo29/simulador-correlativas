@@ -64,7 +64,12 @@ export const downloadAllProgress = async (uid) => {
 
         if (import.meta.env.DEV) console.log("🛠️ Progreso procesado para sincronización:", { progreso, detalles });
 
-        if (Object.keys(progreso).length === 0) {
+        const hasAnyData = Object.keys(progreso).length > 0 || 
+                           Object.keys(detalles).length > 0 || 
+                           Object.keys(simulaciones).length > 0 || 
+                           cloudData.config;
+
+        if (!hasAnyData) {
             return false;
         }
 
@@ -77,15 +82,21 @@ export const downloadAllProgress = async (uid) => {
         
         // Escribimos los datos de la nube en el localStorage.
         for (const [plan, data] of Object.entries(progreso)) {
-            localStorage.setItem(`progreso+${plan}`, JSON.stringify(data));
+            if (data && typeof data === 'object') {
+                localStorage.setItem(`progreso+${plan}`, JSON.stringify(data));
+            }
         }
 
         for (const [plan, data] of Object.entries(detalles)) {
-            localStorage.setItem(`detalles_progreso+${plan}`, JSON.stringify(data));
+            if (data && typeof data === 'object') {
+                localStorage.setItem(`detalles_progreso+${plan}`, JSON.stringify(data));
+            }
         }
 
         for (const [plan, data] of Object.entries(simulaciones)) {
-            localStorage.setItem(`simulacion+${plan}`, JSON.stringify(data));
+            if (data) {
+                localStorage.setItem(`simulacion+${plan}`, JSON.stringify(data));
+            }
         }
 
         if (cloudData.config?.tema) {
