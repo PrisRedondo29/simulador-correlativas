@@ -48,19 +48,89 @@ export default function InteractiveMateriaDemo() {
     };
 
     return (
-        <div className="flex flex-col gap-8 my-10 animate-in fade-in zoom-in duration-700">
-            <div className="flex flex-col items-center text-center max-w-2xl mx-auto mb-4">
-                <Chip color="secondary" variant="dot" className="mb-2 font-bold uppercase">Simulador Interactivo</Chip>
-                <h3 className="text-2xl font-black text-foreground">¡Probá la tarjeta vos mismo!</h3>
-                <p className="text-foreground/60 text-sm">
-                    Interactuá con esta materia de ejemplo para entender cómo funcionan los estados, los avisos y el panel de detalles.
-                </p>
+        <div className="flex flex-col gap-6 my-6">
+            {/* Barra de Presets Rápidos */}
+            <div className="flex flex-wrap items-center justify-center gap-2 p-3 bg-default-100 dark:bg-default-50/50 rounded-2xl border border-default-200">
+                <span className="text-xs font-black text-foreground/60 uppercase tracking-wider mr-2 flex items-center gap-1.5">
+                    <i className="fa-solid fa-wand-magic-sparkles text-[#F5B82E]" />
+                    Prueba rápida:
+                </span>
+                <Button
+                    size="sm"
+                    variant={estado === 'Aprobado' ? 'solid' : 'flat'}
+                    color="success"
+                    onPress={() => {
+                        setEstado('Aprobado');
+                        setDetalles({ fechaRegularidad: { anio: 2024, cuatrimestre: 1 }, notaFinal: 9 });
+                    }}
+                    className="font-bold text-xs"
+                    startContent={<i className="fa-solid fa-check" />}
+                >
+                    Aprobada (Nota 9)
+                </Button>
+                <Button
+                    size="sm"
+                    variant={estado === 'Promocionado' ? 'solid' : 'flat'}
+                    color="secondary"
+                    onPress={() => {
+                        setEstado('Promocionado');
+                        setDetalles({ fechaRegularidad: { anio: 2024, cuatrimestre: 2 }, notaFinal: 10 });
+                    }}
+                    className="font-bold text-xs"
+                    startContent={<i className="fa-solid fa-star" />}
+                >
+                    Promocionada
+                </Button>
+                <Button
+                    size="sm"
+                    variant={estado === 'Regular' && detalles?.fechaRegularidad ? 'solid' : 'flat'}
+                    color="warning"
+                    onPress={() => {
+                        setEstado('Regular');
+                        setDetalles({ fechaRegularidad: { anio: 2023, cuatrimestre: 2 }, notaCursada: 7 });
+                    }}
+                    className="font-bold text-xs text-slate-900"
+                    startContent={<i className="fa-solid fa-clock" />}
+                >
+                    Regular (Con Vencimiento)
+                </Button>
+                <Button
+                    size="sm"
+                    variant={estado === 'Regular' && !detalles?.fechaRegularidad ? 'solid' : 'flat'}
+                    color="danger"
+                    onPress={() => {
+                        setEstado('Regular');
+                        setDetalles({});
+                    }}
+                    className="font-bold text-xs"
+                    startContent={<i className="fa-solid fa-triangle-exclamation" />}
+                >
+                    Falta Info
+                </Button>
+                <Button
+                    size="sm"
+                    variant="light"
+                    onPress={() => handleCambioEstado('Reiniciar')}
+                    className="font-bold text-xs text-foreground/60 hover:text-foreground"
+                    startContent={<i className="fa-solid fa-rotate-left" />}
+                >
+                    Reiniciar
+                </Button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* Columna de la Tarjeta (Demo) */}
-                <div className="lg:col-span-5 flex justify-center sticky top-24">
-                    <div className="w-full max-w-[320px]">
+                <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-default-50 dark:bg-default-100/40 rounded-3xl border border-default-200">
+                    <div className="text-center mb-4">
+                        <span className="text-[11px] font-bold text-foreground/50 uppercase tracking-wider block">
+                            Tarjeta interactiva de prueba
+                        </span>
+                        <p className="text-xs text-foreground/70 mt-0.5">
+                            Tocá la tarjeta para abrir el menú o los 3 puntos para ver detalles.
+                        </p>
+                    </div>
+
+                    <div className="w-full max-w-[300px]">
                         <MateriaCard
                             materia={materiaDemo}
                             estado={estado}
@@ -68,72 +138,69 @@ export default function InteractiveMateriaDemo() {
                             actualizarEstados={handleCambioEstado}
                             abrirInfo={() => setIsDetailOpen(true)}
                         />
-                        <div className="mt-4 flex justify-center">
-                            <i className="fa-solid fa-arrow-pointer text-secondary animate-bounce text-2xl" />
-                        </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-foreground/60 bg-background px-3 py-1.5 rounded-full border border-default-200 shadow-2xs">
+                        <i className="fa-solid fa-hand-pointer text-[#005a36] dark:text-emerald-400 animate-bounce" />
+                        <span>Estado actual: <b className="text-foreground">{estado}</b></span>
                     </div>
                 </div>
 
                 {/* Columna de Explicación */}
-                <div className="lg:col-span-7 space-y-6">
-                    <section>
-                        <h4 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
-                            <i className="fa-solid fa-list-check text-primary" />
+                <div className="lg:col-span-7 space-y-4">
+                    <section className="bg-background p-5 rounded-2xl border border-default-200 shadow-xs">
+                        <h4 className="text-sm font-black text-foreground flex items-center gap-2 mb-2">
+                            <i className="fa-solid fa-list-check text-[#005a36] dark:text-emerald-400" />
                             Gestión de Estados
                         </h4>
-                        <p className="text-sm text-foreground/70 leading-relaxed">
-                            Al hacer <b>clic en la tarjeta</b>, se abrirá un menú con los estados posibles. Al seleccionar uno, la tarjeta cambiará su color e ícono.
+                        <p className="text-xs text-foreground/70 leading-relaxed">
+                            Al hacer <b>clic sobre la tarjeta</b> se despliega el menú de estados: <b>Libre</b>, <b>Regular</b>, <b>Aprobada</b> o <b>Promocionada</b>. Cada uno actualiza instantáneamente el color de la tarjeta y el porcentaje de tu carrera.
                         </p>
                     </section>
 
-                    <section className="bg-default-100 p-5 rounded-3xl border border-default-200">
-                        <h4 className="text-sm font-black text-default-600 uppercase tracking-widest mb-4">Guía de Indicadores</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                    <Chip size="sm" color="danger" variant="flat" className="animate-pulse">Falta Info</Chip>
-                                    <span className="text-sm font-bold text-foreground/80">Vacío total</span>
+                    <section className="bg-default-100/60 p-5 rounded-2xl border border-default-200">
+                        <h4 className="text-xs font-black text-foreground/80 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <i className="fa-solid fa-tags text-amber-500" />
+                            Guía de Indicadores Automáticos
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="p-3 bg-background rounded-xl border border-default-200/80">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Chip size="sm" color="danger" variant="flat" className="text-[10px] font-bold">Falta Info</Chip>
                                 </div>
-                                <p className="text-[12px] text-foreground/60 leading-tight">Aparece en Regular si no cargaste ni año ni nota.</p>
+                                <p className="text-[11px] text-foreground/60 leading-tight">Aparece en Regular si aún no cargaste año o nota de cursada.</p>
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                    <Chip size="sm" color="danger" variant="flat" className="animate-pulse">Falta Nota</Chip>
-                                    <span className="text-xs font-bold text-foreground/80">Nota pendiente</span>
+                            <div className="p-3 bg-background rounded-xl border border-default-200/80">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Chip size="sm" color="warning" variant="dot" className="text-[10px] font-bold">Vence: Fecha</Chip>
                                 </div>
-                                <p className="text-[12px] text-foreground/60 leading-tight">Falta la nota de cursada o el examen final.</p>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-2">
-                                    <Chip size="sm" color="warning" variant="dot">Vence: Jul 2027</Chip>
-                                </div>
-                                <p className="text-[12px] text-foreground/60 leading-tight">El sistema calcula automáticamente cuándo vence tu regularidad por tiempo.</p>
+                                <p className="text-[11px] text-foreground/60 leading-tight">El sistema proyecta cuándo expira tu regularidad para que no se te pase la fecha.</p>
                             </div>
                         </div>
                     </section>
 
-                    <section>
-                        <h4 className="text-lg font-bold text-foreground flex items-center gap-2 mb-3">
-                            <i className="fa-solid fa-circle-info text-primary" />
-                            Panel de Detalles
+                    <section className="bg-background p-5 rounded-2xl border border-default-200 shadow-xs">
+                        <h4 className="text-sm font-black text-foreground flex items-center gap-2 mb-2">
+                            <i className="fa-solid fa-circle-info text-[#005a36] dark:text-emerald-400" />
+                            Panel de Detalles Completo
                         </h4>
-                        <p className="text-sm text-foreground/70 leading-relaxed mb-4">
-                            Dentro del panel de detalles (botón "Detalles"), podrás gestionar el historial completo:
+                        <p className="text-xs text-foreground/70 leading-relaxed mb-3">
+                            Al presionar el botón de información en la tarjeta podés registrar:
                         </p>
-                        <ul className="space-y-3">
-                            <li className="flex gap-3 text-xs text-foreground/70">
-                                <i className="fa-solid fa-calendar-check text-secondary shrink-0" />
-                                <span><b>Año y Nota:</b> Registrá cuándo regularizaste/aprobaste y con qué nota.</span>
-                            </li>
-                            <li className="flex gap-3 text-xs text-foreground/70">
-                                <i className="fa-solid fa-list-ol text-secondary shrink-0" />
-                                <span><b>Historial:</b> Llevá la cuenta de tus intentos de final (fechas y notas).</span>
-                            </li>
-                            <li className="flex gap-3 text-xs text-foreground/70">
-                                <i className="fa-solid fa-diagram-project text-secondary shrink-0" />
-                                <span><b>Correlativas:</b> Revisá qué necesitás para cursar (solo visible si no está finalizada).</span>
-                            </li>
-                        </ul>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                            <div className="flex items-center gap-2 p-2 bg-default-100/50 rounded-lg">
+                                <i className="fa-solid fa-calendar-check text-[#005a36] dark:text-emerald-400 text-xs shrink-0" />
+                                <span className="text-[11px] font-semibold text-foreground/80">Año y Notas</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 bg-default-100/50 rounded-lg">
+                                <i className="fa-solid fa-list-ol text-amber-500 text-xs shrink-0" />
+                                <span className="text-[11px] font-semibold text-foreground/80">Intentos de final</span>
+                            </div>
+                            <div className="flex items-center gap-2 p-2 bg-default-100/50 rounded-lg">
+                                <i className="fa-solid fa-diagram-project text-indigo-500 text-xs shrink-0" />
+                                <span className="text-[11px] font-semibold text-foreground/80">Correlativas</span>
+                            </div>
+                        </div>
                     </section>
                 </div>
             </div>
