@@ -8,43 +8,37 @@ export const useEquivalencias = () => {
     const planViejo = useMemo(() => planService.getPlanByNumber("17.13"), []);
     const planNuevo = useMemo(() => planService.getPlanByNumber("17.14"), []);
 
-    const [progresoSimulado, setProgresoSimulado] = useState({});
-    const [modoEdicion, setModoEdicion] = useState(false);
+    const [progreso, setProgreso] = useState(() => {
+        const storageKey = "progreso+17.13";
+        const storageData = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+        if (storageData) {
+            try {
+                return JSON.parse(storageData);
+            } catch {
+                // fallback
+            }
+        }
+        const initial = {};
+        planViejo?.materias.forEach(m => {
+            initial[m.codigo] = m.tesis ? materiasUtils.bloquear : materiasUtils.estadosPosibles[0];
+        });
+        return initial;
+    });
+
     const [filtro, setFiltro] = useState('todas');
     const [busqueda, setBusqueda] = useState('');
 
-    const cargarProgresoReal = useCallback(() => {
+    useEffect(() => {
         const storageKey = "progreso+17.13";
         const storageData = localStorage.getItem(storageKey);
-
-        let progreso = {};
         if (storageData) {
-            progreso = JSON.parse(storageData);
-        } else {
-            planViejo?.materias.forEach(m => {
-                progreso[m.codigo] = m.tesis ? materiasUtils.bloquear : materiasUtils.estadosPosibles[0];
-            });
+            try {
+                setProgreso(JSON.parse(storageData));
+            } catch {
+                // fallback
+            }
         }
-        setProgresoSimulado(progreso);
-        addToast({ title: "Progreso sincronizado", description: "Datos reales cargados correctamente.", color: "success" });
     }, [planViejo]);
-
-    useEffect(() => {
-        cargarProgresoReal();
-    }, [cargarProgresoReal]);
-
-    const guardarSimulacion = () => {
-        localStorage.setItem(`simulacion+equivalencias+17.13`, JSON.stringify(progresoSimulado));
-        addToast({ title: "Simulación guardada", variant: "flat", color: "success" });
-    };
-
-    const cargarSimulacion = () => {
-        const data = localStorage.getItem(`simulacion+equivalencias+17.13`);
-        if (data) {
-            setProgresoSimulado(JSON.parse(data));
-            addToast({ title: "Simulación cargada", variant: "flat", color: "primary" });
-        }
-    };
 
     // NUEVO MOTOR DE MAPEO: Grupos de Equivalencia (Many-to-One y One-to-One)
     const gruposEquivalencia = useMemo(() => {
@@ -103,26 +97,16 @@ export const useEquivalencias = () => {
             
             // Para el filtro de estado, consideramos el estado del grupo (Equivalencia aceptada si TODAS están aprobadas)
             const todasAprobadas = grupo.materiasViejas.length > 0 && 
-                grupo.materiasViejas.every(m => progresoSimulado[m.codigo] === materiasUtils.estadosPosibles[2]);
+                grupo.materiasViejas.every(m => progreso[m.codigo] === materiasUtils.estadosPosibles[2]);
             
             if (filtro === 'aprobadas') return matchesBusqueda && todasAprobadas;
             if (filtro === 'pendientes') return matchesBusqueda && !todasAprobadas;
             
             return matchesBusqueda;
         });
-    }, [gruposEquivalencia, progresoSimulado, filtro, busqueda]);
+    }, [gruposEquivalencia, progreso, filtro, busqueda]);
 
-    const toggleEstado = (codigoMateria) => {
-        if (!modoEdicion) return;
-        setProgresoSimulado(prev => {
-            const currentStatus = prev[codigoMateria];
-            const currentIndex = materiasUtils.estadosPosibles.indexOf(currentStatus);
-            const nextIndex = (currentIndex + 1) % materiasUtils.estadosPosibles.length;
-            return { ...prev, [codigoMateria]: materiasUtils.estadosPosibles[nextIndex] };
-        });
-    };
-
-    // MOTOR DE CÁLCULO DE HORAS REFACTORIZADO
+    // MOTOR DE CÁLCULO DE HORAS
     const comparativaHoras = useMemo(() => {
         if (!planViejo || !planNuevo) return null;
 
@@ -132,7 +116,7 @@ export const useEquivalencias = () => {
         planViejo.materias.forEach(m => {
             const h = parseInt(m.horas_totales) || 0;
             viejoTotales += h;
-            if (progresoSimulado[m.codigo] !== materiasUtils.estadosPosibles[2]) {
+            if (progreso[m.codigo] !== materiasUtils.estadosPosibles[2]) {
                 viejoRestantes += h;
             }
         });
@@ -150,10 +134,10 @@ export const useEquivalencias = () => {
 
             if (equivs) {
                 // Si tiene equivalencias en el JSON, deben estar TODAS aprobadas en el plan viejo
-                estaAprobada = equivs.every(c => progresoSimulado[c] === materiasUtils.estadosPosibles[2]);
+                estaAprobada = equivs.every(c => progreso[c] === materiasUtils.estadosPosibles[2]);
             } else {
                 // Si no tiene equivalencia en JSON, buscamos por código directo
-                estaAprobada = progresoSimulado[m.codigo] === materiasUtils.estadosPosibles[2];
+                estaAprobada = progreso[m.codigo] === materiasUtils.estadosPosibles[2];
             }
 
             if (!estaAprobada) {
@@ -165,11 +149,17 @@ export const useEquivalencias = () => {
             viejo: { totales: viejoTotales, restantes: viejoRestantes },
             nuevo: { totales: nuevoTotales, restantes: nuevoRestantes }
         };
-    }, [progresoSimulado, planViejo, planNuevo]);
+    }, [progreso, planViejo, planNuevo]);
 
     return {
-        planViejo, planNuevo, progresoSimulado, materiasFiltradas, filtro, setFiltro, busqueda, setBusqueda,
-        modoEdicion, setModoEdicion, toggleEstado, guardarSimulacion, cargarSimulacion, cargarProgresoReal,
+        planViejo,
+        planNuevo,
+        progreso,
+        materiasFiltradas,
+        filtro,
+        setFiltro,
+        busqueda,
+        setBusqueda,
         comparativaHoras,
         stats: {
             porcentajeViejo: comparativaHoras?.viejo.totales ? Math.round(((comparativaHoras.viejo.totales - comparativaHoras.viejo.restantes) * 100) / comparativaHoras.viejo.totales) : 0,
@@ -177,7 +167,7 @@ export const useEquivalencias = () => {
             totalNuevas: planNuevo?.materias.length || 0,
             aprobadasNuevas: planNuevo?.materias.filter(m => {
                 const equivs = equivalenciasData[m.codigo];
-                return equivs ? equivs.every(c => progresoSimulado[c] === materiasUtils.estadosPosibles[2]) : progresoSimulado[m.codigo] === materiasUtils.estadosPosibles[2];
+                return equivs ? equivs.every(c => progreso[c] === materiasUtils.estadosPosibles[2]) : progreso[m.codigo] === materiasUtils.estadosPosibles[2];
             }).length
         }
     };
