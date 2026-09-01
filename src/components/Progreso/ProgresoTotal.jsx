@@ -70,9 +70,9 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
     return (
         <header ref={headerRef} className="bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 shadow-xs hover:shadow-sm rounded-3xl flex flex-col transition-all duration-300">
             {/* Contenedor con blur para la parte superior (No afecta al fixed de abajo) */}
-            <div className="p-6 md:p-8 pb-4 flex flex-col gap-6 rounded-t-3xl w-full">
+            <div className="p-4 sm:p-8 pb-3 sm:pb-4 flex flex-col gap-4 sm:gap-6 rounded-t-3xl w-full">
                 {/* Sección Superior: Limpia, alineada y jerárquica con botón de simulación */}
-                <div className="flex flex-col gap-6 w-full">
+                <div className="flex flex-col gap-4 sm:gap-6 w-full">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 w-full">
                         <div className="flex flex-col items-start text-left gap-2">
                             {/* Migas de pan / Ubicación */}
@@ -111,8 +111,8 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                             </p>
                         </div>
 
-                        {/* Botón Destacado Simular cambio de plan (Amarillo institucional) */}
-                        <div className="shrink-0 flex items-center gap-2">
+                        {/* Botón Destacado Simular cambio de plan (Visible en Desktop; en móvil se muestra la card abajo) */}
+                        <div className="shrink-0 hidden sm:flex items-center gap-2">
                             <Button
                                 onPress={() => navigate('/cambio-plan')}
                                 className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-black text-xs sm:text-sm px-4 sm:px-6 py-2.5 sm:py-6 rounded-2xl shadow-xs hover:shadow-md transition-all flex items-center gap-2"
@@ -123,25 +123,26 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                         </div>
                     </div>
 
-                    {/* Sección Estadísticas: Grilla responisva con tarjetas neutras y limpias */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
+                    {/* Sección Estadísticas: Grilla responsive con tarjetas neutras y limpias */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full">
                         <Tooltip content="Hacé clic para entender cómo se calcula el promedio sin aplazos" placement="bottom">
                             <div 
                                 onClick={() => {
                                     setTipoPromedioModal('sinAplazos');
                                     onPromedioModalOpen();
                                 }}
-                                className="group cursor-pointer flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl shadow-2xs hover:shadow-xs transition-all"
+                                className="group cursor-pointer flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl shadow-2xs hover:shadow-xs transition-all overflow-hidden"
                             >
-                                <div className="w-10 h-10 rounded-xl bg-emerald-100/70 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
-                                    <i className="fa-solid fa-chart-line text-sm" />
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-100/70 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-700 dark:text-emerald-400 shrink-0 group-hover:scale-105 transition-transform">
+                                    <i className="fa-solid fa-chart-line text-xs sm:text-sm" />
                                 </div>
-                                <div className="flex flex-col items-start min-w-0">
-                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate flex items-center gap-1">
-                                        <span>Prom. Sin Aplazos</span>
-                                        <i className="fa-solid fa-circle-info text-[9px] text-slate-400 group-hover:text-emerald-600 transition-colors" />
-                                    </span>
-                                    <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{promedios.promedioSinAplazos || '--'}</span>
+                                <div className="flex flex-col items-start min-w-0 flex-1">
+                                    <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 flex items-center gap-1 w-full truncate">
+                                        <span className="truncate sm:hidden">Sin Aplazos</span>
+                                        <span className="truncate hidden sm:inline">Prom. Sin Aplazos</span>
+                                        <i className="fa-solid fa-circle-info text-[9px] text-slate-400 group-hover:text-emerald-600 transition-colors shrink-0" />
+                                    </div>
+                                    <span className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{promedios.promedioSinAplazos || '--'}</span>
                                 </div>
                             </div>
                         </Tooltip>
@@ -152,46 +153,53 @@ function ProgresoTotal({ carrera, plan, progress, progreso, progresoDetalles, ma
                                     setTipoPromedioModal('conAplazos');
                                     onPromedioModalOpen();
                                 }}
-                                className="group cursor-pointer flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl shadow-2xs hover:shadow-xs transition-all"
+                                className="group cursor-pointer flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 hover:border-emerald-500/50 dark:hover:border-emerald-500/50 rounded-2xl shadow-2xs hover:shadow-xs transition-all overflow-hidden"
                             >
-                                <div className="w-10 h-10 rounded-xl bg-amber-100/70 dark:bg-amber-950/60 flex items-center justify-center text-amber-700 dark:text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
-                                    <i className="fa-solid fa-chart-area text-sm" />
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-100/70 dark:bg-amber-950/60 flex items-center justify-center text-amber-700 dark:text-amber-400 shrink-0 group-hover:scale-105 transition-transform">
+                                    <i className="fa-solid fa-chart-area text-xs sm:text-sm" />
                                 </div>
-                                <div className="flex flex-col items-start min-w-0">
-                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate flex items-center gap-1">
-                                        <span>Prom. Con Aplazos</span>
-                                        <i className="fa-solid fa-circle-info text-[9px] text-slate-400 group-hover:text-amber-600 transition-colors" />
-                                    </span>
-                                    <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{promedios.promedioConAplazos || '--'}</span>
+                                <div className="flex flex-col items-start min-w-0 flex-1">
+                                    <div className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 flex items-center gap-1 w-full truncate">
+                                        <span className="truncate sm:hidden">Con Aplazos</span>
+                                        <span className="truncate hidden sm:inline">Prom. Con Aplazos</span>
+                                        <i className="fa-solid fa-circle-info text-[9px] text-slate-400 group-hover:text-amber-600 transition-colors shrink-0" />
+                                    </div>
+                                    <span className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{promedios.promedioConAplazos || '--'}</span>
                                 </div>
                             </div>
                         </Tooltip>
 
                         <Tooltip content="Materias aprobadas y promocionadas respecto al plan." placement="bottom">
-                            <div className="flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 rounded-2xl shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
-                                <div className="w-10 h-10 rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 flex items-center justify-center text-slate-700 dark:text-zinc-200 shrink-0">
-                                    <i className="fa-solid fa-book-bookmark text-sm" />
+                            <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 rounded-2xl shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all overflow-hidden">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 flex items-center justify-center text-slate-700 dark:text-zinc-200 shrink-0">
+                                    <i className="fa-solid fa-book-bookmark text-xs sm:text-sm" />
                                 </div>
-                                <div className="flex flex-col items-start min-w-0">
-                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate">Total Materias</span>
+                                <div className="flex flex-col items-start min-w-0 flex-1">
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate w-full">
+                                        <span className="sm:hidden">Materias</span>
+                                        <span className="hidden sm:inline">Total Materias</span>
+                                    </span>
                                     <div className="flex items-baseline gap-1">
-                                        <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{totalMateriasFinalizadas}</span>
-                                        <span className="text-[11px] font-bold text-slate-400">/ {totalMateriasCarrera}</span>
+                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{totalMateriasFinalizadas}</span>
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">/ {totalMateriasCarrera}</span>
                                     </div>
                                 </div>
                             </div>
                         </Tooltip>
 
                         <Tooltip content="Carga horaria completada sobre el total del plan de estudios." placement="bottom">
-                            <div className="flex items-center gap-3 p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 rounded-2xl shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all">
-                                <div className="w-10 h-10 rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 flex items-center justify-center text-slate-700 dark:text-zinc-200 shrink-0">
-                                    <i className="fa-solid fa-clock text-sm" />
+                            <div className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3.5 bg-slate-50/80 dark:bg-zinc-800/60 border border-slate-200/70 dark:border-zinc-700/70 rounded-2xl shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all overflow-hidden">
+                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-slate-200/70 dark:bg-zinc-700/70 flex items-center justify-center text-slate-700 dark:text-zinc-200 shrink-0">
+                                    <i className="fa-solid fa-clock text-xs sm:text-sm" />
                                 </div>
-                                <div className="flex flex-col items-start min-w-0">
-                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate">Carga Horaria</span>
+                                <div className="flex flex-col items-start min-w-0 flex-1">
+                                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-bold uppercase tracking-wider leading-none mb-1 truncate w-full">
+                                        <span className="sm:hidden">Horas</span>
+                                        <span className="hidden sm:inline">Carga Horaria</span>
+                                    </span>
                                     <div className="flex items-baseline gap-1">
-                                        <span className="text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{totalHorasProgreso}</span>
-                                        <span className="text-[11px] font-bold text-slate-400">/ {totalHorasCarrera} hs</span>
+                                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-zinc-50 leading-none tabular-nums">{totalHorasProgreso}</span>
+                                        <span className="text-[10px] sm:text-[11px] font-bold text-slate-400">/ {totalHorasCarrera}h</span>
                                     </div>
                                 </div>
                             </div>

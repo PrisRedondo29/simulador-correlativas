@@ -51,90 +51,90 @@ function MateriaCard({ materia, todasLasMaterias, estado, detalles, actualizarEs
     const cardContent = (
         <Card
             isPressable={false}
-            className={`w-full h-full flex flex-col justify-between border transition-all duration-300 font-medium ${config.estilo} ${vista === 'list' ? 'flex-row items-center justify-between p-2 h-auto' : ''} ${estado === 'Bloqueado' ? 'opacity-60 grayscale-[0.2]' : ''} ${estado === 'Cursando' ? 'shadow-[0_0_14px_3px_rgba(99,102,241,0.30)] border-indigo-400/80' : 'shadow-sm hover:shadow-md hover:-translate-y-0.5'}`}
+            className={`w-full h-full flex flex-col justify-between border transition-all duration-300 font-medium ${config.estilo} ${vista === 'list' ? 'flex-row items-center justify-between p-2 h-auto' : ''} ${estado === 'Bloqueado' ? 'opacity-60 grayscale-[0.2]' : ''} ${estado === 'Cursando' ? 'shadow-[0_0_14px_3px_rgba(99,102,241,0.30)] border-indigo-400/80' : 'shadow-2xs sm:shadow-sm hover:shadow-md hover:-translate-y-0.5'}`}
         >
-            <CardHeader className={`flex flex-wrap gap-1.5 justify-between items-center shrink-0 ${vista === 'list' ? 'w-auto gap-4 p-2' : ''}`}>
-                <Chip color={config.color} variant="flat" size="sm" className="h-6 font-bold">
-                    <i className={`${config.icono} mr-1 text-xs`} />
-                    <span className="text-xs">{estado}</span>
+            <CardHeader className={`flex flex-wrap gap-1 items-center justify-between shrink-0 p-2 sm:p-3 pb-1 ${vista === 'list' ? 'w-auto gap-4 p-2' : ''}`}>
+                <Chip color={config.color} variant="flat" size="sm" className="h-5 sm:h-6 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2">
+                    <i className={`${config.icono} mr-1 text-[10px] sm:text-xs`} />
+                    <span>{estado}</span>
                 </Chip>
                 
                 {/* Indicadores sutiles de falta de información */}
                 {estado === 'Regular' && !detalles?.fechaRegularidad && !detalles?.notaRegularizacion && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-6 text-[11px] font-semibold opacity-90">
-                        <i className="fa-solid fa-circle-exclamation mr-1 text-[10px]" />
+                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-circle-exclamation mr-1 text-[9px]" />
                         Falta Info
                     </Chip>
                 )}
                 {estado === 'Regular' && !detalles?.fechaRegularidad && detalles?.notaRegularizacion && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-6 text-[11px] font-semibold opacity-90">
-                        <i className="fa-solid fa-calendar-circle-exclamation mr-1 text-[10px]" />
+                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-calendar-circle-exclamation mr-1 text-[9px]" />
                         Falta Año
                     </Chip>
                 )}
                 {estado === 'Regular' && detalles?.fechaRegularidad && !detalles?.notaRegularizacion && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-6 text-[11px] font-semibold opacity-90">
-                        <i className="fa-solid fa-pen-to-square mr-1 text-[10px]" />
+                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-pen-to-square mr-1 text-[9px]" />
                         Falta Nota
                     </Chip>
                 )}
 
                 {(estado === 'Aprobado' || estado === 'Promocionado') && !detalles?.notaFinal && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-6 text-[11px] font-semibold opacity-90">
-                        <i className="fa-solid fa-pen-to-square mr-1 text-[10px]" />
+                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-pen-to-square mr-1 text-[9px]" />
                         Falta Nota
                     </Chip>
                 )}
 
                 {/* Indicadores de Equivalencia o Libre */}
                 {detalles?.esEquivalencia && (
-                    <Chip color="primary" variant="flat" size="sm" className="h-6 font-bold text-[11px] border border-primary/20">
-                        <i className="fa-solid fa-handshake mr-1 text-[10px]" />
-                        Equivalencia
+                    <Chip color="primary" variant="flat" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] border border-primary/20 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-handshake mr-1 text-[9px]" />
+                        Equiv.
                     </Chip>
                 )}
 
                 {detalles?.rendidaLibre && estado === 'Aprobado' && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-6 font-bold text-[11px] border border-danger/20">
-                        <i className="fa-solid fa-user-slash mr-1 text-[10px]" />
+                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] border border-danger/20 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-user-slash mr-1 text-[9px]" />
                         Libre
                     </Chip>
                 )}
 
                 {/* Indicador de recursada */}
                 {detalles?.historial && detalles.historial.length > 0 && (
-                    <Chip color="primary" variant="flat" size="sm" className="h-6 font-bold text-[11px] border border-primary/20">
-                        <i className="fa-solid fa-clock-rotate-left mr-1 text-[10px]" />
-                        Recursada ({detalles.historial.length})
+                    <Chip color="primary" variant="flat" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] border border-primary/20 px-1 sm:px-1.5">
+                        <i className="fa-solid fa-clock-rotate-left mr-1 text-[9px]" />
+                        Rec ({detalles.historial.length})
                     </Chip>
                 )}
 
                 {estado === 'Regular' && detalles?.fechaRegularidad && (
-                    <Chip color="warning" variant="dot" size="sm" className="h-6 font-bold text-[11px]">
+                    <Chip color="warning" variant="dot" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] px-1 sm:px-1.5">
                         Vence: {regularidadUtils.obtenerFechaVencimientoLabel(detalles.fechaRegularidad)}
                     </Chip>
                 )}
                 {estado === 'Aprobado' && detalles?.intentosFinal?.some(i => i.estado === 'aprobado') && (
-                    <Chip color="success" variant="dot" size="sm" className="h-6 font-bold text-[11px]">
-                        Aprobada en: {detalles.intentosFinal.find(i => i.estado === 'aprobado').fecha?.split("-")[0] || 'S/F'}
+                    <Chip color="success" variant="dot" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] px-1 sm:px-1.5">
+                        Aprob: {detalles.intentosFinal.find(i => i.estado === 'aprobado').fecha?.split("-")[0] || 'S/F'}
                     </Chip>
                 )}
             </CardHeader>
 
-            <CardBody className={`py-2 px-3 flex-1 flex items-center justify-center ${vista === 'list' ? 'flex-row flex-1 justify-between p-2 overflow-hidden gap-4' : ''}`}>
-                <div className={`text-foreground font-bold tracking-tight text-sm w-full ${vista === 'list' ? 'flex-1 pr-4 truncate' : 'line-clamp-2'}`} title={nombre}>
+            <CardBody className={`py-1.5 px-2 sm:px-3 flex-1 flex items-center justify-center ${vista === 'list' ? 'flex-row flex-1 justify-between p-2 overflow-hidden gap-4' : ''}`}>
+                <div className={`text-foreground font-bold tracking-tight text-xs sm:text-sm w-full ${vista === 'list' ? 'flex-1 pr-4 truncate' : 'line-clamp-3 sm:line-clamp-2'} leading-snug`} title={nombre}>
                     {nombre}
                 </div>
             </CardBody>
 
-            <CardFooter className={`flex justify-between items-center pt-1 pb-2.5 px-3 shrink-0 ${vista === 'list' ? 'w-auto p-2 justify-end gap-3' : ''}`}>
-                <span className="text-xs text-default-400 font-semibold tracking-wide">
+            <CardFooter className={`flex justify-between items-center pt-0.5 pb-2 px-2 sm:px-3 shrink-0 ${vista === 'list' ? 'w-auto p-2 justify-end gap-3' : ''}`}>
+                <span className="text-[10px] sm:text-xs text-default-400 font-semibold tracking-wide">
                     {materia.mostrarCodigo === false ? '---' : codigo}
                 </span>
 
                 {/* Muestro la Nota final si está cargada */}
                 {(estado === 'Aprobado' || estado === 'Promocionado') && detalles?.notaFinal ? (
-                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <span className="text-[10px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-500/20">
                         Nota: {detalles.notaFinal}
                     </span>
                 ) : (

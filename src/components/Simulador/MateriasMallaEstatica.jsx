@@ -129,7 +129,7 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
   };
 
   return (
-    <div className="w-full overflow-x-auto snap-x snap-mandatory flex gap-4 p-3.5 sm:p-6 select-none touch-pan-x scrollbar-thin scrollbar-thumb-default-300 dark:scrollbar-thumb-zinc-700 min-h-[600px] max-h-[840px] pb-36 rounded-3xl bg-slate-100/60 dark:bg-zinc-950/60 border border-default-200">
+    <div className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2.5 sm:gap-4 p-2 sm:p-6 select-none touch-pan-x scrollbar-thin scrollbar-thumb-default-300 dark:scrollbar-thumb-zinc-700 min-h-[600px] max-h-[840px] pb-36 rounded-3xl bg-slate-100/60 dark:bg-zinc-950/60 border border-default-200">
       {colKeys.map((colNum) => {
         const materiasCol = columnasMap[colNum] || [];
         const anioCalculado = Math.ceil(colNum / 2);
@@ -156,7 +156,7 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
         return (
           <div
             key={`malla-col-${colNum}`}
-            className={`flex-none shrink-0 w-[265px] sm:w-[285px] snap-start flex flex-col gap-3 p-3 rounded-2xl transition-all duration-150 ${
+            className={`flex-none shrink-0 w-[calc(50vw-18px)] min-w-[155px] max-w-[210px] sm:max-w-none sm:w-[285px] snap-start flex flex-col gap-2 sm:gap-3 p-2 sm:p-3 rounded-2xl transition-all duration-150 ${
               esColActiva
                 ? 'bg-white dark:bg-zinc-900 border-2 border-emerald-600 dark:border-emerald-500 shadow-md'
                 : 'bg-white/80 dark:bg-zinc-900/80 border border-slate-200/90 dark:border-zinc-800 shadow-xs'
@@ -164,39 +164,39 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
           >
             {/* Header del Cuatrimestre */}
             <div
-              className={`flex-none shrink-0 p-3.5 rounded-xl shadow-xs flex flex-col gap-1.5 transition-colors ${
+              className={`flex-none shrink-0 p-2 sm:p-3.5 rounded-xl shadow-xs flex flex-col gap-1 sm:gap-1.5 transition-colors ${
                 esColActiva
                   ? 'bg-emerald-700 text-white dark:bg-emerald-800 shadow-sm'
                   : 'bg-slate-800 text-white dark:bg-zinc-800'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider opacity-90">
-                  {anioCalculado}° Año · {cuatriCalculado}° Cuatri
+                <span className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider opacity-90 truncate">
+                  {anioCalculado}°A · {cuatriCalculado}°C
                 </span>
-                <span className="text-[10px] bg-white/20 text-white font-bold px-2 py-0.5 rounded-md backdrop-blur-xs">
+                <span className="text-[9px] sm:text-[10px] bg-white/20 text-white font-bold px-1.5 sm:px-2 py-0.5 rounded-md backdrop-blur-xs shrink-0">
                   {aprobadasCol}/{materiasCol.length}
                 </span>
               </div>
 
               <div className="flex items-center justify-between gap-1">
-                <h4 className="text-xs font-black tracking-wide truncate">
+                <h4 className="text-[11px] sm:text-xs font-black tracking-wide truncate">
                   {colLabel}
                 </h4>
                 {totalHorasSem > 0 && (
-                  <span className="text-[10px] font-mono opacity-80 shrink-0">
-                    {totalHorasSem}h/sem
+                  <span className="text-[9px] sm:text-[10px] font-mono opacity-80 shrink-0">
+                    {totalHorasSem}h/s
                   </span>
                 )}
               </div>
 
               {/* Pill resaltado + Botón de selección masiva en la columna activa */}
               {esColActiva && (
-                <div className="mt-2 pt-2 border-t border-white/20 flex flex-col gap-2">
+                <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-white/20 flex flex-col gap-1.5 sm:gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[9px] font-extrabold uppercase tracking-widest bg-white text-emerald-900 px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping" />
-                      CONFIGURANDO AHORA
+                    <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest bg-white text-emerald-900 px-1.5 sm:px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs truncate">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping shrink-0" />
+                      CONFIGURANDO
                     </span>
                   </div>
 
@@ -206,15 +206,15 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
                       onClick={() => {
                         marcarTodasEnPantalla(todasInscriptasActivas ? 'No Cursado' : 'Cursado');
                       }}
-                      className={`w-full py-1.5 px-3 rounded-lg font-black text-xs transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
+                      className={`w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-lg font-black text-[10px] sm:text-xs transition-all flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
                         todasInscriptasActivas
                           ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300'
                           : 'bg-white hover:bg-slate-100 text-emerald-900 border border-white/80'
                       }`}
                       title={todasInscriptasActivas ? "Quitar todas las materias del cuatrimestre" : "Seleccionar todas las materias disponibles"}
                     >
-                      <i className={todasInscriptasActivas ? "fa-solid fa-rotate-left text-xs text-rose-600" : "fa-solid fa-check-double text-xs text-emerald-700"} />
-                      <span>{todasInscriptasActivas ? 'Quitar todas' : 'Seleccionar todas'}</span>
+                      <i className={todasInscriptasActivas ? "fa-solid fa-rotate-left text-[10px] sm:text-xs text-rose-600" : "fa-solid fa-check-double text-[10px] sm:text-xs text-emerald-700"} />
+                      <span>{todasInscriptasActivas ? 'Quitar' : 'Seleccionar'}</span>
                     </button>
                   )}
                 </div>
@@ -222,7 +222,7 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
             </div>
 
             {/* Lista Vertical de Materias del Cuatrimestre */}
-            <div className="flex-1 overflow-y-auto flex flex-col gap-2.5 p-0.5 pb-32 scrollbar-none">
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 p-0.5 pb-32 scrollbar-none">
               {materiasCol.map((materia) => {
                 const { label, icon, badgeClass, borderClass } = getEstadoStyles(materia);
                 const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
@@ -256,45 +256,45 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
                     onClick={handleCardPress}
                     onMouseEnter={() => setHoveredCodigo(materia.codigo)}
                     onMouseLeave={() => setHoveredCodigo(null)}
-                    className={`flex-none shrink-0 w-full p-3 rounded-xl border-2 transition-colors duration-150 cursor-pointer select-none box-border ${borderClass} ${hoverHighlightClass}`}
+                    className={`flex-none shrink-0 w-full p-2 sm:p-3 rounded-xl border-2 transition-colors duration-150 cursor-pointer select-none box-border ${borderClass} ${hoverHighlightClass}`}
                   >
                     {/* Fila Superior: Nombre + Código */}
-                    <div className="flex justify-between items-start gap-1.5 w-full">
-                      <h5 className="text-xs font-extrabold text-slate-900 dark:text-zinc-100 leading-snug text-left flex-1">
+                    <div className="flex justify-between items-start gap-1 w-full">
+                      <h5 className="text-[11px] sm:text-xs font-extrabold text-slate-900 dark:text-zinc-100 leading-snug text-left flex-1 line-clamp-3 sm:line-clamp-2">
                         {materia.nombre}
                       </h5>
-                      <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded-md shrink-0 border border-slate-200 dark:border-zinc-700">
+                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 px-1 sm:px-1.5 py-0.5 rounded shrink-0 border border-slate-200 dark:border-zinc-700">
                         {materia.codigo}
                       </span>
                     </div>
 
                     {/* Fila Media: Horas semanal / totales */}
-                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
-                      <span>{materia.horas_semanales ? `${materia.horas_semanales}h/sem` : ''}</span>
-                      {materia.horas_totales && <span>{materia.horas_totales}h tot</span>}
+                    <div className="mt-1 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
+                      <span>{materia.horas_semanales ? `${materia.horas_semanales}h/s` : ''}</span>
+                      {materia.horas_totales && <span>{materia.horas_totales}h</span>}
                     </div>
 
                     {/* Indicador interactivo de correlativa */}
                     {isRequeridaPorHovered && (
-                      <div className="mt-1.5 text-[9px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded-md">
-                        ⚠️ Requisito necesario
+                      <div className="mt-1 text-[8px] sm:text-[9px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded">
+                        ⚠️ Requisito
                       </div>
                     )}
                     {isDesbloqueadaPorHovered && (
-                      <div className="mt-1.5 text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-md">
-                        🔓 Se habilita con la seleccionada
+                      <div className="mt-1 text-[8px] sm:text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded">
+                        🔓 Se habilita
                       </div>
                     )}
 
                     {/* Fila Inferior: Badge de Estado + Correlativas */}
-                    <div className="mt-2.5 flex items-center justify-between gap-1 flex-wrap pt-2 border-t border-slate-100 dark:border-zinc-800/80 w-full">
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 ${badgeClass}`}>
-                        <i className={`${icon} text-[9px]`} />
-                        {label}
+                    <div className="mt-1.5 sm:mt-2.5 flex items-center justify-between gap-1 flex-wrap pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-zinc-800/80 w-full">
+                      <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 ${badgeClass}`}>
+                        <i className={`${icon} text-[8px] sm:text-[9px]`} />
+                        <span>{label}</span>
                       </span>
 
                       {hasCorrelativas && (
-                        <span className="text-[9px] font-mono text-slate-400 dark:text-zinc-500 truncate max-w-[110px]">
+                        <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 dark:text-zinc-500 truncate max-w-[65px] sm:max-w-[110px]">
                           Req: {materia.correlativas.join(', ')}
                         </span>
                       )}

@@ -639,11 +639,11 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
 
                     {materiasFiltradas.length > 0 ? (
                         <div className={vista === 'grid'
-                            ? "grid grid-cols-1 min-[768px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-5"
                             : "flex flex-col gap-3"
                         }>
                             {materiasFiltradas.map((materia) => (
-                                <div key={materia.codigo}>
+                                <div key={materia.codigo} className="h-full">
                                     <MateriaCard
                                         materia={materia}
                                         todasLasMaterias={materias}
@@ -726,8 +726,8 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                                                     </div>
                                                 </div>
 
-                                                {/* Contenedor de Cuatrimestres */}
-                                                <div className={`flex flex-col gap-8 pl-2 sm:pl-4 ${isAnioOpen.includes(valor) ? " hidden" : ""}`}>
+                                                {/* Contenedor de Cuatrimestres en 2 Columnas Paralelas */}
+                                                <div className={`grid grid-cols-2 gap-2 sm:gap-6 pl-0 sm:pl-2 ${isAnioOpen.includes(valor) ? " hidden" : ""}`}>
                                                     {[1, 2].map((cuatri) => {
                                                         // Me quedo con las materias de este cuatrimestre
                                                         const materiasCuatri = materiasParaMostrar.filter(
@@ -737,28 +737,28 @@ function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDeta
                                                         if (materiasCuatri.length === 0) return null
 
                                                         return (
-                                                            <div key={cuatri} className="flex flex-col gap-4">
+                                                            <div key={cuatri} className="flex flex-col gap-2.5 sm:gap-4 min-w-0">
                                                                 {/* Cabecera del Cuatrimestre */}
-                                                                <div className="sm:flex items-center sm:justify-between bg-default-50 border border-default-200 rounded-lg px-4 py-3 shadow-sm">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="w-1 h-5 bg-default-400 rounded-full"></div>
-                                                                        <h3 className="text-lg font-semibold text-default-700">
+                                                                <div className="flex items-center justify-between bg-default-50/90 dark:bg-default-100/40 border border-default-200 rounded-xl px-2 py-1.5 sm:px-4 sm:py-3 shadow-2xs">
+                                                                    <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+                                                                        <div className="w-1 h-3.5 sm:h-5 bg-default-400 rounded-full shrink-0"></div>
+                                                                        <h3 className="text-xs sm:text-base font-black sm:font-bold text-default-700 truncate">
                                                                             {cuatri}° Cuatrimestre
                                                                         </h3>
                                                                     </div>
-                                                                    <Chip size="sm" variant="flat" className="bg-background border border-default-200 text-default-600 shadow-sm" startContent={<i className="fa-solid fa-book ml-1 text-default-400"></i>}>
-                                                                        <span className="font-bold ml-1">{materiasCuatri.length}</span> <span className="hidden sm:inline font-medium">{materiasCuatri.length === 1 ? 'materia' : 'materias'}</span>
+                                                                    <Chip size="sm" variant="flat" className="h-5 sm:h-6 text-[10px] sm:text-xs bg-background border border-default-200 text-default-600 shadow-2xs px-1 sm:px-2 shrink-0">
+                                                                        <span className="font-bold">{materiasCuatri.length}</span> <span className="hidden sm:inline font-medium">{materiasCuatri.length === 1 ? 'materia' : 'materias'}</span>
                                                                     </Chip>
                                                                 </div>
 
                                                                 <div className={vista === 'grid'
-                                                                    ? "grid grid-cols-1 min-[768px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-                                                                    : "flex flex-col gap-3"
+                                                                    ? "grid grid-cols-1 xl:grid-cols-2 gap-2 sm:gap-4"
+                                                                    : "flex flex-col gap-2 sm:gap-3"
                                                                 }>
                                                                     {materiasCuatri.map((materia, index) => {
                                                                         const esElPrimero = materia.codigo === materias[0]?.codigo;
                                                                         return (
-                                                                            <div key={materia.codigo !== "N/A" ? materia.codigo : `${materia.codigo}-${index}`} id={esElPrimero ? 'materia-card-ejemplo' : undefined}>
+                                                                            <div key={materia.codigo !== "N/A" ? materia.codigo : `${materia.codigo}-${index}`} id={esElPrimero ? 'materia-card-ejemplo' : undefined} className="h-full">
                                                                                 <MateriaCard
                                                                                     materia={materia}
                                                                                     todasLasMaterias={materias}
