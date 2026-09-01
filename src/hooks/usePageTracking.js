@@ -12,8 +12,8 @@ const PAGE_TITLES = {
     '/progreso':    'Progreso Académico',
     '/simulador':   'Simulador de Avance',
     '/equivalencias': 'Equivalencias entre Planes',
+    '/cambio-plan': 'Cambio de Plan',
     '/como-usar':   'Cómo Usar',
-    '/chatbot':     'Chat IA',
     '/config':      'Configuración',
 };
 

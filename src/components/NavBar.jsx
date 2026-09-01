@@ -172,22 +172,31 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const menuItems = [
-        { name: 'Inicio', icon: 'fa-house', path: '/', isDeactivated: false },
-        { name: 'Progreso', icon: 'fa-graduation-cap', path: '/progreso', isDeactivated: false },
-        { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador', isDeactivated: false },
-        { name: 'Equivalencias', icon: 'fa-right-left', path: '/equivalencias', isDeactivated: false },
-        { 
-            name: 'Cambio de Plan', 
-            icon: 'fa-arrows-rotate', 
-            path: '/cambio-plan', 
-            badge: 'Res. 89/25', 
-            isDeactivated: false 
+    const menuGroups = [
+        {
+            title: "Académico",
+            items: [
+                { name: 'Inicio', icon: 'fa-house', path: '/' },
+                { name: 'Mi Progreso', icon: 'fa-graduation-cap', path: '/progreso' },
+                { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador' },
+                { name: 'Equivalencias', icon: 'fa-right-left', path: '/equivalencias' },
+                { 
+                    name: 'Cambio de Plan', 
+                    icon: 'fa-arrows-rotate', 
+                    path: '/cambio-plan', 
+                    badge: 'Res. 89/25',
+                    isHighlight: true
+                },
+            ]
         },
-        { name: 'Chat IA', icon: 'fa-robot', path: '/chatbot', isDeactivated: true },
-        { name: 'Cómo usar', icon: 'fa-circle-question', path: '/como-usar', isDeactivated: false, id: 'btn-como-usar' },
-        { name: 'Reportar error', icon: 'fa-bug', path: '/contacto', isDeactivated: false },
-        { name: 'CODES', imgIcon: '/imgs/logo-codes.png', path: 'https://www.codesunlu.tech/', isExternal: true, isDeactivated: false },
+        {
+            title: "Ayuda & Comunidad",
+            items: [
+                { name: 'Cómo usar', icon: 'fa-circle-question', path: '/como-usar', id: 'btn-como-usar' },
+                { name: 'Reportar error', icon: 'fa-bug', path: '/contacto' },
+                { name: 'CODES UNLu', imgIcon: '/imgs/logo-codes.png', path: 'https://www.codesunlu.tech/', isExternal: true },
+            ]
+        }
     ];
 
     const handleClick = (item) => {
@@ -197,109 +206,103 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
     };
 
     return (
-        <nav className={`flex flex-col gap-1.5 transition-all duration-300 ${isCollapsed ? 'px-2' : 'px-3 py-2'}`}>
-            {/* Botón Destacado Simular Transición en Sidebar */}
-            <div className="mb-2">
-                <button
-                    onClick={() => {
-                        navigate('/cambio-plan');
-                        if (onItemClick) onItemClick();
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className={`w-full rounded-2xl bg-gradient-to-br from-[#F5B82E] to-amber-500 text-slate-950 font-black shadow-md hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2.5 border border-amber-300 ${
-                        isCollapsed ? 'p-3 justify-center' : 'p-2.5 px-3.5 text-left'
-                    }`}
-                >
-                    <div className="w-7 h-7 rounded-xl bg-black/10 flex items-center justify-center shrink-0">
-                        <i className="fa-solid fa-arrows-rotate text-xs text-slate-950" />
-                    </div>
+        <nav className={`flex flex-col gap-3 transition-all duration-300 ${isCollapsed ? 'px-2 py-2' : 'px-3 py-2'}`}>
+            {menuGroups.map((group, gIdx) => (
+                <div key={gIdx} className="flex flex-col gap-1">
                     {!isCollapsed && (
-                        <div className="min-w-0 flex-1">
-                            <span className="text-[9px] font-black uppercase tracking-wider block leading-none text-slate-900/80">
-                                Res. HCS 89/2025
-                            </span>
-                            <span className="text-xs font-black block truncate text-slate-950">
-                                Simular Cambio de Plan
-                            </span>
-                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200/60 px-3 pt-1.5 pb-0.5 block">
+                            {group.title}
+                        </span>
                     )}
-                </button>
-            </div>
+                    {isCollapsed && gIdx > 0 && (
+                        <div className="w-8 h-px bg-white/10 mx-auto my-1.5" />
+                    )}
 
-            {menuItems.map((item) => {
-                const isActive = !item.isExternal && !item.isTransicionAction && location.pathname === item.path;
-                const isDisabled = !isActive && item.isDeactivated;
+                    {group.items.map((item) => {
+                        const isActive = !item.isExternal && location.pathname === item.path;
 
-                if (item.isExternal) {
-                    const content = (
-                        <a
-                            key={item.path}
-                            href={item.path}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'px-3.5 py-2.5'} text-white/80 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10`}
-                        >
-                            {item.imgIcon ? (
-                                <div className="w-6 h-6 bg-white rounded-md flex items-center justify-center p-0.5 shrink-0 shadow-sm group-hover:scale-110 transition-transform">
-                                    <img src={item.imgIcon} alt={item.name} className="w-full h-full object-contain" />
-                                </div>
-                            ) : (
-                                <i className={`fa-solid ${item.icon} w-5 text-base shrink-0 group-hover:scale-110 transition-transform`} />
-                            )}
-                            {!isCollapsed && <span className="text-sm font-medium transition-opacity duration-300 whitespace-nowrap overflow-hidden">{item.name}</span>}
-                            {!isCollapsed && <i className="fa-solid fa-arrow-up-right-from-square text-[10px] ml-auto opacity-50 group-hover:opacity-100" />}
-                        </a>
-                    );
-                    return isCollapsed ? (
-                        <Tooltip key={item.path} content={item.name} placement="right">
-                            {content}
-                        </Tooltip>
-                    ) : content;
-                }
+                        if (item.isExternal) {
+                            const content = (
+                                <a
+                                    key={item.path}
+                                    href={item.path}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${
+                                        isCollapsed ? 'p-2.5 justify-center' : 'px-3.5 py-2'
+                                    } text-white/80 hover:bg-white/10 hover:text-white border border-transparent hover:border-white/10`}
+                                >
+                                    {item.imgIcon ? (
+                                        <div className="w-5 h-5 bg-white rounded-md flex items-center justify-center p-0.5 shrink-0 shadow-sm group-hover:scale-110 transition-transform">
+                                            <img src={item.imgIcon} alt={item.name} className="w-full h-full object-contain" />
+                                        </div>
+                                    ) : (
+                                        <i className={`fa-solid ${item.icon} w-5 text-base shrink-0 group-hover:scale-110 transition-transform`} />
+                                    )}
+                                    {!isCollapsed && (
+                                        <div className="flex items-center justify-between w-full min-w-0">
+                                            <span className="text-sm font-medium transition-opacity duration-300 truncate">{item.name}</span>
+                                            <i className="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-50 group-hover:opacity-100 ml-1.5 shrink-0" />
+                                        </div>
+                                    )}
+                                </a>
+                            );
+                            return isCollapsed ? (
+                                <Tooltip key={item.path} content={item.name} placement="right">
+                                    {content}
+                                </Tooltip>
+                            ) : content;
+                        }
 
-                const content = (
-                    <button
-                        key={item.path || item.name}
-                        id={item.id}
-                        onClick={() => isDisabled ? addToast({ title: 'En progreso', description: 'Esta página aún no está disponible', color: 'warning' }) : handleClick(item)}
-                        className={`flex items-center gap-3 rounded-xl transition-all duration-200 group relative ${isCollapsed ? 'p-3 justify-center' : 'px-3.5 py-2.5'} ${
-                            item.isTransicionAction 
-                                ? 'text-amber-300 hover:bg-white/10 hover:text-amber-200 font-bold'
-                                : isActive
-                                    ? 'bg-white/20 text-white font-bold shadow-sm border border-white/20 backdrop-blur-md'
-                                    : isDisabled
-                                        ? 'bg-black/10 text-white/30 cursor-not-allowed'
-                                        : 'text-white/80 hover:bg-white/10 hover:text-white'
-                        }`}
-                    >
-                        <i className={`fa-solid ${item.icon} w-5 text-base shrink-0 ${
-                            item.isTransicionAction ? 'text-amber-400' : isActive ? 'text-white drop-shadow-sm' : 'group-hover:scale-110 transition-transform'
-                        }`} />
-                        {!isCollapsed && (
-                            <div className="flex items-center justify-between w-full min-w-0">
-                                <span className="text-sm font-medium transition-opacity duration-300 whitespace-nowrap overflow-hidden">{item.name}</span>
-                                {item.badge && (
-                                    <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#F5B82E] text-slate-950 ml-2 shrink-0">
-                                        {item.badge}
-                                    </span>
+                        const content = (
+                            <button
+                                key={item.path || item.name}
+                                id={item.id}
+                                onClick={() => handleClick(item)}
+                                className={`flex items-center gap-2.5 rounded-xl transition-all duration-200 group relative text-left w-full cursor-pointer ${
+                                    isCollapsed ? 'p-2.5 justify-center' : 'px-3 py-2'
+                                } ${
+                                    isActive
+                                        ? 'bg-white/20 text-white font-bold shadow-xs border border-white/25 backdrop-blur-md'
+                                        : 'text-white/80 hover:bg-white/10 hover:text-white border border-transparent'
+                                }`}
+                            >
+                                <i className={`fa-solid ${item.icon} w-5 text-center text-base shrink-0 ${
+                                    isActive 
+                                        ? 'text-white drop-shadow-sm' 
+                                        : item.isHighlight 
+                                            ? 'text-[#F5B82E] group-hover:scale-110 transition-transform' 
+                                            : 'group-hover:scale-110 transition-transform'
+                                }`} />
+                                {!isCollapsed && (
+                                    <div className="flex items-center justify-between w-full">
+                                        <span className={`text-sm font-medium transition-opacity duration-300 whitespace-nowrap ${isActive ? 'font-bold' : ''}`}>
+                                            {item.name}
+                                        </span>
+                                        {item.badge && (
+                                            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#F5B82E] text-slate-950 ml-1.5 shrink-0 shadow-2xs">
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
-                            </div>
-                        )}
-                        {isActive && !isCollapsed && (
-                            <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_6px_2px] shadow-emerald-300/80 animate-pulse" />
-                        )}
-                        {isActive && isCollapsed && (
-                            <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-white" />
-                        )}
-                    </button>
-                );
+                                {isActive && !isCollapsed && !item.badge && (
+                                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-emerald-300 shadow-[0_0_6px_2px] shadow-emerald-300/80 animate-pulse shrink-0" />
+                                )}
+                                {isActive && isCollapsed && (
+                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 w-1 h-4 rounded-full bg-white" />
+                                )}
+                            </button>
+                        );
 
-                return isCollapsed ? (
-                    <Tooltip key={item.path || item.name} content={item.name} placement="right">
-                        {content}
-                    </Tooltip>
-                ) : content;
-            })}
+                        return isCollapsed ? (
+                            <Tooltip key={item.path || item.name} content={item.badge ? `${item.name} (${item.badge})` : item.name} placement="right">
+                                {content}
+                            </Tooltip>
+                        ) : content;
+                    })}
+                </div>
+            ))}
         </nav>
     );
 };
@@ -313,12 +316,12 @@ NavLinks.propTypes = {
 const SidebarFooter = ({ onSignInPress, id_prefix = 'desktop', isCollapsed }) => {
     return (
         <div className={`mt-auto border-t border-white/10 transition-all duration-300 ${isCollapsed ? 'p-2' : 'p-3'}`}>
-            <div className={`bg-black/25 backdrop-blur-md rounded-2xl border border-white/10 flex flex-col gap-3 shadow-sm transition-all duration-300 ${isCollapsed ? 'p-1 py-3' : 'p-3'}`}>
+            <div className={`bg-black/25 backdrop-blur-md rounded-2xl border border-white/10 flex flex-col gap-2.5 shadow-sm transition-all duration-300 ${isCollapsed ? 'p-1 py-2' : 'p-2.5'}`}>
                 <div id={`selector-tema-${id_prefix}`}>
                     <ThemeSwitcher isCollapsed={isCollapsed} />
                 </div>
 
-                <div className={`${!isCollapsed ? 'border-t border-white/10 pt-3' : 'w-full flex justify-center'}`}>
+                <div className={`${!isCollapsed ? 'border-t border-white/10 pt-2.5' : 'w-full flex justify-center'}`}>
                     <UserPanel onSignInPress={onSignInPress} isCollapsed={isCollapsed} />
                 </div>
             </div>

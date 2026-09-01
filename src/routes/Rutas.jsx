@@ -7,7 +7,6 @@ const Progreso = lazy(() => import('../pages/Progreso'))
 const Simulador = lazy(() => import('../pages/Simulador'))
 const Equivalencias = lazy(() => import('../pages/Equivalencias'))
 const TransicionPlan = lazy(() => import('../pages/TransicionPlan'))
-const ChatBot = lazy(() => import('../pages/ChatBot'))
 const ComoUsar = lazy(() => import('../pages/ComoUsar'))
 const SettingsPage = lazy(() => import('../pages/SettingsPage'))
 const Contacto = lazy(() => import('../pages/Contacto'))
@@ -46,10 +45,6 @@ const Rutas = ({ plan, setPlan }) => {
             path: "/transicion",
             element: <TransicionPlan plan={plan} setPlan={setPlan} />,
         },
-        // {
-        //     path: "/chatbot",
-        //     element: <ChatBot />
-        // },
         {
             path: "/como-usar",
             element: <ComoUsar />
