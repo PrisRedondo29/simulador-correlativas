@@ -86,13 +86,7 @@ export default function Progreso() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <div
-          className={
-            dashboard.selectedMateria
-              ? "lg:col-span-8 min-w-0"
-              : "lg:col-span-12 min-w-0"
-          }
-        >
+        <div className="lg:col-span-8 min-w-0">
           <MateriasList
             progreso={progreso}
             progresoDetalles={progresoDetalles}
@@ -130,22 +124,24 @@ export default function Progreso() {
           />
         </div>
 
-        {dashboard.selectedMateria && (
-          <div className="lg:col-span-4 min-w-0">
-            <MateriaContextPanel
-              materia={dashboard.selectedMateria}
-              materias={materias}
-              progreso={progreso}
-              progresoDetalles={progresoDetalles}
-              setProgresoDetalles={setProgresoDetalles}
-              plan={plan}
-              cambioDeEstado={dashboard.cambioDeEstado}
-              onChangeEstado={dashboard.handleCambioDeEstado}
-              onSelectMateria={dashboard.setSelectedCodigo}
-              onClose={() => dashboard.setSelectedCodigo(null)}
-            />
-          </div>
-        )}
+        <div
+          className={`lg:col-span-4 min-w-0 lg:sticky lg:top-[72px] ${
+            dashboard.selectedMateria ? "" : "hidden lg:block"
+          }`}
+        >
+          <MateriaContextPanel
+            materia={dashboard.selectedMateria}
+            materias={materias}
+            progreso={progreso}
+            progresoDetalles={progresoDetalles}
+            setProgresoDetalles={setProgresoDetalles}
+            plan={plan}
+            cambioDeEstado={dashboard.cambioDeEstado}
+            onChangeEstado={dashboard.handleCambioDeEstado}
+            onSelectMateria={dashboard.setSelectedCodigo}
+            onClose={() => dashboard.setSelectedCodigo(null)}
+          />
+        </div>
       </div>
 
       <LeyendaEstados materias={materias} />

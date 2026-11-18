@@ -855,9 +855,8 @@ export default function MateriaContextPanel(props) {
     () => false,
   );
 
-  if (!materia) return null;
-
   if (isCompactViewport) {
+    if (!materia) return null;
     return (
       <Drawer
         isOpen={Boolean(materia)}
@@ -880,10 +879,31 @@ export default function MateriaContextPanel(props) {
     );
   }
 
+  if (!materia) {
+    return (
+      <aside
+        aria-label="Panel de detalle de materia"
+        className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-dashed border-[#CBD5E1] dark:border-[#2A3540] p-6 text-center space-y-2.5"
+      >
+        <div className="w-10 h-10 rounded-full bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#6EE7B7] flex items-center justify-center mx-auto">
+          <BookOpen className="w-5 h-5" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+            Detalle de materia
+          </p>
+          <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+            Seleccioná cualquier materia para ver sus correlativas, cambiar su estado o cargar notas de cursada y final.
+          </p>
+        </div>
+      </aside>
+    );
+  }
+
   return (
     <aside
       aria-label={`Detalle de ${materia.nombre}`}
-      className="lg:sticky lg:top-20 rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-4 shadow-sm max-h-[calc(100vh-6rem)] overflow-y-auto"
+      className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-4 shadow-sm max-h-[calc(100vh-5.5rem)] overflow-y-auto"
     >
       <MateriaContextContent key={materia.codigo} {...props} />
     </aside>

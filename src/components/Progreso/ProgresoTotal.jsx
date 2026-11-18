@@ -55,7 +55,7 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
       {/* Barra compacta contextual al hacer scroll */}
       {showStickyBar && (
         <div
-          className="sticky top-14 lg:top-0 z-20 -mx-1 px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#24303C] bg-[#FFFFFF]/95 dark:bg-[#161D24]/95 backdrop-blur-md shadow-sm flex flex-wrap items-center justify-between gap-3 transition-all"
+          className="sticky top-14 z-20 -mx-1 px-4 py-2.5 rounded-xl border border-[#E2E8F0] dark:border-[#24303C] bg-[#FFFFFF]/95 dark:bg-[#161D24]/95 backdrop-blur-md shadow-sm flex flex-wrap items-center justify-between gap-3 transition-all"
           role="region"
           aria-label="Resumen rápido de progreso"
         >
