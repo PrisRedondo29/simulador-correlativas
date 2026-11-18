@@ -14,7 +14,6 @@ export default function SyncCloud({ plan }) {
         setIsLoading(true);
         setAction('Guardando...');
         try {
-            // Verificamos si es el primer guardado para este plan
             const esPrimerGuardado = !userData?.progreso || !userData?.progreso[plan];
 
             await uploadPlanProgress(user.uid, plan);
@@ -24,14 +23,14 @@ export default function SyncCloud({ plan }) {
                 const progresoLocal = JSON.parse(localStorage.getItem(`progreso+${plan}`)) || {};
                 const materiasPlan = planService.getPlanByNumber(plan)?.materias || [];
                 const aprobadas = Object.values(progresoLocal).filter(s => s === 'Aprobado' || s === 'Promocionado').length;
-                
+
                 trackProgresoInicial({
                     plan,
                     aprobadas,
-                    total: materiasPlan.length
+                    total: materiasPlan.length,
                 });
             }
-        } catch (err) {
+        } catch {
             addToast({ title: 'Error', description: 'No se pudo guardar en la nube.', color: 'danger' });
         } finally {
             setIsLoading(false);
@@ -46,12 +45,10 @@ export default function SyncCloud({ plan }) {
             const success = await downloadAllProgress(user.uid);
             if (success) {
                 addToast({ title: '¡Éxito!', description: 'Se cargó tu progreso desde la nube.', color: 'success' });
-                // Ya no recargamos manualmente aquí, dejamos que los eventos de downloadAllProgress 
-                // y los listeners en App.jsx/usePlanData hagan su trabajo de forma reactiva.
             } else {
                 addToast({ title: 'Aviso', description: 'No se encontraron datos en la nube.', color: 'warning' });
             }
-        } catch (err) {
+        } catch {
             addToast({ title: 'Error', description: 'No se pudo cargar desde la nube.', color: 'danger' });
         } finally {
             setIsLoading(false);
@@ -62,25 +59,25 @@ export default function SyncCloud({ plan }) {
 
     if (isLoading) {
         return (
-            <div className="flex items-center gap-2">
-                <Spinner size="sm" />
-                <span className="text-xs font-bold text-foreground/70">{action}</span>
+            <div className="flex items-center gap-2 px-2">
+                <Spinner size="sm" color="primary" />
+                <span className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">{action}</span>
             </div>
-        )
+        );
     }
 
     return (
-        <div className="flex items-center gap-1.5 rounded-xl bg-default-100 p-1 border border-default-200">
+        <div className="flex items-center gap-1 rounded-xl bg-white dark:bg-[#161D24] p-1 border border-[#E2E8F0] dark:border-[#2A3540]">
             <Popover placement="bottom" showArrow>
                 <PopoverTrigger>
-                    <Button isIconOnly size="sm" variant="light" className="text-foreground/50 data-[hover=true]:bg-default-200">
-                        <i className="fa-solid fa-circle-info" />
+                    <Button isIconOnly size="sm" variant="light" aria-label="Información sobre sincronización" className="text-[#64748B] h-7 w-7 min-w-7">
+                        <i className="fa-solid fa-circle-info text-xs" />
                     </Button>
                 </PopoverTrigger>
-                <PopoverContent>
+                <PopoverContent className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540]">
                     <div className="px-1 py-2 max-w-xs">
-                        <div className="text-sm font-bold">Sincronización Manual</div>
-                        <div className="text-xs text-foreground/70 mt-1">
+                        <div className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">Sincronización Manual</div>
+                        <div className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
                             Guardá tu progreso en la nube para usarlo en otros dispositivos, o cargá la última versión guardada.
                         </div>
                     </div>
@@ -91,8 +88,8 @@ export default function SyncCloud({ plan }) {
                 size="sm"
                 variant="light"
                 onPress={handleUpload}
-                startContent={<i className="fa-solid fa-cloud-arrow-up" />}
-                className="font-bold data-[hover=true]:bg-default-200"
+                startContent={<i className="fa-solid fa-cloud-arrow-up text-xs text-[#005A36] dark:text-[#6EE7B7]" />}
+                className="font-medium text-xs h-7 px-2.5 text-[#334155] dark:text-[#E2E8F0]"
             >
                 Guardar
             </Button>
@@ -100,8 +97,8 @@ export default function SyncCloud({ plan }) {
                 size="sm"
                 variant="light"
                 onPress={handleDownload}
-                startContent={<i className="fa-solid fa-cloud-arrow-down" />}
-                className="font-bold data-[hover=true]:bg-default-200"
+                startContent={<i className="fa-solid fa-cloud-arrow-down text-xs text-[#475569] dark:text-[#94A3B8]" />}
+                className="font-medium text-xs h-7 px-2.5 text-[#334155] dark:text-[#E2E8F0]"
             >
                 Cargar
             </Button>

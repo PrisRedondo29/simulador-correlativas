@@ -1,58 +1,60 @@
 import React from 'react';
-import { Chip } from '@heroui/react';
 import { Clock, Calendar, CheckCircle2, AlertCircle, Circle, HelpCircle, Unlock } from 'lucide-react';
-import materiasUtils from '../../utils/Progreso/materiasUtils';
 
 const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
-
-    // Configuración de estilos por estado (Respetando estados originales)
     const getStatusConfig = () => {
         switch (estado) {
-            case "Aprobado":
+            case 'Aprobado':
                 return {
-                    border: "border-success-200",
-                    shadow: "shadow-success-100",
-                    sideBar: "bg-success-500",
-                    bg: "bg-success-50/30",
-                    accent: "text-success-600",
-                    chip: "success",
-                    icon: <CheckCircle2 size={12} strokeWidth={3} />,
-                    label: "Aprobada"
+                    border: 'border-[#A7F3D0] dark:border-[#1E4D38]',
+                    sideBar: 'bg-[#478559]',
+                    bg: 'bg-[#ECFDF5] dark:bg-[#102A20]/80',
+                    accent: 'text-[#166534] dark:text-[#86EFAC]',
+                    badgeClass: 'bg-[#D1FAE5] text-[#166534] dark:bg-[#173A24] dark:text-[#86EFAC]',
+                    icon: <CheckCircle2 size={11} strokeWidth={2.5} />,
+                    label: 'Aprobada',
                 };
-            case "Regular":
+            case 'Regular':
                 return {
-                    border: "border-warning-200",
-                    shadow: "shadow-warning-100",
-                    sideBar: "bg-warning-500",
-                    bg: "bg-warning-50/30",
-                    accent: "text-warning-600",
-                    chip: "warning",
-                    icon: <AlertCircle size={12} strokeWidth={3} />,
-                    label: "Regular"
+                    border: 'border-[#FDE68A] dark:border-[#5C4318]',
+                    sideBar: 'bg-[#D97706]',
+                    bg: 'bg-[#FFFBEB] dark:bg-[#2D2210]/70',
+                    accent: 'text-[#92400E] dark:text-[#FCD34D]',
+                    badgeClass: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D]',
+                    icon: <AlertCircle size={11} strokeWidth={2.5} />,
+                    label: 'Regular',
                 };
-            case "Sin equivalencia":
+            case 'Sin equivalencia':
                 return {
-                    border: "border-default-100 border-dashed",
-                    shadow: "shadow-none",
-                    sideBar: "bg-default-200 opacity-50",
-                    bg: "bg-transparent opacity-60",
-                    accent: "text-default-400",
-                    chip: "default",
-                    icon: <HelpCircle size={12} />,
-                    label: "N/A"
+                    border: 'border-[#CBD5E1] dark:border-[#2A3540] border-dashed',
+                    sideBar: 'bg-[#94A3B8]/40',
+                    bg: 'bg-[#F8FAFC] dark:bg-[#161D24] opacity-75',
+                    accent: 'text-[#64748B] dark:text-[#94A3B8]',
+                    badgeClass: 'bg-[#F1F5F9] text-[#64748B] dark:bg-[#1E2730] dark:text-[#94A3B8]',
+                    icon: <HelpCircle size={11} />,
+                    label: 'Sin equiv.',
                 };
-            case "Disponible":
+            case 'Disponible':
             default:
-                return {
-                    border: isNewPlan ? "border-primary-100" : "border-default-100",
-                    shadow: "shadow-md",
-                    sideBar: isNewPlan ? "bg-primary-500" : "bg-secondary-400",
-                    bg: "bg-white dark:bg-zinc-900",
-                    accent: isNewPlan ? "text-primary-600" : "text-secondary-600",
-                    chip: isNewPlan ? "primary" : "secondary",
-                    icon: isNewPlan ? <Unlock size={12} strokeWidth={2.5} /> : <Circle size={12} />,
-                    label: isNewPlan ? "Disponible" : "Pendiente"
-                };
+                return isNewPlan
+                    ? {
+                        border: 'border-[#BAE6FD] dark:border-[#1E4E6E]',
+                        sideBar: 'bg-[#075985] dark:bg-[#38BDF8]',
+                        bg: 'bg-[#F0F9FF] dark:bg-[#0F2636]/70',
+                        accent: 'text-[#075985] dark:text-[#7DD3FC]',
+                        badgeClass: 'bg-[#E0F2FE] text-[#075985] dark:bg-[#16384F] dark:text-[#7DD3FC]',
+                        icon: <Unlock size={11} strokeWidth={2.5} />,
+                        label: 'Disponible',
+                    }
+                    : {
+                        border: 'border-[#E2E8F0] dark:border-[#2A3540]',
+                        sideBar: 'bg-[#94A3B8]',
+                        bg: 'bg-white dark:bg-[#161D24]',
+                        accent: 'text-[#64748B] dark:text-[#94A3B8]',
+                        badgeClass: 'bg-[#F1F5F9] text-[#475569] dark:bg-[#1E2730] dark:text-[#CBD5E1]',
+                        icon: <Circle size={10} />,
+                        label: 'Pendiente',
+                    };
         }
     };
 
@@ -61,46 +63,38 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
     return (
         <div
             onClick={onClick}
-            className={`group relative flex items-stretch overflow-hidden rounded-2xl border transition-all duration-300 ${config.border} ${config.bg} ${config.shadow} ${onClick ? "cursor-pointer hover:translate-y-[-2px] active:scale-[0.98]" : ""
-                }`}
+            className={`group relative flex items-stretch overflow-hidden rounded-xl border transition-colors duration-150 ${config.border} ${config.bg} ${
+                onClick ? 'cursor-pointer hover:border-[#005A36]/50' : ''
+            }`}
         >
-            {/* Bloque de color lateral para identificación rápida */}
-            <div className={`w-1 sm:w-1.5 shrink-0 ${config.sideBar}`} />
+            <div className={`w-1 shrink-0 ${config.sideBar}`} />
 
-            <div className="flex flex-col grow p-2 sm:p-3.5 gap-1.5 sm:gap-2.5 min-w-0">
-                {/* Fila Superior: Código a la izquierda + Badge a la derecha */}
-                <div className="flex items-center justify-between gap-1 w-full">
-                    <span className={`text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider ${config.accent}`}>
+            <div className="flex flex-col grow p-2.5 sm:p-3.5 gap-1.5 min-w-0">
+                <div className="flex items-center justify-between gap-1.5 w-full">
+                    <span className={`text-[10px] sm:text-xs font-mono font-semibold tracking-wide ${config.accent}`}>
                         {materia.mostrarCodigo === false ? '---' : materia.codigo}
                     </span>
 
-                    <Chip
-                        size="sm"
-                        variant="flat"
-                        color={config.chip}
-                        startContent={config.icon}
-                        className="h-5 sm:h-6 text-[9px] sm:text-xs font-black uppercase px-1.5 sm:px-2 shadow-2xs border border-white/20 shrink-0"
-                    >
-                        {config.label}
-                    </Chip>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0 ${config.badgeClass}`}>
+                        {config.icon}
+                        <span>{config.label}</span>
+                    </span>
                 </div>
 
-                {/* Fila Central: Nombre de la materia con el 100% de ancho disponible */}
-                <h4 className="text-[11px] sm:text-[14px] font-black text-foreground leading-snug tracking-tight line-clamp-3 sm:line-clamp-2 group-hover:text-primary transition-colors">
+                <h4 className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-snug line-clamp-3 sm:line-clamp-2">
                     {materia.nombre}
                 </h4>
 
-                {/* Fila Inferior: Horas totales y semanales */}
-                <div className="flex items-center gap-1.5 sm:gap-2 mt-auto flex-wrap pt-1 border-t border-default-200/40">
-                    <div className="flex items-center gap-1 text-[9px] sm:text-xs text-foreground font-bold bg-default-100 dark:bg-default-200 px-1.5 py-0.5 rounded-md shrink-0">
-                        <Clock size={10} className="text-default-500 dark:text-default-400 shrink-0" />
-                        <span>{materia.horas_totales}h</span>
-                    </div>
+                <div className="flex items-center gap-2 mt-auto pt-1.5 border-t border-[#E2E8F0]/60 dark:border-[#2A3540] text-[10px] sm:text-xs text-[#64748B] dark:text-[#94A3B8] font-medium tabular-nums">
+                    <span className="inline-flex items-center gap-1">
+                        <Clock size={11} />
+                        {materia.horas_totales}h
+                    </span>
                     {materia.horas_semanales && (
-                        <div className="flex items-center gap-1 text-[9px] sm:text-xs text-foreground font-bold bg-default-100 dark:bg-default-200 px-1.5 py-0.5 rounded-md shrink-0">
-                            <Calendar size={10} className="text-default-500 dark:text-default-400 shrink-0" />
-                            <span>{materia.horas_semanales}h/s</span>
-                        </div>
+                        <span className="inline-flex items-center gap-1">
+                            <Calendar size={11} />
+                            {materia.horas_semanales}h/s
+                        </span>
                     )}
                 </div>
             </div>

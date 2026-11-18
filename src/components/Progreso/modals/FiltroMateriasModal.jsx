@@ -59,27 +59,26 @@ function FiltroMateriasModal({ estado, materias, progreso, isOpen, onOpenChange,
                                                     materiasFiltradas.map((m, index) => {
                                                         const estilo = materiasUtils.obtenerEstiloPorEstado(estado)
                                                         return (
-                                                            <Card className='mb-3 border-2 border-default-200 w-full' key={m.codigo}
+                                                            <Card className='mb-3 border border-[#E2E8F0] dark:border-[#2A3540] bg-white dark:bg-[#161D24] shadow-none w-full' key={m.codigo}
                                                                 isPressable onPress={() => handleClick(m)}>
                                                                 <CardHeader>
-                                                                    <div className='flex justify-between items-center w-full'>
-                                                                        <div className="font-semibold text-default-700">
+                                                                    <div className='flex justify-between items-center w-full gap-2'>
+                                                                        <div className="font-semibold text-sm text-[#1E293B] dark:text-[#F1F5F9] text-left">
                                                                             {m.nombre}
                                                                         </div>
 
-                                                                        {/* Aquí aplicamos el ícono con los colores dinámicos */}
-                                                                        <Chip variant="flat" className="size-8" color={estiloEstado(progreso[m.codigo])}>
-                                                                            <i className={`fa-solid ${estilo.icon} ${estilo.colorText} text-sm `}></i>
-                                                                        </Chip>
+                                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${estilo.bgSoft}`}>
+                                                                            <i className={`fa-solid ${estilo.icon} ${estilo.colorText} text-xs`}></i>
+                                                                        </div>
                                                                     </div>
                                                                 </CardHeader>
-                                                                <CardFooter className="pt-0 flex justify-between">
-                                                                    <span className={`text-xs font-bold uppercase`}>
+                                                                <CardFooter className="pt-0 flex justify-between items-center">
+                                                                    <span className="text-xs font-mono font-medium text-[#64748B] dark:text-[#94A3B8]">
                                                                         {m.codigo}
                                                                     </span>
-                                                                    <span>
-                                                                        <Chip color={estiloEstado(progreso[m.codigo])} variant="flat">{progreso[m.codigo]}</Chip>
-                                                                    </span>
+                                                                    <Chip size="sm" color={estiloEstado(progreso[m.codigo])} variant="flat" className="font-medium">
+                                                                        {progreso[m.codigo]}
+                                                                    </Chip>
                                                                 </CardFooter>
                                                             </Card>
                                                         )

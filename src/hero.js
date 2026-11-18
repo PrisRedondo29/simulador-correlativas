@@ -2,104 +2,105 @@ import { heroui } from "@heroui/react";
 
 export default heroui({
     themes: {
-        /* --- 1. MODO CLARO --- */
+        /* --- 1. MODO CLARO: Identidad UNLu Calma --- */
         light: {
             colors: {
-                background: "#f8fafc",
-                foreground: "#0f172a",
-                focus: "#005a36",
-                overlay: "#ffffff",
+                background: "#F8FAFC",
+                foreground: "#1E293B",
+                focus: "#005A36",
+                overlay: "#FFFFFF",
+                divider: "#E2E8F0",
                 default: {
-                    /* Escala zinc/slate */
-                    50: "#f8fafc", 100: "#f1f5f9", 200: "#e2e8f0", 300: "#cbd5e1",
-                    400: "#94a3b8", 500: "#64748b", 600: "#475569", 700: "#334155",
-                    800: "#1e293b", 900: "#0f172a",
-                    foreground: "#0f172a", DEFAULT: "#94a3b8"
+                    50: "#F8FAFC", 100: "#F1F5F9", 200: "#E2E8F0", 300: "#CBD5E1",
+                    400: "#94A3B8", 500: "#64748B", 600: "#475569", 700: "#334155",
+                    800: "#1E293B", 900: "#0F172A",
+                    foreground: "#1E293B", DEFAULT: "#64748B"
                 },
                 primary: {
-                    50: "#e8f5ee", 100: "#c7ebd7", 200: "#96dcba", 300: "#5ec99b",
-                    400: "#2eb37f", 500: "#005a36", 600: "#004d2e", 700: "#004026",
-                    800: "#00331f", 900: "#002617",
-                    foreground: "#ffffff", DEFAULT: "#005a36"
+                    50: "#ECFDF5", 100: "#D1FAE5", 200: "#A7F3D0", 300: "#6EE7B7",
+                    400: "#34A875", 500: "#005A36", 600: "#00472B", 700: "#003822",
+                    800: "#002B1A", 900: "#001F13",
+                    foreground: "#FFFFFF", DEFAULT: "#005A36"
                 },
                 secondary: {
-                    50: "#eee4f8", 100: "#d7bfef", 200: "#bf99e5", 300: "#a773db",
-                    400: "#904ed2", 500: "#7828c8", 600: "#6321a5", 700: "#4e1a82",
-                    800: "#39135f", 900: "#240c3c",
-                    foreground: "#fff", DEFAULT: "#7828c8"
+                    50: "#EEF6F0", 100: "#D7EAD9", 200: "#B1D5B8", 300: "#84BC90",
+                    400: "#5FA16E", 500: "#478559", 600: "#3A6E49", 700: "#2E583A",
+                    800: "#23432C", 900: "#182F1F",
+                    foreground: "#FFFFFF", DEFAULT: "#478559"
                 },
                 success: {
-                    50: "#e2f8ec", 100: "#b9efd1", 200: "#91e5b5", 300: "#68dc9a",
-                    400: "#40d27f", 500: "#17c964", 600: "#13a653", 700: "#0f8341",
-                    800: "#0b5f30", 900: "#073c1e",
-                    foreground: "#000", DEFAULT: "#17c964"
+                    50: "#ECFDF5", 100: "#D1FAE5", 200: "#A7F3D0", 300: "#79C992",
+                    400: "#58A670", 500: "#478559", 600: "#376B47", 700: "#2B5338",
+                    800: "#1F3D29", 900: "#14291B",
+                    foreground: "#FFFFFF", DEFAULT: "#478559"
                 },
                 warning: {
-                    50: "#fef4e4", 100: "#fce4bd", 200: "#fad497", 300: "#f9c571",
-                    400: "#f7b54a", 500: "#f5a524", 600: "#ca881e", 700: "#9f6b17",
-                    800: "#744e11", 900: "#4a320b",
-                    foreground: "#000", DEFAULT: "#f5a524"
+                    50: "#FFFBEB", 100: "#FEF3C7", 200: "#FDE68A", 300: "#FCD34D",
+                    400: "#F59E0B", 500: "#D97706", 600: "#B45309", 700: "#92400E",
+                    800: "#78350F", 900: "#451A03",
+                    foreground: "#FFFFFF", DEFAULT: "#D97706"
                 },
                 danger: {
-                    50: "#fee1eb", 100: "#fbb8cf", 200: "#f98eb3", 300: "#f76598",
-                    400: "#f53b7c", 500: "#f31260", 600: "#c80f4f", 700: "#9e0c3e",
-                    800: "#73092e", 900: "#49051d",
-                    foreground: "#000", DEFAULT: "#f31260"
+                    50: "#FEF2F2", 100: "#FEE2E2", 200: "#FECACA", 300: "#FCA5A5",
+                    400: "#F87171", 500: "#DC2626", 600: "#B91C1C", 700: "#991B1B",
+                    800: "#7F1D1D", 900: "#450A0A",
+                    foreground: "#FFFFFF", DEFAULT: "#DC2626"
                 },
-                content1: { DEFAULT: "#ffffff", foreground: "#000" },
-                content2: { DEFAULT: "#f4f4f5", foreground: "#000" },
-                content3: { DEFAULT: "#e4e4e7", foreground: "#000" },
-                content4: { DEFAULT: "#d4d4d8", foreground: "#000" },
+                content1: { DEFAULT: "#FFFFFF", foreground: "#1E293B" },
+                content2: { DEFAULT: "#F1F5F9", foreground: "#334155" },
+                content3: { DEFAULT: "#E2E8F0", foreground: "#1E293B" },
+                content4: { DEFAULT: "#CBD5E1", foreground: "#0F172A" },
             }
         },
 
-        /* --- 2. MODO OSCURO --- */
+        /* --- 2. MODO OSCURO: Pizarra Serena & Verde UNLu --- */
         dark: {
             colors: {
-                background: "#000000",
-                foreground: "#ffffff",
-                focus: "#006FEE",
-                overlay: "#000000",
+                background: "#0F1419",
+                foreground: "#F1F5F9",
+                focus: "#4A9D68",
+                overlay: "#161D24",
+                divider: "#2A3540",
                 default: {
-                    50: "#0d0d0e", 100: "#1a1a1e", 200: "#2d2d33", 300: "#4b4b54",
-                    400: "#a1a1aa", 500: "#c4c4cc", 600: "#dcdce0", 700: "#ececf0",
-                    800: "#f4f4f5", 900: "#ffffff",
-                    foreground: "#fff", DEFAULT: "#a1a1aa"
+                    50: "#161D24", 100: "#1E2730", 200: "#2A3540", 300: "#3B4958",
+                    400: "#64748B", 500: "#94A3B8", 600: "#CBD5E1", 700: "#E2E8F0",
+                    800: "#F1F5F9", 900: "#FFFFFF",
+                    foreground: "#F1F5F9", DEFAULT: "#94A3B8"
                 },
                 primary: {
-                    50: "#002147", 100: "#003571", 200: "#00489b", 300: "#005cc4",
-                    400: "#006fee", 500: "#2d88f1", 600: "#59a1f4", 700: "#86bbf7",
-                    800: "#b3d4fa", 900: "#dfedfd",
-                    foreground: "#fff", DEFAULT: "#006fee"
+                    50: "#0D241A", 100: "#123526", 200: "#1A4D38", 300: "#246B4E",
+                    400: "#2E8B63", 500: "#3BA578", 600: "#6EE7B7", 700: "#A7F3D0",
+                    800: "#D1FAE5", 900: "#ECFDF5",
+                    foreground: "#FFFFFF", DEFAULT: "#2E8B63"
                 },
                 secondary: {
-                    50: "#240c3c", 100: "#39135f", 200: "#4e1a82", 300: "#6321a5",
-                    400: "#7828c8", 500: "#904ed2", 600: "#a773db", 700: "#bf99e5",
-                    800: "#d7bfef", 900: "#eee4f8",
-                    foreground: "#fff", DEFAULT: "#7828c8"
+                    50: "#102819", 100: "#173A24", 200: "#215435", 300: "#2D7349",
+                    400: "#3D8F5E", 500: "#4A9D68", 600: "#74BD8E", 700: "#A3D7B5",
+                    800: "#CFEBD8", 900: "#EEF8F1",
+                    foreground: "#FFFFFF", DEFAULT: "#4A9D68"
                 },
                 success: {
-                    50: "#073c1e", 100: "#0b5f30", 200: "#0f8341", 300: "#13a653",
-                    400: "#17c964", 500: "#40d27f", 600: "#68dc9a", 700: "#91e5b5",
-                    800: "#b9efd1", 900: "#e2f8ec",
-                    foreground: "#000", DEFAULT: "#17c964"
+                    50: "#102819", 100: "#173A24", 200: "#215435", 300: "#2D7349",
+                    400: "#3D8F5E", 500: "#4A9D68", 600: "#74BD8E", 700: "#A3D7B5",
+                    800: "#CFEBD8", 900: "#EEF8F1",
+                    foreground: "#FFFFFF", DEFAULT: "#4A9D68"
                 },
                 warning: {
-                    50: "#4a320b", 100: "#744e11", 200: "#9f6b17", 300: "#ca881e",
-                    400: "#f5a524", 500: "#f7b54a", 600: "#f9c571", 700: "#fad497",
-                    800: "#fce4bd", 900: "#fef4e4",
-                    foreground: "#000", DEFAULT: "#f5a524"
+                    50: "#2D2210", 100: "#423115", 200: "#5C4318", 300: "#855E1E",
+                    400: "#B45309", 500: "#D97706", 600: "#F59E0B", 700: "#FCD34D",
+                    800: "#FDE68A", 900: "#FEF3C7",
+                    foreground: "#FFFFFF", DEFAULT: "#D97706"
                 },
                 danger: {
-                    50: "#49051d", 100: "#73092e", 200: "#9e0c3e", 300: "#c80f4f",
-                    400: "#f31260", 500: "#f53b7c", 600: "#f76598", 700: "#f98eb3",
-                    800: "#fbb8cf", 900: "#fee1eb",
-                    foreground: "#000", DEFAULT: "#f31260"
+                    50: "#2D1619", 100: "#421D22", 200: "#5C262B", 300: "#853139",
+                    400: "#B91C1C", 500: "#E05252", 600: "#F87171", 700: "#FCA5A5",
+                    800: "#FECACA", 900: "#FEE2E2",
+                    foreground: "#FFFFFF", DEFAULT: "#E05252"
                 },
-                content1: { DEFAULT: "#18181b", foreground: "#fff" },
-                content2: { DEFAULT: "#27272a", foreground: "#fff" },
-                content3: { DEFAULT: "#333338", foreground: "#fff" },
-                content4: { DEFAULT: "#44444a", foreground: "#fff" },
+                content1: { DEFAULT: "#161D24", foreground: "#F1F5F9" },
+                content2: { DEFAULT: "#1E2730", foreground: "#E2E8F0" },
+                content3: { DEFAULT: "#2A3540", foreground: "#F1F5F9" },
+                content4: { DEFAULT: "#3B4958", foreground: "#FFFFFF" },
             }
         }
     }

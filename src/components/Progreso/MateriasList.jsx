@@ -1,828 +1,371 @@
-import { useEffect, useState } from 'react'
-import MateriaCard from './MateriaCard.jsx'
-import { Button, Chip, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Switch, Tab, Tabs, useDisclosure, Dropdown, DropdownTrigger, DropdownMenu, DropdownItem } from '@heroui/react'
-import DetalleMateriaModal from './modals/DetalleMateriaModal.jsx'
-import ConfirmarCambioModal from './modals/ConfirmarCambioModal.jsx'
-import CapturaTransicionModal from './modals/CapturaTransicionModal.jsx'
-import { useNavigate } from 'react-router-dom'
-import materiasUtils from '../../utils/Progreso/materiasUtils.js'
-import useProgresoMaterias from '../../hooks/Progreso/useProgresoMaterias.jsx'
-import { useAuth } from '../../context/AuthContext.jsx'
-import regularidadUtils from '../../utils/Progreso/regularidadUtils.js'
-import { Search } from 'lucide-react'
-import SyncCloud from './SyncCloud';
-import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
-import { trackSearch, trackCambioVista } from '../../services/analyticsService.js';
-import { esMateriaIncompleta } from './InfoStatusBanner.jsx';
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+} from "@heroui/react";
+import { CheckCheck, CheckCircle2, RotateCcw, SearchX } from "lucide-react";
+import MateriaCard from "./MateriaCard";
+import ConfirmarCambioModal from "./modals/ConfirmarCambioModal";
+import CapturaTransicionModal from "./modals/CapturaTransicionModal";
+import { esMateriaIncompleta } from "../../utils/Progreso/materiasUtils";
 
-function MateriasList({ progreso, setProgreso, progresoDetalles, setProgresoDetalles, materias, plan, busqueda = "", filtros = [], isAnioOpen, setIsAnioOpen, handleMostrarTodo }) {
-    const { updateAuthProgreso } = useAuth();
-    const [infoMateria, setInfoMateria] = useState()
-    const { cambioDeEstado, cambioDeEstadoMultiple } = useProgresoMaterias(progreso, setProgreso, materias, plan, updateAuthProgreso)
-
-    // Lógica de filtrado
-    const isSearching = busqueda.trim().length > 0 || filtros.length > 0;
-
-    const materiasFiltradas = materias.filter(m => {
-        // Función para quitar acentos
-        const normalize = (text) =>
-            text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-
-        const searchNormalized = normalize(busqueda);
-
-        const matchBusqueda = busqueda === "" ||
-            normalize(m.nombre).includes(searchNormalized) ||
-            normalize(m.codigo).includes(searchNormalized);
-
-        const estadoMateria = progreso[m.codigo];
-        const detallesMateria = progresoDetalles ? progresoDetalles[m.codigo] : null;
-
-        const matchFiltros = filtros.length === 0 || (
-            filtros.includes('falta_info')
-                ? (esMateriaIncompleta(m, estadoMateria, detallesMateria) || (filtros.length > 1 && filtros.filter(f => f !== 'falta_info').includes(estadoMateria)))
-                : filtros.includes(estadoMateria)
-        );
-
-        return matchBusqueda && matchFiltros;
-    });
-
-    // Efecto para verificar vencimientos pasivos al cargar
-    useEffect(() => {
-        if (!progreso || !progresoDetalles) return;
-
-        let huboCambios = false;
-        const nuevoProgreso = { ...progreso };
-
-        Object.entries(progreso).forEach(([codigo, estado]) => {
-            if (estado === 'Regular') {
-                const detalles = progresoDetalles[codigo];
-                if (detalles?.fechaRegularidad) {
-                    const estadoActualizado = regularidadUtils.calcularEstadoConsolidado(
-                        "Regular",
-                        detalles.fechaRegularidad,
-                        detalles.intentosFinal
-                    );
-                    if (estadoActualizado === 'Libre') {
-                        nuevoProgreso[codigo] = 'Libre';
-                        huboCambios = true;
-                    }
-                }
-            }
-        });
-
-        if (huboCambios) {
-            setProgreso(nuevoProgreso);
-            updateAuthProgreso(plan, nuevoProgreso, progresoDetalles);
+function YearProgressBadge({ completedCount, totalCount }) {
+  const isComplete = totalCount > 0 && completedCount === totalCount;
+  return (
+    <span className="inline-flex items-center gap-2 text-xs font-medium tabular-nums shrink-0">
+      <span
+        className={
+          isComplete
+            ? "text-[#166534] dark:text-[#86EFAC]"
+            : "text-[#64748B] dark:text-[#94A3B8]"
         }
-    }, []);
-    const [confirmacion, setConfirmacion] = useState(false)
-    const [mostrar, setMostrar] = useState(true)
-
-    const [vista, setVista] = useState(() => localStorage.getItem('materias_vista_preferida') || 'grid');
-
-    useEffect(() => {
-        localStorage.setItem('materias_vista_preferida', vista);
-        trackCambioVista({ tipo: 'tipo_progreso', valor: vista });
-    }, [vista]);
-
-    // Trackear búsquedas en Progreso con debounce
-    useEffect(() => {
-        if (!busqueda) return;
-        const timer = setTimeout(() => {
-            trackSearch({
-                term: busqueda,
-                resultsCount: materiasFiltradas.length,
-                search_origen: 'progreso'
-            });
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [busqueda, materiasFiltradas.length]);
-
-    const navigate = useNavigate()
-
-    // Para el Drawer/Info de la materia
-    const {
-        isOpen: isDetailOpen,
-        onOpen: onDetailOpen,
-        onClose: onDetailClose,
-        onOpenChange: onDetailOpenChange
-    } = useDisclosure()
-
-    // Para el Modal de confirmación de borrado
-    const {
-        isOpen: isResetOpen,
-        onOpen: onResetOpen,
-        onOpenChange: onResetOpenChange,
-        onClose: onResetClose
-    } = useDisclosure()
-
-    //Para el modal de Confirmar regular una materia bloqueada
-    const {
-        isOpen: isConfirmationOpen,
-        onOpen: onConfirmationOpen,
-        onOpenChange: onConfirmationOpenChange,
-        onClose: onConfirmationClose
-    } = useDisclosure()
-
-    // Para el modal de captura de datos por transición de estado
-    const {
-        isOpen: isCapturaOpen,
-        onOpen: onCapturaOpen,
-        onOpenChange: onCapturaOpenChange,
-        onClose: onCapturaClose
-    } = useDisclosure()
-    const [capturaConfig, setCapturaConfig] = useState({ tipo: null, materia: null, pendingState: null })
-
-    // Para el Modal de Aprobar Año o Grupo
-    const [grupoAAprobar, setGrupoAAprobar] = useState(null)
-    const {
-        isOpen: isAprobarAnioOpen,
-        onOpen: onAprobarAnioOpen,
-        onOpenChange: onAprobarAnioOpenChange,
-        onClose: onAprobarAnioClose
-    } = useDisclosure()
-
-    // ... down below ...
-    //Abrir la info de una materia con Drawer de HeroUI
-    const abrirInfo = (materia) => {
-        setInfoMateria(materia)
-        onDetailOpen()
-
-        window.history.pushState({ modalOpen: true }, "")
-    }
-    //Manejo el evento de que en celu haga para atrás, que cierre el modal y no se saque la página
-    useEffect(() => {
-        const handlePopState = () => onDetailClose()
-        if (isDetailOpen) window.addEventListener("popstate", handlePopState)
-        return () => window.removeEventListener("popstate", handlePopState)
-    }, [isDetailOpen, onDetailClose])
-
-    // Manejo de historial para modal de reset
-    useEffect(() => {
-        const handlePopState = () => onResetClose()
-        if (isResetOpen) window.addEventListener("popstate", handlePopState)
-        return () => window.removeEventListener("popstate", handlePopState)
-    }, [isResetOpen, onResetClose])
-
-    // Manejo de historial para modal de confirmación
-    useEffect(() => {
-        const handlePopState = () => onConfirmationClose()
-        if (isConfirmationOpen) window.addEventListener("popstate", handlePopState)
-        return () => window.removeEventListener("popstate", handlePopState)
-    }, [isConfirmationOpen, onConfirmationClose])
-
-    // Manejo de historial para modal de aprobar año
-    useEffect(() => {
-        const handlePopState = () => onAprobarAnioClose()
-        if (isAprobarAnioOpen) window.addEventListener("popstate", handlePopState)
-        return () => window.removeEventListener("popstate", handlePopState)
-    }, [isAprobarAnioOpen, onAprobarAnioClose])
-
-    //Para cambiar el tamaño de la barra de progreso
-    const getProgressBar = () => {
-        const sizeProgressBar = window.innerWidth
-        if (sizeProgressBar < 640) { return "sm" }
-        else if (sizeProgressBar < 768) { return "md" }
-        else if (sizeProgressBar < 1024) { return "lg" }
-    }
-    const currentSize = getProgressBar()
-
-    // Ordeno las materias dentro del array cuatrimestres, para poder mostrarlas en orden y separarlas por cuatrimestre
-    const aniosTotales = [...new Set(materias.map((m) => Number(m.anio)))].sort((a, b) => a - b)
-    const talleres = materias.filter(m => m.taller === true)
-
-    // Lógica Título Intermedio
-    const tituloIntermedioText = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
-    const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
-
-    // Para poder filtrar las materias
-    const tabs = [
-        {
-            id: "todas",
-            label: "Todas",
-            content: aniosTotales
-        },
-        ...(talleres.length > 0 ? [{
-            id: "talleres",
-            label: "Talleres",
-            content: ["taller"]
-        }] : []),
-        ...aniosTotales.map(anio => ({
-            id: anio.toString(),
-            label: `${anio}° Año`,
-            content: [anio]
-        }))
-    ]
-
-    //Para poder reestablecer el progreso
-    const reestablecerProgreso = () => {
-        const progresoInicial = {}
-
-        // Usamos la lista de materias que ya tenemos en el estado
-        materias.forEach(m => {
-            if (m.tesis) {
-                progresoInicial[m.codigo] = materiasUtils.bloquear
-            } else {
-                progresoInicial[m.codigo] = (m.correlativas.length > 0 ? materiasUtils.bloquear : materiasUtils.estadosPosibles[0])
-            }
-        })
-
-        updateAuthProgreso(plan, progresoInicial, {});
-        // Actualizo el progreso
-        setProgreso(progresoInicial)
-        if (setProgresoDetalles) setProgresoDetalles({})
-        onResetClose()
-    }
-    //Abrir el modal de confirmar el reestablecer progreso
-    const handleBorrado = () => {
-        onResetOpen()
-        window.history.pushState({ modalOpen: true }, "")
-    }
-
-    //Manejar el cambio de estado con Popover Menu
-    const [codigoMateria, setCodigoMateria] = useState()
-    const [targetStateModal, setTargetStateModal] = useState(null)
-
-    const handleCambioDeEstado = (codigo, targetState) => {
-        const mappedState = targetState;
-        const materia = materias.find(m => m.codigo === codigo);
-        const estadoActual = progreso[codigo];
-
-        if (mappedState === "Reiniciar") {
-            const ESTADOS_VALIDOS = [materiasUtils.estadosPosibles[1], materiasUtils.estadosPosibles[2], materiasUtils.estadosPosibles[4], 'Cursando'];
-            const todasBien = !materia?.correlativas?.length || materia.correlativas.every(c => ESTADOS_VALIDOS.includes(progreso[c]));
-            const baseState = todasBien ? materiasUtils.estadosPosibles[0] : materiasUtils.bloquear;
-            cambioDeEstado(codigo, baseState);
-            return;
-        }
-
-        // Si es "Cursando", verificamos si es una recursada
-        if (mappedState === "Cursando") {
-            const viniendoDeEstadoAvanzado = ['Regular', 'Libre', 'Aprobado', 'Promocionado'].includes(estadoActual);
-            
-            if (viniendoDeEstadoAvanzado) {
-                // Es recursada, pedimos datos (año)
-                setCapturaConfig({ tipo: 'hacia_cursando', materia, pendingState: mappedState });
-                setCodigoMateria(codigo);
-                onCapturaOpen();
-                return;
-            }
-
-            // Si no es recursada (viene de Disponible/Bloqueado), tomamos el año actual automáticamente
-            const cuatrimestreAuto = materia?.cuatrimestre
-                ? (Number(materia.cuatrimestre) % 2 === 0 ? 2 : 1)
-                : 1;
-
-            const payload = {
-                fechaInicioCursada: {
-                    anio: new Date().getFullYear(),
-                    cuatrimestre: cuatrimestreAuto
-                }
-            };
-
-            ejecutarCambioConDatos(codigo, { tipo: 'hacia_cursando', materia, pendingState: mappedState }, payload);
-            return;
-        }
-
-        // Determinar tipo de captura según la transición
-        let tipoCaptura = null;
-
-        if (mappedState === "Regular") {
-            tipoCaptura = estadoActual === 'Cursando' ? 'desde_cursando_hacia_reg' : 'hacia_regular';
-        } else if (mappedState === "Aprobado" || mappedState === "Promocionado") {
-            if (estadoActual === 'Regular' || estadoActual === 'Cursando') {
-                tipoCaptura = 'hacia_aprobado_desde_reg';
-            } else {
-                tipoCaptura = 'hacia_aprobado_directo';
-            }
-        }
-
-        if (tipoCaptura) {
-            setCapturaConfig({ tipo: tipoCaptura, materia, pendingState: mappedState, estadoAnterior: estadoActual });
-            setCodigoMateria(codigo);
-            onCapturaOpen();
-            return;
-        }
-
-        // Estados sin formulario (Libre directo, etc.)
-        cambioDeEstado(codigo, mappedState);
-    }
-
-    const ejecutarCambioConDatos = (codigo, config, payload) => {
-        if (payload && codigo) {
-            const detallesActuales = progresoDetalles?.[codigo] || {};
-            const estadoActual = progreso[codigo];
-
-            // ¿Es una recursada? (viniendo de un estado que ya implica cursada previa y queriendo cursar/regularizar de nuevo)
-            const viniendoDeEstadoAvanzado = ['Regular', 'Libre', 'Aprobado', 'Promocionado', 'Cursando'].includes(estadoActual);
-            const yendoAEstadoActivo = ['Cursando', 'Regular', 'Aprobado', 'Promocionado'].includes(config.pendingState);
-            // Es recursada si viene de un estado avanzado y el nuevo estado es Cursando, 
-            // O si viene de un estado final (Libre/Aprobado) y va a uno activo.
-            const esRecursada = (viniendoDeEstadoAvanzado && config.pendingState === 'Cursando') || 
-                               (['Libre', 'Aprobado', 'Promocionado'].includes(estadoActual) && yendoAEstadoActivo);
-
-            let nuevosDetallesBase = { ...detallesActuales };
-
-            if (esRecursada) {
-                // Archivar la cursada actual en el historial
-                const { historial, ...datosAArchivar } = detallesActuales;
-
-                // Solo archivar si realmente hay algo significativo (intentos o fecha de regularidad)
-                if ((datosAArchivar.intentosFinal && datosAArchivar.intentosFinal.length > 0) || datosAArchivar.fechaRegularidad) {
-                    nuevosDetallesBase = {
-                        historial: [
-                            ...(historial || []),
-                            {
-                                ...datosAArchivar,
-                                estadoFinal: estadoActual, // Guardamos que terminó como Libre, Aprobado o Promocionado
-                                fechaFin: new Date().toISOString()
-                            }
-                        ],
-                        // Limpiamos los datos actuales para la nueva cursada
-                        intentosFinal: [],
-                        fechaRegularidad: null,
-                        notaRegularizacion: null,
-                        fechaInicioCursada: null,
-                        notaFinal: null
-                    };
-                }
-            }
-
-            const nuevosDetalles = {
-                ...nuevosDetallesBase,
-                ...(payload.fechaRegularidad !== undefined && { fechaRegularidad: payload.fechaRegularidad }),
-                ...(payload.fechaInicioCursada !== undefined && { fechaInicioCursada: payload.fechaInicioCursada }),
-                ...(payload.notaFinal !== undefined && { notaFinal: payload.notaFinal }),
-                ...(payload.notaRegularizacion !== undefined && { notaRegularizacion: payload.notaRegularizacion }),
-            };
-
-            // Si transición 'desde_cursando_hacia_reg', copiar fechaInicioCursada como fechaRegularidad si no la tiene
-            if (config.tipo === 'desde_cursando_hacia_reg' && !nuevosDetalles.fechaRegularidad && nuevosDetallesBase.fechaInicioCursada) {
-                nuevosDetalles.fechaRegularidad = nuevosDetallesBase.fechaInicioCursada;
-            }
-
-            if (payload.notaFinal != null && (config.pendingState === 'Aprobado' || config.pendingState === 'Promocionado')) {
-                const fechaExamen = payload.anioExamen
-                    ? new Date(payload.anioExamen, 11, 31).toISOString()
-                    : new Date().toISOString();
-
-                const nuevoIntento = {
-                    nota: payload.notaFinal,
-                    estado: payload.notaFinal >= 4 ? 'aprobado' : 'reprobado',
-                    fecha: payload.fechaFinal || fechaExamen.split("T")[0]
-                };
-                nuevosDetalles.intentosFinal = [
-                    ...(nuevosDetallesBase.intentosFinal || []),
-                    nuevoIntento
-                ];
-            }
-
-            const updatedDetalles = { ...progresoDetalles, [codigo]: nuevosDetalles };
-            if (setProgresoDetalles) setProgresoDetalles(updatedDetalles);
-            updateAuthProgreso(plan, progreso, updatedDetalles);
-        }
-
-        // Aplicar el cambio de estado siempre si hay un estado pendiente
-        if (config.pendingState) {
-            cambioDeEstado(codigo, config.pendingState);
-        }
-    }
-
-    const handleCapturaConfirm = (payload) => {
-        // _sugerirLibre: el usuario eligio "Marcar como Libre" desde la alerta de nota reprobatoria
-        if (payload?._sugerirLibre) {
-            if (codigoMateria) {
-                const detallesActuales = progresoDetalles?.[codigoMateria] || {};
-                const updatedDetalles = {
-                    ...progresoDetalles,
-                    [codigoMateria]: { ...detallesActuales, notaRegularizacion: payload.notaRegularizacion }
-                };
-                if (setProgresoDetalles) setProgresoDetalles(updatedDetalles);
-                updateAuthProgreso(plan, progreso, updatedDetalles);
-            }
-            onCapturaClose();
-            cambioDeEstado(codigoMateria, 'Libre');
-            return;
-        }
-
-        ejecutarCambioConDatos(codigoMateria, capturaConfig, payload);
-        onCapturaClose();
-    }
-
-    useEffect(() => {
-        if (confirmacion === true) {
-            cambioDeEstado(codigoMateria, targetStateModal)
-            setConfirmacion(false)
-        }
-    }, [onConfirmationClose, confirmacion])
-
-    //Manejo los años para saber si están o no mostrandose
-    const handleMostrar = (id) => {
-        if (isAnioOpen.includes(id)) {
-            //Solo guardo todas las id que no sean la que acaba de cambiar de estado
-            setIsAnioOpen(isAnioOpen.filter(a => a !== id))
-        } else {
-            //Guardo lo mismo más el id que acaba de cambiar de estado
-            setIsAnioOpen([...isAnioOpen, id])
-        }
-    }
-
-    return (
-        <div className='pb-50'>
-            {/* Modal para confirmar reset */}
-            <Modal
-                isOpen={isResetOpen}
-                onOpenChange={onResetOpenChange}
-                backdrop="opaque"
-                placement="center"
-                classNames={{
-                    backdrop: "bg-black/50"
-                }}
-            >
-                <ModalContent>
-                    {(onClose) => (
-                        <>
-                            <ModalHeader className="flex flex-col gap-1 text-danger">
-                                <div className="flex items-center gap-2">
-                                    <i className="fa-solid fa-triangle-exclamation"></i>
-                                    Confirmar Acción
-                                </div>
-                            </ModalHeader>
-                            <ModalBody>
-                                <p className="text-default-600">
-                                    ¿Estás seguro de que quieres <b>reestablecer todo tu progreso</b>?
-                                </p>
-                                <p className="text-sm text-foreground/80 italic">
-                                    Esta acción volverá todas las materias a su estado inicial (Disponible/Bloqueado) y no se puede deshacer.
-                                </p>
-                            </ModalBody>
-                            <ModalFooter>
-                                <Button variant="light" onPress={onResetClose}>
-                                    Cancelar
-                                </Button>
-                                <Button
-                                    color="danger"
-                                    className="font-bold"
-                                    onPress={reestablecerProgreso}
-                                >
-                                    Reestablecer
-                                </Button>
-                            </ModalFooter>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
-
-            {/* Modal para confirmar Aprobar Año */}
-            <Modal
-                isOpen={isAprobarAnioOpen}
-                onOpenChange={onAprobarAnioOpenChange}
-                backdrop="opaque"
-                placement="center"
-                classNames={{
-                    backdrop: "bg-black/50"
-                }}
-            >
-                <ModalContent>
-                    {(onClose) => (
-                        <>
-                            <ModalHeader className="flex flex-col gap-1 text-success">
-                                <div className="flex items-center gap-2">
-                                    <i className="fa-solid fa-check-double"></i>
-                                    Aprobar {grupoAAprobar?.label || ""}
-                                </div>
-                            </ModalHeader>
-                            <ModalBody>
-                                <p className="text-default-600">
-                                    ¿Estás seguro de que quieres <b>aprobar todas las materias</b> de {grupoAAprobar?.label || ""} y sus correlativas anteriores?
-                                </p>
-                                <p className="text-sm text-foreground/80 italic">
-                                    Esta acción actualizará en cadena todas las materias y correlativas dependientes al estado Aprobado. Podrás modificar los detalles (como notas de cursada y final) más adelante.
-                                </p>
-                            </ModalBody>
-                            <ModalFooter>
-                                <Button variant="light" onPress={onAprobarAnioClose}>
-                                    Cancelar
-                                </Button>
-                                <Button
-                                    color="success"
-                                    className="font-bold"
-                                    onPress={() => {
-                                        if (grupoAAprobar) {
-                                            const codigos = grupoAAprobar.materias.map(m => m.codigo);
-                                            cambioDeEstadoMultiple(codigos, materiasUtils.estadosPosibles[2]);
-                                        }
-                                        onAprobarAnioClose();
-                                    }}
-                                >
-                                    Confirmar y Aprobar
-                                </Button>
-                            </ModalFooter>
-                        </>
-                    )}
-                </ModalContent>
-            </Modal>
-
-            {/* Sección de botones */}
-            <div className="sm:flex flex-wrap items-center sm:justify-between gap-3 mb-8">
-                {/* Grupo de Acciones Principales */}
-                <div className="flex flex-wrap items-center gap-2">
-                    <Dropdown>
-                        <DropdownTrigger>
-                            <Button
-                                size="sm"
-                                variant="solid"
-                                color="success"
-                                className="bg-[#005a36] hover:bg-[#004a2c] text-white font-extrabold text-xs px-3.5 py-2 rounded-xl shadow-xs hover:shadow-sm transition-all flex items-center gap-1.5"
-                                startContent={<i className="fa-solid fa-check-double text-[#F5B82E] text-xs"></i>}
-                                endContent={<i className="fa-solid fa-chevron-down text-[10px] ml-0.5 opacity-80"></i>}
-                            >
-                                <span>Aprobar hasta...</span>
-                            </Button>
-                        </DropdownTrigger>
-                        <DropdownMenu aria-label="Aprobar hasta">
-                            {tituloIntermedioText !== "" && (
-                                <DropdownItem
-                                    key="titulo_intermedio"
-                                    color="success"
-                                    startContent={<i className="fa-solid fa-graduation-cap text-[#005a36]"></i>}
-                                    onPress={() => {
-                                        setGrupoAAprobar({
-                                            label: tituloIntermedioText,
-                                            materias: materiasIntermedio
-                                        });
-                                        onAprobarAnioOpen();
-                                    }}
-                                >
-                                    {tituloIntermedioText}
-                                </DropdownItem>
-                            )}
-                            {aniosTotales.map(anio => {
-                                const materiasHastaAnio = materias.filter(m => Number(m.anio) <= anio && !m.tesis && m.codigo !== "N/A");
-                                return (
-                                    <DropdownItem
-                                        key={`anio_${anio}`}
-                                        color="success"
-                                        startContent={<i className="fa-solid fa-check-double text-[#005a36]" />}
-                                        onPress={() => {
-                                            setGrupoAAprobar({
-                                                label: `el ${anio}° Año`,
-                                                materias: materiasHastaAnio
-                                            });
-                                            onAprobarAnioOpen();
-                                        }}
-                                    >
-                                        {`${anio}° Año`}
-                                    </DropdownItem>
-                                )
-                            })}
-                        </DropdownMenu>
-                    </Dropdown>
-                    <Button
-                        size="sm"
-                        variant="flat"
-                        color="default"
-                        className="font-bold rounded-xl"
-                        startContent={<i className={`fa-solid ${isAnioOpen.length > 0 ? 'fa-eye' : 'fa-eye-slash'}`}></i>}
-                        onPress={handleMostrarTodo}
-                    >
-                        <span className="max-sm:hidden">{isAnioOpen.length > 0 ? "Mostrar todo" : "Ocultar todo"}</span>
-                    </Button>
-                    <Button
-                        size="sm"
-                        variant="flat"
-                        color="danger"
-                        className="font-bold rounded-xl"
-                        startContent={<i className="fa-solid fa-trash-can"></i>}
-                        onPress={() => handleBorrado()}
-                    >
-                        <span>Reestablecer</span>
-                    </Button>
-                </div>
-
-                {/* Herramientas de Sincronización y Vista */}
-                <div className="flex items-center gap-3">
-                    <SyncCloud plan={plan} />
-
-                    <div id="wrapper-view-selector" className="max-md:hidden">
-                        <Tabs
-                            size="sm"
-                            variant="bordered"
-                            selectedKey={vista}
-                            onSelectionChange={setVista}
-                            classNames={{
-                                tabList: "rounded-xl border-default-200 bg-default-100 p-1",
-                                cursor: "rounded-lg bg-background shadow-sm",
-                                tab: "px-3"
-                            }}
-                        >
-                            <Tab key="grid" title={<div className="flex items-center gap-2"><i className="fa-solid fa-table-cells-large"></i></div>} />
-                            <Tab key="list" title={<div className="flex items-center gap-2"><i className="fa-solid fa-list-ul"></i></div>} />
-                        </Tabs>
-                    </div>
-                </div>
-            </div>
-            {/* Sección materias o Resultados de búsqueda */}
-            {isSearching ? (
-                <div className="space-y-8 animate-in fade-in duration-500">
-                    <div className="flex items-center justify-between border-b border-default-200 pb-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-1.5 h-8 bg-secondary rounded-full"></div>
-                            <h2 className="text-2xl font-black text-foreground tracking-tight">
-                                Resultados de búsqueda
-                            </h2>
-                        </div>
-                        <Chip variant="flat" color="secondary" className="font-bold">
-                            {materiasFiltradas.length} encontrados
-                        </Chip>
-                    </div>
-
-                    {materiasFiltradas.length > 0 ? (
-                        <div className={vista === 'grid'
-                            ? "grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-5"
-                            : "flex flex-col gap-3"
-                        }>
-                            {materiasFiltradas.map((materia) => (
-                                <div key={materia.codigo} className="h-full">
-                                    <MateriaCard
-                                        materia={materia}
-                                        todasLasMaterias={materias}
-                                        estado={progreso[materia.codigo]}
-                                        detalles={progresoDetalles?.[materia.codigo]}
-                                        actualizarEstados={(target) => handleCambioDeEstado(materia.codigo, target)}
-                                        abrirInfo={() => abrirInfo(materia)}
-                                        vista={vista}
-                                        plan={plan}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="py-20 flex flex-col items-center justify-center text-center gap-4 bg-default-50 rounded-[2.5rem] border-2 border-dashed border-default-200">
-                            <div className="w-16 h-16 bg-default-100 rounded-2xl flex items-center justify-center text-default-400">
-                                <Search size={32} />
-                            </div>
-                            <div>
-                                <p className="text-xl font-bold text-foreground">No encontramos materias</p>
-                                <p className="text-default-500">Probá con otros términos o filtros</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            ) : (
-                <div id="tabs-filtro-anio" className="relative animate-in fade-in duration-500">
-                    <Tabs aria-label="Filtos por año" items={tabs} className=' w-full mask-[linear-gradient(to_right,black_85%,transparent_100%)] pl-[3%] md:mask-none'>
-                        {(item) => (
-                            <Tab key={item.id} title={item.label} className=''>
-                                <div className="space-y-12 ">
-                                    {item.content.map((valor) => {
-                                        let materiasParaMostrar
-                                        //Si el valor es taller
-                                        if (valor === "taller") {
-                                            materiasParaMostrar = talleres
-                                        } else {
-                                            // Me quedo con las materias de este año
-                                            materiasParaMostrar = materias.filter((m) => Number(m.anio) === valor)
-                                        }
-
-                                        // Si no hay materias en este año, podríamos evitar renderizarlo (opcional)
-                                        if (materiasParaMostrar.length === 0) return null
-
-                                        return (
-                                            <section key={valor} className={`flex flex-col gap-6`}>
-                                                {/* Cabecera del Año */}
-                                                <div className="flex justify-between ">
-                                                    <div className='flex items-center gap-3 border-b border-default-200 pb-2 grow'>
-                                                        <div className="w-1.5 h-8 bg-primary rounded-full shadow-sm"></div>
-                                                        <h2 className="text-2xl font-bold text-foreground tracking-tight">
-                                                            {valor === "taller" ? "Talleres" : `${valor}° Año`}
-                                                        </h2>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 ml-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="flat"
-                                                            color="success"
-                                                            className="font-bold text-xs rounded-xl"
-                                                            startContent={<i className="fa-solid fa-check-double" />}
-                                                            onPress={() => {
-                                                                const materiasConAnteriores = valor === "taller"
-                                                                    ? materiasParaMostrar
-                                                                    : materias.filter(m => Number(m.anio) <= valor && !m.tesis && m.codigo !== "N/A");
-
-                                                                setGrupoAAprobar({
-                                                                    label: valor === "taller" ? "Talleres" : `el ${valor}° Año`,
-                                                                    materias: materiasConAnteriores
-                                                                });
-                                                                onAprobarAnioOpen();
-                                                            }}
-                                                        >
-                                                            <span className="hidden sm:inline">Aprobar hasta este año</span>
-                                                            <span className="sm:hidden">Aprobar</span>
-                                                        </Button>
-                                                        <Button size="sm" variant="flat" className="font-medium text-xs rounded-xl" onPress={() => handleMostrar(valor)}>
-                                                            {isAnioOpen.includes(valor) ? "Mostrar" : "Ocultar"}
-                                                        </Button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Contenedor de Cuatrimestres en 2 Columnas Paralelas */}
-                                                <div className={`grid grid-cols-2 gap-2 sm:gap-6 pl-0 sm:pl-2 ${isAnioOpen.includes(valor) ? " hidden" : ""}`}>
-                                                    {[1, 2].map((cuatri) => {
-                                                        // Me quedo con las materias de este cuatrimestre
-                                                        const materiasCuatri = materiasParaMostrar.filter(
-                                                            (m) => (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1) === cuatri
-                                                        )
-
-                                                        if (materiasCuatri.length === 0) return null
-
-                                                        return (
-                                                            <div key={cuatri} className="flex flex-col gap-2.5 sm:gap-4 min-w-0">
-                                                                {/* Cabecera del Cuatrimestre */}
-                                                                <div className="flex items-center justify-between bg-default-50/90 dark:bg-default-100/40 border border-default-200 rounded-xl px-2 py-1.5 sm:px-4 sm:py-3 shadow-2xs">
-                                                                    <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-                                                                        <div className="w-1 h-3.5 sm:h-5 bg-default-400 rounded-full shrink-0"></div>
-                                                                        <h3 className="text-xs sm:text-base font-black sm:font-bold text-default-700 truncate">
-                                                                            {cuatri}° Cuatrimestre
-                                                                        </h3>
-                                                                    </div>
-                                                                    <Chip size="sm" variant="flat" className="h-5 sm:h-6 text-[10px] sm:text-xs bg-background border border-default-200 text-default-600 shadow-2xs px-1 sm:px-2 shrink-0">
-                                                                        <span className="font-bold">{materiasCuatri.length}</span> <span className="hidden sm:inline font-medium">{materiasCuatri.length === 1 ? 'materia' : 'materias'}</span>
-                                                                    </Chip>
-                                                                </div>
-
-                                                                <div className={vista === 'grid'
-                                                                    ? "grid grid-cols-1 xl:grid-cols-2 gap-2 sm:gap-4"
-                                                                    : "flex flex-col gap-2 sm:gap-3"
-                                                                }>
-                                                                    {materiasCuatri.map((materia, index) => {
-                                                                        const esElPrimero = materia.codigo === materias[0]?.codigo;
-                                                                        return (
-                                                                            <div key={materia.codigo !== "N/A" ? materia.codigo : `${materia.codigo}-${index}`} id={esElPrimero ? 'materia-card-ejemplo' : undefined} className="h-full">
-                                                                                <MateriaCard
-                                                                                    materia={materia}
-                                                                                    todasLasMaterias={materias}
-                                                                                    estado={progreso[materia.codigo]}
-                                                                                    detalles={progresoDetalles?.[materia.codigo]}
-                                                                                    actualizarEstados={(target) => handleCambioDeEstado(materia.codigo, target)}
-                                                                                    abrirInfo={() => abrirInfo(materia)}
-                                                                                    vista={vista}
-                                                                                    plan={plan}
-                                                                                />
-                                                                            </div>
-                                                                        )
-                                                                    })}
-                                                                </div>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </section>
-                                        )
-                                    })}
-                                </div>
-                            </Tab>
-                        )}
-                    </Tabs>
-                </div>
-            )}
-
-
-            {/* Drawer de info de las materiasd */}
-            <DetalleMateriaModal
-                isOpen={isDetailOpen}
-                infoMateria={infoMateria}
-                materias={materias}
-                progreso={progreso}
-                progresoDetalles={progresoDetalles}
-                setProgresoDetalles={setProgresoDetalles}
-                cambioDeEstado={cambioDeEstado}
-                plan={plan}
-                onOpenChange={onDetailOpenChange}
-            />
-
-            {/* Modal para confirmar el cambio de estado de una materia bloqueada */}
-            <ConfirmarCambioModal
-                setConfirmacion={setConfirmacion}
-                setMostrar={setMostrar}
-                isOpen={isConfirmationOpen}
-                onOpenChange={onConfirmationOpenChange}
-                onClose={onConfirmationClose}
-                targetState={targetStateModal}
-            />
-
-            {/* Modal de captura de datos por transición */}
-            <CapturaTransicionModal
-                isOpen={isCapturaOpen}
-                onOpenChange={onCapturaOpenChange}
-                tipo={capturaConfig.tipo}
-                materia={capturaConfig.materia}
-                config={capturaConfig}
-                onConfirm={handleCapturaConfirm}
-            />
-
-        </div >
-    )
+      >
+        {completedCount}/{totalCount} materias
+      </span>
+      {isComplete ? (
+        <CheckCircle2
+          className="w-4 h-4 text-[#478559] dark:text-[#6EE7B7]"
+          aria-hidden="true"
+        />
+      ) : (
+        <span
+          className="w-2 h-2 rounded-full bg-[#CBD5E1] dark:bg-[#334155]"
+          aria-hidden="true"
+        />
+      )}
+    </span>
+  );
 }
 
-export default MateriasList
+/**
+ * Listado de materias organizado en acordeones por año (y talleres),
+ * con cuatrimestres apilados verticalmente en móvil y lado a lado en escritorio,
+ * vista plana al filtrar y modales de confirmación/captura compartidos.
+ */
+export default function MateriasList({
+  progreso,
+  progresoDetalles,
+  vista,
+  isFiltering,
+  filteredMaterias,
+  clearFilters,
+  yearGroups,
+  expandedYears,
+  setExpandedYears,
+  selectedCodigo,
+  onSelectMateria,
+  onRequestApproveGroup,
+  // Modales desde useProgresoDashboard
+  isResetOpen,
+  onResetOpenChange,
+  reestablecerProgreso,
+  grupoAAprobar,
+  isAprobarAnioOpen,
+  onAprobarAnioOpenChange,
+  confirmApproveGroup,
+  isConfirmationOpen,
+  onConfirmationOpenChange,
+  onConfirmationClose,
+  pendingBlockedTransition,
+  confirmarCascada,
+  setMostrarConfirmacionCascada,
+  isCapturaOpen,
+  onCapturaOpenChange,
+  capturaConfig,
+  handleCapturaConfirm,
+}) {
+  const renderCard = (materia) => {
+    const estado = progreso[materia.codigo] || "Disponible";
+    const detalles = progresoDetalles?.[materia.codigo];
+    const isIncomplete = esMateriaIncompleta(materia, estado, detalles);
+
+    return (
+      <MateriaCard
+        key={materia.codigo}
+        materia={materia}
+        estado={estado}
+        isIncomplete={isIncomplete}
+        isSelected={selectedCodigo === materia.codigo}
+        vista={vista}
+        onSelect={onSelectMateria}
+      />
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Vista filtrada o vacía */}
+      {isFiltering ? (
+        filteredMaterias.length === 0 ? (
+          <div className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-8 sm:p-10 text-center space-y-3">
+            <div className="w-11 h-11 rounded-full bg-[#F1F5F9] dark:bg-[#1E2730] text-[#64748B] dark:text-[#94A3B8] flex items-center justify-center mx-auto">
+              <SearchX className="w-5 h-5" />
+            </div>
+            <div className="space-y-1 max-w-md mx-auto">
+              <h2 className="text-base font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                Sin materias coincidentes
+              </h2>
+              <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+                No encontramos materias que cumplan con los filtros seleccionados.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="bg-[#005A36] text-white font-medium"
+              onPress={clearFilters}
+            >
+              Limpiar filtros
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+              <p className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] tabular-nums">
+                Mostrando {filteredMaterias.length}{" "}
+                {filteredMaterias.length === 1 ? "materia" : "materias"}
+              </p>
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-xs font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline cursor-pointer"
+              >
+                Limpiar filtros
+              </button>
+            </div>
+
+            <div
+              className={
+                vista === "list"
+                  ? "grid grid-cols-1 gap-2.5"
+                  : "grid grid-cols-1 md:grid-cols-2 gap-3"
+              }
+            >
+              {filteredMaterias.map(renderCard)}
+            </div>
+          </div>
+        )
+      ) : (
+        /* Vista normal: Acordeones por año */
+        <Accordion
+          variant="splitted"
+          selectionMode="multiple"
+          selectedKeys={new Set(expandedYears)}
+          onSelectionChange={(keys) => {
+            if (keys === "all") {
+              setExpandedYears(yearGroups.map((g) => g.key));
+            } else {
+              setExpandedYears(Array.from(keys).map(String));
+            }
+          }}
+          className="px-0 gap-3"
+          itemClasses={{
+            base: "bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] shadow-xs rounded-xl px-4",
+            trigger: "py-3.5 cursor-pointer",
+            title: "text-base font-semibold text-[#1E293B] dark:text-[#F1F5F9]",
+            indicator: "text-[#64748B] dark:text-[#94A3B8]",
+            content: "pb-4 pt-1",
+          }}
+        >
+          {yearGroups.map((group) => {
+            const cuatri1 = group.materias.filter(
+              (m) => Number(m.cuatrimestre) % 2 === 1,
+            );
+            const cuatri2 = group.materias.filter(
+              (m) => Number(m.cuatrimestre) > 0 && Number(m.cuatrimestre) % 2 === 0,
+            );
+            const tieneCuatrimestres =
+              !group.isTaller && (cuatri1.length > 0 || cuatri2.length > 0);
+            const ambosCuatris = cuatri1.length > 0 && cuatri2.length > 0;
+            const labelCuatriUnico =
+              group.anioNum === 6 ? "Tramo de cierre" : "1° Cuatrimestre";
+
+            return (
+              <AccordionItem
+                key={group.key}
+                aria-label={`${group.label}, ${group.completedCount} de ${group.totalCount} materias aprobadas`}
+                title={
+                  <div className="flex items-center justify-between gap-3 pr-2 w-full">
+                    <span className="truncate">{group.label}</span>
+                    <YearProgressBadge
+                      completedCount={group.completedCount}
+                      totalCount={group.totalCount}
+                    />
+                  </div>
+                }
+              >
+                <div className="space-y-3 border-t border-[#E2E8F0]/80 dark:border-[#24303C] pt-3">
+                  {/* Barra de acción del grupo */}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                      {group.completedCount} aprobadas o promocionadas de{" "}
+                      {group.totalCount}
+                    </span>
+
+                    {group.completedCount < group.totalCount && (
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        className="bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-medium min-h-8"
+                        startContent={<CheckCheck className="w-3.5 h-3.5" />}
+                        onPress={() =>
+                          onRequestApproveGroup(group.label, group.materias)
+                        }
+                      >
+                        Aprobar {group.isTaller ? "talleres" : "año"}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Cuatrimestres: vertical en móvil (< md), lado a lado en escritorio (md+) */}
+                  {tieneCuatrimestres ? (
+                    ambosCuatris ? (
+                      <div
+                        className={
+                          vista === "list"
+                            ? "grid grid-cols-1 gap-4"
+                            : "grid grid-cols-1 md:grid-cols-2 gap-4 items-start"
+                        }
+                      >
+                        <div className="rounded-xl bg-[#F8FAFC]/80 dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] p-3 space-y-2.5">
+                          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] px-0.5">
+                            1° Cuatrimestre
+                          </h3>
+                          <div className="grid grid-cols-1 gap-2">
+                            {cuatri1.map(renderCard)}
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl bg-[#F8FAFC]/80 dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] p-3 space-y-2.5">
+                          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] px-0.5">
+                            2° Cuatrimestre
+                          </h3>
+                          <div className="grid grid-cols-1 gap-2">
+                            {cuatri2.map(renderCard)}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="rounded-xl bg-[#F8FAFC]/80 dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] p-3 space-y-2.5">
+                        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] px-0.5">
+                          {cuatri1.length > 0 ? labelCuatriUnico : "2° Cuatrimestre"}
+                        </h3>
+                        <div
+                          className={
+                            vista === "list"
+                              ? "grid grid-cols-1 gap-2"
+                              : "grid grid-cols-1 md:grid-cols-2 gap-2.5"
+                          }
+                        >
+                          {(cuatri1.length > 0 ? cuatri1 : cuatri2).map(renderCard)}
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <div
+                      className={
+                        vista === "list"
+                          ? "grid grid-cols-1 gap-2"
+                          : "grid grid-cols-1 md:grid-cols-2 gap-2.5"
+                      }
+                    >
+                      {group.materias.map(renderCard)}
+                    </div>
+                  )}
+                </div>
+              </AccordionItem>
+            );
+          })}
+        </Accordion>
+      )}
+
+      {/* Modal confirmar reestablecer progreso */}
+      <Modal isOpen={isResetOpen} onOpenChange={onResetOpenChange} size="sm">
+        <ModalContent className="bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C]">
+          {(onClose) => (
+            <>
+              <ModalHeader className="text-[#1E293B] dark:text-[#F1F5F9]">
+                Reestablecer progreso
+              </ModalHeader>
+              <ModalBody className="text-sm text-[#475569] dark:text-[#94A3B8]">
+                Esta acción volverá todas las materias de este plan a su estado
+                inicial y eliminará las notas e historial cargados.
+              </ModalBody>
+              <ModalFooter>
+                <Button size="sm" variant="light" onPress={onClose}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  color="danger"
+                  startContent={<RotateCcw className="w-3.5 h-3.5" />}
+                  onPress={reestablecerProgreso}
+                >
+                  Reestablecer
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Modal aprobar grupo o hasta año */}
+      <Modal
+        isOpen={isAprobarAnioOpen}
+        onOpenChange={onAprobarAnioOpenChange}
+        size="sm"
+      >
+        <ModalContent className="bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C]">
+          {(onClose) => (
+            <>
+              <ModalHeader className="text-[#1E293B] dark:text-[#F1F5F9]">
+                Aprobar materias
+              </ModalHeader>
+              <ModalBody className="text-sm text-[#475569] dark:text-[#94A3B8]">
+                {grupoAAprobar
+                  ? `Se marcarán como aprobadas ${grupoAAprobar.materias.length} materias correspondientes a "${grupoAAprobar.label}" y se recalcularán las correlativas.`
+                  : "Se aprobarán las materias seleccionadas."}
+              </ModalBody>
+              <ModalFooter>
+                <Button size="sm" variant="light" onPress={onClose}>
+                  Cancelar
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-[#005A36] text-white font-medium"
+                  onPress={confirmApproveGroup}
+                >
+                  Confirmar
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Modal de confirmación de cascada sobre materias bloqueadas */}
+      <ConfirmarCambioModal
+        isOpen={isConfirmationOpen}
+        onOpenChange={onConfirmationOpenChange}
+        onClose={onConfirmationClose}
+        onConfirm={confirmarCascada}
+        setMostrar={setMostrarConfirmacionCascada}
+        targetState={pendingBlockedTransition?.targetState}
+      />
+
+      {/* Modal de captura de notas / fechas en transiciones */}
+      <CapturaTransicionModal
+        isOpen={isCapturaOpen}
+        onOpenChange={onCapturaOpenChange}
+        tipo={capturaConfig.tipo}
+        materia={capturaConfig.materia}
+        config={capturaConfig}
+        onConfirm={handleCapturaConfirm}
+      />
+    </div>
+  );
+}

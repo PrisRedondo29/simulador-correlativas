@@ -1,25 +1,23 @@
-import { Card, CardHeader, CardBody, Chip, Tooltip } from "@heroui/react"
+import { Card, CardHeader, CardBody, Chip, Tooltip } from '@heroui/react';
 
 function GhostCard({ materia }) {
     return (
-        <Card className="p-2 opacity-60 border-2 border-dashed border-default-300 bg-default-100/30 shadow-none grayscale-[0.5]">
+        <Card shadow="none" className="p-2 border border-dashed border-[#CBD5E1] dark:border-[#2A3540] bg-[#F1F5F9] dark:bg-[#1A2129] rounded-2xl">
             <CardHeader className="flex justify-between items-start pb-1">
-                <div className="text-[10px] font-black text-foreground/40 tracking-wider">
+                <span className="text-xs font-mono font-medium text-[#64748B] dark:text-[#94A3B8]">
                     {materia.mostrarCodigo === false ? '---' : materia.codigo}
-                </div>
-                <div className="text-danger-400 opacity-80">
-                    <Tooltip content="Materia bloqueada por correlativas" color="danger" closeDelay={0}>
-                        <i className="fa-solid fa-lock text-sm" />
-                    </Tooltip>
-                </div>
+                </span>
+                <Tooltip content="Materia bloqueada por correlativas" closeDelay={0}>
+                    <i className="fa-solid fa-lock text-xs text-[#64748B] dark:text-[#94A3B8]" />
+                </Tooltip>
             </CardHeader>
-            <CardBody className="py-2">
-                <p className="font-bold text-foreground/40 leading-tight text-sm uppercase tracking-tight">{materia.nombre}</p>
+            <CardBody className="py-1.5">
+                <p className="font-semibold text-[#475569] dark:text-[#CBD5E1] leading-snug text-sm">{materia.nombre}</p>
 
-                <div className="mt-4 flex flex-col gap-1.5">
-                    <div className="flex items-center gap-1">
-                        <span className="text-[9px] font-black text-danger-500/60 uppercase tracking-widest">Bloqueada por</span>
-                        <div className="h-px flex-1 bg-danger-500/20"></div>
+                <div className="mt-3 flex flex-col gap-1.5">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">Bloqueada por</span>
+                        <div className="h-px flex-1 bg-[#E2E8F0] dark:bg-[#2A3540]" />
                     </div>
                     <div className="flex flex-wrap gap-1">
                         {materia.correlativasFaltantes.map((f) => (
@@ -27,8 +25,7 @@ function GhostCard({ materia }) {
                                 key={f}
                                 size="sm"
                                 variant="flat"
-                                color="danger"
-                                className="h-5 text-[9px] font-bold border border-danger-200/30 bg-danger-100/20"
+                                className="h-5 text-[11px] font-medium bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#94A3B8]"
                             >
                                 {f}
                             </Chip>
@@ -37,7 +34,7 @@ function GhostCard({ materia }) {
                 </div>
             </CardBody>
         </Card>
-    )
+    );
 }
 
-export default GhostCard
+export default GhostCard;

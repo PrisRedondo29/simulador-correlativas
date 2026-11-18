@@ -1,63 +1,77 @@
+/**
+ * Configuración unificada de estados académicos (Semáforo Calmo UNLu).
+ * Garantiza coherencia visual en Progreso, Simulador (Malla/Grafo/Lista) y Equivalencias.
+ */
 const ESTADO_CONFIG = {
     Bloqueado: {
-        estilo: "bg-default-50/80 border-default-200/70 hover:bg-default-100/80 hover:border-default-300 text-default-600 dark:text-default-400 backdrop-blur-sm",
+        estilo: "bg-[#F1F5F9] dark:bg-[#1A2129] border-[#E2E8F0] dark:border-[#2D3743] hover:border-[#CBD5E1] dark:hover:border-[#3B4958] text-[#64748B] dark:text-[#94A3B8]",
+        badgeClass: "bg-[#E2E8F0]/70 text-[#475569] dark:bg-[#2A3540] dark:text-[#94A3B8]",
         color: "default",
         icono: "fa-solid fa-lock",
     },
     Disponible: {
-        estilo: "bg-primary/8 border-primary/25 hover:bg-primary/15 hover:border-primary/35 text-primary-900 dark:text-primary-100",
-        color: "primary",
+        estilo: "bg-[#F0F9FF] dark:bg-[#0F2636]/70 border-[#BAE6FD] dark:border-[#1E4E6E] hover:border-[#7DD3FC] dark:hover:border-[#38BDF8]/60 text-[#075985] dark:text-[#BAE6FD]",
+        badgeClass: "bg-[#E0F2FE] text-[#075985] dark:bg-[#16384F] dark:text-[#7DD3FC]",
+        color: "default",
         icono: "fa-solid fa-lock-open",
     },
     Cursando: {
-        estilo: "bg-indigo-500/10 border-indigo-400/70 hover:bg-indigo-500/20 text-indigo-900 dark:text-indigo-100 font-bold",
-        color: "secondary",
-        icono: "fa-solid fa-pencil",
-        pulso: true,
+        estilo: "bg-[#F0FDF4] dark:bg-[#122D22] border-[#005A36]/60 dark:border-[#34D399]/60 hover:border-[#005A36] dark:hover:border-[#34D399] text-[#005A36] dark:text-[#A7F3D0]",
+        badgeClass: "bg-[#005A36] text-white dark:bg-[#2E8B63] dark:text-white",
+        color: "primary",
+        icono: "fa-solid fa-pen",
     },
     Regular: {
-        estilo: "bg-warning/8 border-warning/30 hover:bg-warning/15 hover:border-warning/40 text-warning-900 dark:text-warning-100",
+        estilo: "bg-[#FFFBEB] dark:bg-[#2D2210]/70 border-[#FDE68A] dark:border-[#5C4318] hover:border-[#FCD34D] dark:hover:border-[#855E1E] text-[#92400E] dark:text-[#FCD34D]",
+        badgeClass: "bg-[#FEF3C7] text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D]",
         color: "warning",
         icono: "fa-regular fa-clock",
     },
     Aprobado: {
-        estilo: "bg-success/10 border-success/35 hover:bg-success/18 hover:border-success/50 text-success-900 dark:text-success-100 font-bold",
+        estilo: "bg-[#ECFDF5] dark:bg-[#102A20]/80 border-[#A7F3D0] dark:border-[#1E4D38] hover:border-[#478559]/70 dark:hover:border-[#4A9D68] text-[#166534] dark:text-[#86EFAC]",
+        badgeClass: "bg-[#D1FAE5] text-[#166534] dark:bg-[#173A24] dark:text-[#86EFAC]",
         color: "success",
         icono: "fa-regular fa-circle-check",
     },
     Promocionado: {
-        estilo: "bg-violet-500/15 border-violet-400/60 hover:bg-violet-500/20 hover:border-violet-500/70 text-violet-900 dark:text-violet-100 font-black shadow-[0_0_12px_-2px_rgba(139,92,246,0.4)]",
-        color: "secondary",
-        icono: "fa-solid fa-crown",
+        estilo: "bg-[#ECFDF5] dark:bg-[#112E22] border-[#478559]/60 dark:border-[#2E8B63] hover:border-[#005A36] dark:hover:border-[#4A9D68] text-[#005A36] dark:text-[#A7F3D0]",
+        badgeClass: "bg-[#478559] text-white dark:bg-[#2E8B63] dark:text-white",
+        color: "success",
+        icono: "fa-solid fa-award",
     },
     Libre: {
-        estilo: "bg-danger/8 border-danger/30 hover:bg-danger/15 hover:border-danger/45 text-danger-900 dark:text-danger-100 font-bold",
+        estilo: "bg-[#FEF2F2] dark:bg-[#2D1619]/70 border-[#FECACA] dark:border-[#5C262B] hover:border-[#FCA5A5] dark:hover:border-[#853139] text-[#991B1B] dark:text-[#FCA5A5]",
+        badgeClass: "bg-[#FEE2E2] text-[#991B1B] dark:bg-[#421D22] dark:text-[#FCA5A5]",
         color: "danger",
         icono: "fa-solid fa-user-slash",
     },
-    // --- Estados para el Simulador Dinámico ---
+    // --- Estados para el Simulador ---
     Seleccionada: {
-        estilo: "bg-primary/20 border-primary shadow-[0_0_20px_-5px_rgba(59,130,246,0.6)] ring-2 ring-primary/20 text-primary-900 dark:text-primary-100 font-black scale-105 z-10 transition-all duration-300",
+        estilo: "bg-[#F0FDF4] dark:bg-[#122D22] border-2 border-[#005A36] dark:border-[#4A9D68] text-[#005A36] dark:text-[#A7F3D0]",
+        badgeClass: "bg-[#005A36] text-white dark:bg-[#2E8B63] dark:text-white",
         color: "primary",
         icono: "fa-solid fa-check-double",
     },
     Proyectada: {
-        estilo: "bg-default-100/40 border-dashed border-default-300 opacity-60 hover:opacity-100 transition-opacity text-default-600",
+        estilo: "bg-[#FFFFFF] dark:bg-[#161D24] border-dashed border-[#CBD5E1] dark:border-[#2A3540] text-[#64748B] dark:text-[#94A3B8]",
+        badgeClass: "bg-[#F1F5F9] text-[#475569] dark:bg-[#1E2730] dark:text-[#94A3B8]",
         color: "default",
-        icono: "fa-solid fa-wand-magic-sparkles",
+        icono: "fa-regular fa-calendar",
     },
     Aprobada: {
-        estilo: "bg-success/20 border-success/40 text-success-800 dark:text-success-200 opacity-80",
+        estilo: "bg-[#ECFDF5] dark:bg-[#102A20]/80 border-[#A7F3D0] dark:border-[#1E4D38] text-[#166534] dark:text-[#86EFAC]",
+        badgeClass: "bg-[#D1FAE5] text-[#166534] dark:bg-[#173A24] dark:text-[#86EFAC]",
         color: "success",
         icono: "fa-solid fa-circle-check",
     },
     NoCursada: {
-        estilo: "bg-default-100/30 border-default-200/50 text-default-400 opacity-60 border-dashed grayscale-[0.8]",
+        estilo: "bg-[#F8FAFC] dark:bg-[#161D24] border-dashed border-[#CBD5E1] dark:border-[#2A3540] text-[#64748B] dark:text-[#94A3B8] opacity-75",
+        badgeClass: "bg-[#F1F5F9] text-[#64748B] dark:bg-[#1E2730] dark:text-[#94A3B8]",
         color: "default",
         icono: "fa-solid fa-xmark",
-    }
+    },
 };
 
 export default {
-    ESTADO_CONFIG
-}
+    ESTADO_CONFIG,
+};

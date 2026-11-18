@@ -251,8 +251,7 @@ function CapturaTransicionModal({ isOpen, onOpenChange, tipo, materia, config, o
                                         label={isEquivalencia ? 'Año de otorgamiento' : (['hacia_aprobado_desde_reg', 'hacia_aprobado_directo'].includes(tipo) ? 'Año de aprobación' : (tipo === 'hacia_cursando' ? 'Año de inicio de cursada' : 'Año de regularización'))}
                                         placeholder="ej: 2024"
                                         type="number"
-                                        variant="faded"
-                                        color={isEquivalencia ? 'primary' : (['hacia_aprobado_desde_reg', 'hacia_aprobado_directo'].includes(tipo) ? 'success' : (tipo === 'hacia_cursando' ? 'primary' : 'warning'))}
+                                        variant="bordered"
                                         value={anio}
                                         onValueChange={setAnio}
                                         isInvalid={!!errors.anio}
@@ -275,8 +274,7 @@ function CapturaTransicionModal({ isOpen, onOpenChange, tipo, materia, config, o
                                         label="Nota de cursada (promedio de parciales)"
                                         placeholder="0 - 10"
                                         type="number"
-                                        variant="faded"
-                                        color="warning"
+                                        variant="bordered"
                                         value={notaCursada}
                                         onValueChange={setNotaCursada}
                                         isInvalid={!!errors.notaCursada}
@@ -317,8 +315,7 @@ function CapturaTransicionModal({ isOpen, onOpenChange, tipo, materia, config, o
                                     <Input
                                         label="Fecha del examen final"
                                         type="date"
-                                        variant="faded"
-                                        color="success"
+                                        variant="bordered"
                                         value={fechaFinal}
                                         onChange={(e) => setFechaFinal(e.target.value)}
                                         fullWidth
@@ -327,8 +324,7 @@ function CapturaTransicionModal({ isOpen, onOpenChange, tipo, materia, config, o
                                         label="Nota del examen final"
                                         placeholder="0 - 10"
                                         type="number"
-                                        variant="faded"
-                                        color="success"
+                                        variant="bordered"
                                         value={notaFinal}
                                         onValueChange={setNotaFinal}
                                         isInvalid={!!errors.notaFinal}

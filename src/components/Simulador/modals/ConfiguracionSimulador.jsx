@@ -70,15 +70,15 @@ function ConfiguracionSimulador({ isOpen, onOpenChange, onClose, setAnio, setCua
                     <>
                         <ModalHeader className='flex flex-col gap-1'>
                             <div className='flex items-center gap-3'>
-                                <div className='bg-primary text-white w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30'>
-                                    <i className='fa-solid fa-sliders text-lg' />
+                                <div className='bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] w-10 h-10 rounded-xl flex items-center justify-center'>
+                                    <i className='fa-solid fa-sliders text-base' />
                                 </div>
                                 <div className='flex flex-col'>
-                                    <h2 className='text-xl font-bold text-foreground'>
+                                    <h2 className='text-lg font-bold text-foreground'>
                                         Configurar Simulación
                                     </h2>
-                                    <p className='text-[12px] font-medium text-foreground/60 uppercase tracking-wider'>
-                                        Parámetros Iniciales
+                                    <p className='text-xs font-medium text-foreground/60'>
+                                        Parámetros iniciales
                                     </p>
                                 </div>
                             </div>
@@ -155,10 +155,10 @@ function ConfiguracionSimulador({ isOpen, onOpenChange, onClose, setAnio, setCua
                             </div>
                         </ModalBody>
 
-                        <ModalFooter className="flex-col sm:flex-row gap-3">
+                        <ModalFooter className="flex-col sm:flex-row gap-2.5">
                             <Button
                                 color="primary"
-                                className="w-full sm:w-auto rounded-2xl font-bold h-12 shadow-lg shadow-primary/30"
+                                className="w-full sm:w-auto rounded-xl font-semibold h-10"
                                 onPress={() => handleConfigurar()}
                             >
                                 Comenzar Simulación
@@ -166,7 +166,7 @@ function ConfiguracionSimulador({ isOpen, onOpenChange, onClose, setAnio, setCua
                             <Button
                                 variant="light"
                                 onPress={onClose}
-                                className="w-full sm:w-auto rounded-2xl font-semibold h-12 text-foreground/60"
+                                className="w-full sm:w-auto rounded-xl font-medium h-10 text-foreground/70"
                             >
                                 Cancelar
                             </Button>

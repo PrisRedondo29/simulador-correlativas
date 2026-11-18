@@ -1,107 +1,118 @@
-import { Card, CardBody, CardFooter, CardHeader } from '@heroui/card'
-import materiasUtils from '../../utils/Progreso/materiasUtils'
-import { Chip } from '@heroui/react'
+import { Accordion, AccordionItem, Chip } from '@heroui/react';
+import materiasUtils from '../../utils/Progreso/materiasUtils';
 
 function LeyendaEstados({ materias }) {
-
-    // Los nombres deben coincidir exactamente con los "case" de tu switch
     const estados = [
-        { name: "Aprobado", desc: "Materia completada" },
-        { name: "Regular", desc: "Cursada aprobada" },
-        { name: "Disponible", desc: "Lista para cursar" },
-        { name: "Bloqueado", desc: "Faltan correlativas" },
-    ]
+        { name: 'Aprobado', desc: 'Materia completada' },
+        { name: 'Regular', desc: 'Cursada vigente (final pendiente)' },
+        { name: 'Disponible', desc: 'Lista para cursar' },
+        { name: 'Bloqueado', desc: 'Faltan correlativas previas' },
+    ];
 
-    const horas_totales = materias.reduce((acumulador, materia) => {
-        const horas = Number(materia.horas_totales)
-        return acumulador + horas
-    }, 0)
-
-    // Mapeo para los fondos suaves basado en el "accent" semántico de HeroUI
-    const bgMap = {
-        success: "bg-success/20",
-        primary: "bg-primary/20",
-        warning: "bg-warning/20",
-        danger: "bg-danger/20",
-        secondary: "bg-secondary/20",
-        default: "bg-default-100"
-    }
+    const horasTotales = materias.reduce((acumulador, materia) => {
+        const horas = Number(materia.horas_totales) || 0;
+        return acumulador + horas;
+    }, 0);
 
     return (
-        <div className='flex flex-col gap-6 w-full'>
-            <Card className="shadow-sm border border-default-100">
-                <CardHeader className='font-bold text-foreground px-6 pt-6 text-lg flex flex-row items-center justify-between gap-4 flex-wrap'>
-                    <span>Leyenda de Estados</span>
-                    <Chip variant='flat' color='success' size="sm" className="font-bold">
-                        Horas totales de la carrera: {horas_totales} hs
-                    </Chip>
-                </CardHeader>
-                <CardBody className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-6'>
-                    {estados.map((estado) => {
-                        const estilo = materiasUtils.obtenerEstiloPorEstado(estado.name)
-                        return (
-                            <div key={estado.name} className="flex items-center gap-4">
-                                <div className={`${bgMap[estilo.accent]} w-12 h-12 rounded-2xl flex items-center justify-center transition-transform hover:scale-105`}>
-                                    <i className={`fa-solid ${estilo.icon} ${estilo.colorText} text-xl`}></i>
+        <Accordion
+            variant="bordered"
+            className="px-0"
+            itemClasses={{
+                base: 'bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl shadow-none px-4',
+                title: 'text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]',
+                subtitle: 'text-xs text-[#64748B] dark:text-[#94A3B8]',
+                trigger: 'py-3.5',
+                content: 'pb-5 pt-1',
+            }}
+        >
+            <AccordionItem
+                key="referencias"
+                aria-label="Referencias de estados y Estatuto UNLu"
+                title="Referencias de estados y Estatuto UNLu"
+                subtitle={`Carga horaria total del plan: ${horasTotales} hs`}
+                startContent={
+                    <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center">
+                        <i className="fa-solid fa-scale-balanced text-xs" aria-hidden="true" />
+                    </div>
+                }
+            >
+                <div className="flex flex-col gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {estados.map((estado) => {
+                            const estilo = materiasUtils.obtenerEstiloPorEstado(estado.name);
+                            return (
+                                <div
+                                    key={estado.name}
+                                    className="flex items-center gap-3 p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540]"
+                                >
+                                    <div className={`${estilo.bgSoft} w-9 h-9 rounded-lg flex items-center justify-center shrink-0`}>
+                                        <i className={`fa-solid ${estilo.icon} ${estilo.colorText} text-sm`} aria-hidden="true" />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                                            {estado.name}
+                                        </span>
+                                        <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                            {estado.desc}
+                                        </span>
+                                    </div>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className={`text-sm font-bold ${estilo.colorText} leading-tight`}>
-                                        {estado.name}
+                            );
+                        })}
+                    </div>
+
+                    <div className="border-t border-[#E2E8F0] dark:border-[#2A3540] pt-4 flex flex-col gap-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2">
+                                <i className="fa-solid fa-building-columns text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+                                Estatuto UNLu · Régimen General de Estudios
+                            </span>
+                            <a
+                                href="https://www.unlu.edu.ar/estatuto_unlu.pdf"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-[#005A36] dark:text-[#6EE7B7] hover:underline flex items-center gap-1 font-medium"
+                            >
+                                <i className="fa-solid fa-file-pdf" aria-hidden="true" />
+                                Ver Estatuto Completo (PDF)
+                            </a>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="flex gap-3 items-start bg-[#F8FAFC] dark:bg-[#1E2730] p-3.5 rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]">
+                                <Chip size="sm" variant="flat" color="primary" className="font-semibold shrink-0">
+                                    Art. 16
+                                </Chip>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="font-semibold text-xs text-[#1E293B] dark:text-[#F1F5F9]">
+                                        Vigencia de la Regularidad
                                     </span>
-                                    <span className="text-xs text-foreground/60 font-medium">
-                                        {estado.desc}
-                                    </span>
+                                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+                                        La condición de regular tiene una vigencia de <strong>5 cuatrimestres</strong> consecutivos desde su obtención.
+                                    </p>
                                 </div>
                             </div>
-                        )
-                    })}
-                </CardBody>
-            </Card>
 
-            <Card className="shadow-sm border border-default-100 bg-primary/5">
-                <CardHeader className='font-bold text-foreground px-6 pt-6 text-lg flex flex-row items-center justify-between gap-2 flex-wrap'>
-                    <div className="flex items-center gap-2">
-                        <i className="fa-solid fa-scale-balanced text-primary"></i>
-                        <span>Estatuto UNLu</span>
-                    </div>
-                    <a
-                        href="https://www.unlu.edu.ar/estatuto_unlu.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1 font-medium"
-                    >
-                        <i className="fa-solid fa-file-pdf"></i>
-                        Ver Estatuto Completo (PDF)
-                    </a>
-                </CardHeader>
-                <CardBody className='px-6 py-4 grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <div className="flex gap-4 items-start bg-background/50 p-4 rounded-xl border border-primary/10">
-                        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                            <span className="font-bold text-primary">16</span>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="font-bold text-sm">Vigencia de la Regularidad</span>
-                            <p className="text-xs text-foreground/70 leading-relaxed">
-                                Según el <b>Art. 16 del RGE</b>, la condición de regular tiene una vigencia de <b>5 cuatrimestres</b> consecutivos desde su obtención.
-                            </p>
+                            <div className="flex gap-3 items-start bg-[#F8FAFC] dark:bg-[#1E2730] p-3.5 rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]">
+                                <div className="w-7 h-7 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center shrink-0">
+                                    <i className="fa-solid fa-shield-halved text-xs" aria-hidden="true" />
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="font-semibold text-xs text-[#1E293B] dark:text-[#F1F5F9]">
+                                        Independencia de las Cursadas
+                                    </span>
+                                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+                                        Si se vence la regularidad de una materia previa, las cursadas ya regularizadas de materias posteriores no se pierden automáticamente.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div className="flex gap-4 items-start bg-background/50 p-4 rounded-xl border border-primary/10">
-                        <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-                            <i className="fa-solid fa-shield-halved text-primary"></i>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <span className="font-bold text-sm">Independencia de las Cursadas</span>
-                            <p className="text-xs text-foreground/70 leading-relaxed">
-                                Si se vence la regularidad de una materia A, la regularidad de una materia B <b>no se cae automáticamente</b>. Cada materia mantiene su propia vigencia independiente de las demás.
-                            </p>
-                        </div>
-                    </div>
-                </CardBody>
-            </Card>
-        </div>
-    )
+                </div>
+            </AccordionItem>
+        </Accordion>
+    );
 }
 
-export default LeyendaEstados
+export default LeyendaEstados;

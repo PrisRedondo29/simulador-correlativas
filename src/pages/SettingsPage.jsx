@@ -10,15 +10,14 @@ import {
     Tab,
     addToast,
     Chip,
-    Avatar
+    Avatar,
 } from '@heroui/react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePlanCapabilities } from '../context/PlanContext';
 import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
 import { trackSeleccionCarrera } from '../services/analyticsService';
-
-import TransicionModal from '../components/Progreso/modals/TransicionModal';
-import { useDisclosure } from '@heroui/react';
 
 export default function SettingsPage({ plan, setPlan }) {
     const {
@@ -27,11 +26,11 @@ export default function SettingsPage({ plan, setPlan }) {
         loading,
         getProgresoLocal,
         refetchUserData,
-        signIn
+        signIn,
     } = useAuth();
+    const { canSimulateTransition, transitionInfo } = usePlanCapabilities();
     const { theme, setTheme } = useTheme();
 
-    const { isOpen: isTransicionOpen, onOpen: onTransicionOpen, onOpenChange: onTransicionOpenChange } = useDisclosure();
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
 
@@ -50,7 +49,9 @@ export default function SettingsPage({ plan, setPlan }) {
                 if (loggedUser) {
                     addToast({ title: '¡Bienvenido!', description: 'Sesión iniciada correctamente.', color: 'success' });
                 }
-            } catch (err) { }
+            } catch {
+                addToast({ title: 'Aviso', description: 'No se pudo completar el inicio de sesión.', color: 'warning' });
+            }
             return;
         }
 
@@ -59,11 +60,11 @@ export default function SettingsPage({ plan, setPlan }) {
             await updateUserConfig(user.uid, {
                 alias,
                 planActivo: plan,
-                tema: theme
+                tema: theme,
             });
             await refetchUserData();
             addToast({ title: 'Guardado', description: 'Tus configuraciones han sido actualizadas.', color: 'success' });
-        } catch (err) {
+        } catch {
             addToast({ title: 'Error', description: 'No se pudo guardar la configuración.', color: 'danger' });
         } finally {
             setSaving(false);
@@ -71,16 +72,17 @@ export default function SettingsPage({ plan, setPlan }) {
     };
 
     const handleExport = () => {
-        const rawProgreso = getProgresoLocal(plan);
+        const activePlan = plan || '17.14';
+        const rawProgreso = getProgresoLocal(activePlan);
 
         const minifyProgreso = (prog) => Object.fromEntries(
-            Object.entries(prog || {}).filter(([_, state]) =>
+            Object.entries(prog || {}).filter(([, state]) =>
                 ['Aprobado', 'Regular', 'Cursado', 'Promocionado'].includes(state)
             )
         );
 
         const fullData = {
-            plan,
+            plan: activePlan,
             timestamp: new Date().toISOString(),
             progreso: minifyProgreso(rawProgreso),
         };
@@ -89,34 +91,42 @@ export default function SettingsPage({ plan, setPlan }) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `progreso_unlu_${plan}.json`;
+        a.download = `progreso_unlu_${activePlan}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        addToast({ title: 'Exportado', description: `Se descargó el respaldo del Plan ${activePlan}.`, color: 'success' });
     };
 
     if (loading) return null;
 
     return (
-        <div className="p-4 md:p-8 max-w-4xl mx-auto flex flex-col gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <header className="flex flex-col gap-1">
-                <h1 className="text-4xl font-black tracking-tight text-foreground">Configuración</h1>
-                <p className="text-foreground/60">Gestioná tu perfil, preferencias del simulador y visualización.</p>
+        <div className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto flex flex-col gap-6 w-full animate-in fade-in duration-300">
+            <header className="space-y-1">
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E293B] dark:text-[#F1F5F9]">
+                    Configuración
+                </h1>
+                <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+                    Gestioná tu perfil, plan de estudios activo, apariencia y respaldo local.
+                </p>
             </header>
 
             {!user && (
-                <Card className="bg-linear-to-br from-primary/10 to-primary/5 border-primary/20 shadow-md">
-                    <CardBody className="flex flex-col md:flex-row items-center gap-6 p-6">
-                        <div className="bg-primary/20 p-4 rounded-2xl">
-                            <i className="fa-solid fa-rocket text-primary text-3xl" />
+                <Card shadow="none" className="bg-[#ECFDF5] dark:bg-[#102A20]/80 border border-[#A7F3D0] dark:border-[#1E4D38] rounded-2xl">
+                    <CardBody className="flex flex-col md:flex-row items-center gap-4 p-5">
+                        <div className="w-11 h-11 rounded-xl bg-white dark:bg-[#161D24] border border-[#A7F3D0] dark:border-[#1E4D38] flex items-center justify-center text-[#005A36] dark:text-[#86EFAC] shrink-0">
+                            <i className="fa-solid fa-cloud-arrow-up text-lg" />
                         </div>
                         <div className="flex-1 text-center md:text-left">
-                            <h3 className="text-xl font-bold mb-1">Potenciá tu Simulador</h3>
-                            <p className="text-foreground/70 text-sm">Inicia sesión para guardar tu progreso en la nube y sincronizar entre dispositivos.</p>
+                            <h2 className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                                Sincronizá tu progreso en la nube
+                            </h2>
+                            <p className="text-[#475569] dark:text-[#CBD5E1] text-xs sm:text-sm">
+                                Iniciá sesión con Google para resguardar tu avance y acceder desde otros dispositivos.
+                            </p>
                         </div>
                         <Button
                             color="primary"
-                            variant="shadow"
-                            className="font-bold px-8"
+                            className="font-semibold px-6 rounded-xl bg-[#005A36] dark:bg-[#2E8B63] text-white"
                             onPress={async () => {
                                 const logged = await signIn();
                                 if (logged) {
@@ -124,39 +134,37 @@ export default function SettingsPage({ plan, setPlan }) {
                                 }
                             }}
                         >
-                            Comenzar Gratis
+                            Iniciar sesión
                         </Button>
                     </CardBody>
                 </Card>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Perfil Section */}
-                <Card className="shadow-sm border border-default-200">
-                    <CardHeader className="flex gap-3 px-6 pt-6">
-                        <div className="p-2 rounded-lg bg-default-100">
-                            <i className="fa-solid fa-user text-default-500 w-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Perfil */}
+                <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
+                    <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] flex items-center justify-center text-[#475569] dark:text-[#CBD5E1]">
+                            <i className="fa-solid fa-user text-xs" />
                         </div>
                         <div className="flex flex-col">
-                            <p className="text-md font-bold leading-none">Perfil de Usuario</p>
-                            <p className="text-xs text-default-500">Información básica de tu cuenta</p>
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">Perfil de usuario</p>
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Información de tu cuenta</p>
                         </div>
                     </CardHeader>
-                    <Divider className="my-2 mx-6 w-auto" />
-                    <CardBody className="px-6 pb-6 pt-2 flex flex-col gap-4">
+                    <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
+                    <CardBody className="px-5 pb-5 pt-2 flex flex-col gap-4">
                         {user && (
-                            <div className="flex items-center gap-4 mb-2 p-3 bg-default-50 rounded-xl border border-default-100">
+                            <div className="flex items-center gap-3 p-3 bg-[#F8FAFC] dark:bg-[#1E2730] rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]">
                                 <Avatar
                                     src={user.photoURL}
                                     name={user.displayName}
-                                    className="w-12 h-12 text-large"
-                                    isBordered
-                                    color="primary"
-                                    imgProps={{ referrerPolicy: "no-referrer" }}
+                                    className="w-10 h-10"
+                                    imgProps={{ referrerPolicy: 'no-referrer' }}
                                 />
                                 <div className="flex flex-col overflow-hidden">
-                                    <p className="text-md font-bold truncate">{user.displayName}</p>
-                                    <p className="text-xs text-default-500 truncate">{user.email}</p>
+                                    <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] truncate">{user.displayName}</p>
+                                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] truncate">{user.email}</p>
                                 </div>
                             </div>
                         )}
@@ -165,23 +173,23 @@ export default function SettingsPage({ plan, setPlan }) {
                             label="Alias / Nombre"
                             placeholder="Tu nombre público"
                             labelPlacement="outside"
-                            description="Se muestra en la barra de navegación."
+                            description="Se muestra en el saludo inicial."
                             value={alias}
                             onValueChange={setAlias}
-                            variant="flat"
+                            variant="bordered"
                             isDisabled={!user}
-                            startContent={<i className="fa-solid fa-user text-default-400 text-md mr-2" />}
+                            startContent={<i className="fa-solid fa-user text-[#64748B] text-xs mr-1" />}
                             endContent={
                                 user && (
                                     <Button
-                                        size="md"
-                                        color={alias !== (userData?.config?.alias || user.displayName?.split(' ')[0]) ? "primary" : "default"}
-                                        variant={alias !== (userData?.config?.alias || user.displayName?.split(' ')[0]) ? "shadow" : "flat"}
-                                        className="h-8 font-bold px-4"
+                                        size="sm"
+                                        color={alias !== (userData?.config?.alias || user.displayName?.split(' ')[0]) ? 'primary' : 'default'}
+                                        variant={alias !== (userData?.config?.alias || user.displayName?.split(' ')[0]) ? 'solid' : 'flat'}
+                                        className="h-7 font-semibold px-3 text-xs"
                                         onPress={handleSave}
                                         isLoading={saving}
                                     >
-                                        Actualizar
+                                        Guardar
                                     </Button>
                                 )
                             }
@@ -190,163 +198,140 @@ export default function SettingsPage({ plan, setPlan }) {
                         <Input
                             label="Correo Electrónico"
                             labelPlacement="outside"
-                            value={user?.email || 'Visitante'}
+                            value={user?.email || 'Modo visitante (local)'}
                             variant="bordered"
                             isReadOnly
                             isDisabled={!user}
-                            startContent={<i className="fa-solid fa-envelope text-default-400 text-md mr-2" />}
+                            startContent={<i className="fa-solid fa-envelope text-[#64748B] text-xs mr-1" />}
                         />
                     </CardBody>
                 </Card>
 
-                {/* Preferencias Section */}
-                <Card className="shadow-sm border border-default-200">
-                    <CardHeader className="flex gap-3 px-6 pt-6">
-                        <div className="p-2 rounded-lg bg-default-100">
-                            <i className="fa-solid fa-graduation-cap text-default-500 w-4" />
+                {/* Preferencias Académicas */}
+                <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
+                    <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] flex items-center justify-center text-[#005A36] dark:text-[#86EFAC]">
+                            <i className="fa-solid fa-graduation-cap text-xs" />
                         </div>
                         <div className="flex flex-col">
-                            <p className="text-md font-bold leading-none">Preferencias Académicas</p>
-                            <p className="text-xs text-default-500">Plan de estudios y carrera</p>
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">Preferencias académicas</p>
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Plan de estudios activo</p>
                         </div>
                     </CardHeader>
-                    <Divider className="my-2 mx-6 w-auto" />
-                    <CardBody className="px-6 pb-6 pt-2 flex flex-col gap-4">
-                        <div className="flex flex-col gap-3">
-                            <label className="text-sm font-medium text-foreground/80">Plan de Estudios Activo</label>
-                            <Tabs
-                                aria-label="Selección de Plan"
-                                color="primary"
-                                variant="bordered"
-                                fullWidth
-                                selectedKey={plan || '17.14'}
-                                onSelectionChange={(key) => {
-                                    setPlan(key);
-                                    trackSeleccionCarrera({ plan: key, origen_plan: 'settings' });
-                                }}
-                                classNames={{
-                                    base: "w-full",
-                                    tabList: "w-full bg-default-100 p-1 border-none shrink-0",
-                                    cursor: "shadow-sm",
-                                    tab: "h-10 px-2"
-                                }}
-                            >
-                                <Tab
-                                    key="17.14"
-                                    title={
-                                        <div className="flex items-center gap-1.5 overflow-hidden">
-                                            <span className="text-xs sm:text-sm font-bold whitespace-nowrap">Plan 17.14</span>
-                                            <Chip size="sm" variant="flat" color="primary" className="hidden xs:flex h-min min-w-0 px-1 text-[10px]">Actual</Chip>
-                                        </div>
-                                    }
-                                />
-                                <Tab key="17.13" title={<span className="text-xs sm:text-sm font-bold">Plan 17.13</span>} />
-                            </Tabs>
-                            <p className="text-xs text-default-500 px-1 italic">
-                                * Cambiar el plan afecta los datos mostrados en el Simulador y Progreso.
-                            </p>
-
-                            {/* Banner Informativo de Transición */}
-                            <div className="p-3.5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent dark:from-amber-950/30 border border-[#F5B82E]/40 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-1 shadow-2xs">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-[#F5B82E]/20 text-amber-800 dark:text-amber-300 flex items-center justify-center shrink-0">
-                                        <i className="fa-solid fa-scale-balanced text-sm" />
+                    <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
+                    <CardBody className="px-5 pb-5 pt-2 flex flex-col gap-3.5">
+                        <label className="text-xs font-medium text-[#475569] dark:text-[#CBD5E1]">
+                            Plan de Estudios Activo
+                        </label>
+                        <Tabs
+                            aria-label="Selección de Plan"
+                            color="primary"
+                            variant="bordered"
+                            fullWidth
+                            selectedKey={plan || '17.14'}
+                            onSelectionChange={(key) => {
+                                setPlan(key);
+                                trackSeleccionCarrera({ plan: key, origen_plan: 'settings' });
+                            }}
+                            classNames={{
+                                base: 'w-full',
+                                tabList: 'w-full bg-[#F1F5F9] dark:bg-[#1E2730] p-1 border border-[#E2E8F0] dark:border-[#2A3540]',
+                                cursor: 'bg-white dark:bg-[#161D24] shadow-2xs',
+                                tab: 'h-9 px-2',
+                            }}
+                        >
+                            <Tab
+                                key="17.14"
+                                title={
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-xs sm:text-sm font-semibold">Plan 17.14</span>
+                                        <Chip size="sm" variant="flat" color="primary" className="h-5 px-1.5 text-[10px]">Vigente</Chip>
                                     </div>
-                                    <div>
-                                        <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-400 block">
-                                            TRANSICIÓN DE PLAN (RES. HCS 89/2025)
-                                        </span>
-                                        <p className="text-xs text-slate-700 dark:text-zinc-300">
-                                            ¿Dudas sobre cambiar entre planes? Verificá con tu avance si la transición es viable hoy.
-                                        </p>
-                                    </div>
-                                </div>
-                                <Button
-                                    size="sm"
-                                    onPress={() => navigate('/cambio-plan')}
-                                    className="bg-[#F5B82E] hover:bg-[#e2a825] text-slate-900 font-extrabold text-xs px-3.5 py-1.5 rounded-lg shrink-0 shadow-2xs self-end sm:self-center"
-                                    endContent={<i className="fa-solid fa-arrow-right text-[10px]" />}
-                                >
-                                    Simular cambio
-                                </Button>
-                            </div>
-                        </div>
+                                }
+                            />
+                            <Tab key="17.13" title={<span className="text-xs sm:text-sm font-semibold">Plan 17.13</span>} />
+                        </Tabs>
+                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+                            Cambiar el plan actualiza las materias mostradas en Mi Progreso y el Simulador.
+                            {canSimulateTransition && transitionInfo && (
+                                <>
+                                    {' '}
+                                    <Link to={transitionInfo.route} className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
+                                        Analizar transición ({transitionInfo.shortBadge}) →
+                                    </Link>
+                                </>
+                            )}
+                        </p>
                     </CardBody>
                 </Card>
 
-                {/* Interfaz Section */}
-                <Card className="shadow-sm border border-default-200">
-                    <CardHeader className="flex gap-3 px-6 pt-6">
-                        <div className="p-2 rounded-lg bg-default-100">
-                            <i className="fa-solid fa-palette text-default-500 w-4" />
+                {/* Personalización */}
+                <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
+                    <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] flex items-center justify-center text-[#475569] dark:text-[#CBD5E1]">
+                            <i className="fa-solid fa-palette text-xs" />
                         </div>
                         <div className="flex flex-col">
-                            <p className="text-md font-bold leading-none">Personalización</p>
-                            <p className="text-xs text-default-500">Ajustá el estilo de la interfaz</p>
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">Apariencia</p>
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Elegí el modo visual de la interfaz</p>
                         </div>
                     </CardHeader>
-                    <Divider className="my-2 mx-6 w-auto" />
-                    <CardBody className="px-6 pb-6 pt-2">
-                        <div className="flex flex-col gap-4">
-                            <p className="text-sm font-bold px-1">Temas Disponibles</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[
-                                    { id: 'light', label: 'Claro', icon: 'fa-sun', color: 'bg-white' },
-                                    { id: 'dark', label: 'Oscuro', icon: 'fa-moon', color: 'bg-slate-900' }
-                                ].map((t) => (
+                    <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
+                    <CardBody className="px-5 pb-5 pt-2">
+                        <div className="grid grid-cols-2 gap-2.5">
+                            {[
+                                { id: 'light', label: 'Modo Claro', icon: 'fa-sun', swatch: 'bg-[#F8FAFC]' },
+                                { id: 'dark', label: 'Modo Oscuro', icon: 'fa-moon', swatch: 'bg-[#0F1419]' },
+                            ].map((t) => {
+                                const active = theme === t.id;
+                                return (
                                     <button
                                         key={t.id}
+                                        type="button"
                                         onClick={() => setTheme(t.id)}
-                                        className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${theme === t.id
-                                            ? 'border-primary bg-primary/5 shadow-sm'
-                                            : 'border-default-100 bg-default-50 hover:border-default-200'
-                                            }`}
+                                        className={`flex items-center gap-2.5 p-3 rounded-xl border transition-colors cursor-pointer ${
+                                            active
+                                                ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20]'
+                                                : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] hover:border-[#CBD5E1]'
+                                        }`}
                                     >
-                                        <div className={`w-4 h-4 rounded-full ${t.color} border border-default-200 shadow-inner`} />
-                                        <span className={`text-xs font-bold ${theme === t.id ? 'text-primary' : 'text-foreground/70'}`}>
+                                        <div className={`w-4 h-4 rounded-full ${t.swatch} border border-[#CBD5E1] dark:border-[#3B4958]`} />
+                                        <span className={`text-xs font-semibold ${active ? 'text-[#005A36] dark:text-[#86EFAC]' : 'text-[#475569] dark:text-[#CBD5E1]'}`}>
                                             {t.label}
                                         </span>
-                                        {theme === t.id && <i className="fa-solid fa-check ml-auto text-primary" />}
+                                        {active && <i className="fa-solid fa-check ml-auto text-xs text-[#005A36] dark:text-[#86EFAC]" />}
                                     </button>
-                                ))}
-                            </div>
+                                );
+                            })}
                         </div>
                     </CardBody>
                 </Card>
 
-                {/* Próximamente Section */}
-                <Card className="shadow-sm border border-dashed border-default-300 bg-default-50/30 overflow-hidden relative">
-                    <div className="absolute top-2 right-2 rotate-12">
-                        <Chip variant="flat" color="warning" size="sm" className="font-bold uppercase tracking-wider">Lab</Chip>
-                    </div>
-                    <CardHeader className="flex gap-3 px-6 pt-6 opacity-60">
-                        <div className="p-2 rounded-lg bg-default-100">
-                            <i className="fa-solid fa-rocket text-default-400 w-4" />
+                {/* Respaldo de datos */}
+                <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
+                    <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] flex items-center justify-center text-[#475569] dark:text-[#CBD5E1]">
+                            <i className="fa-solid fa-file-export text-xs" />
                         </div>
                         <div className="flex flex-col">
-                            <p className="text-md font-bold leading-none">Nuevas Funciones</p>
-                            <p className="text-xs text-default-400 italic">En desarrollo activo</p>
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">Respaldo local</p>
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">Descargá una copia de tu avance</p>
                         </div>
                     </CardHeader>
-                    <CardBody className="px-6 pb-6 pt-2 flex flex-col gap-3 opacity-60">
-                        <div className="flex items-center gap-3 p-2 border border-default-100 rounded-xl">
-                            <div className="p-2 rounded-lg bg-default-50">
-                                <i className="fa-solid fa-file-pdf text-default-400 w-4 flex justify-center" />
-                            </div>
-                            <p className="text-xs font-semibold">Subida de Analítico para actualizar el Progreso</p>
-                        </div>
-                        <div className="flex items-center gap-3 p-2 border border-default-100 rounded-xl">
-                            <div className="p-2 rounded-lg bg-default-50">
-                                <i className="fa-solid fa-bell text-default-400 w-4 flex justify-center" />
-                            </div>
-                            <p className="text-xs font-semibold">Alertas de Inscripción y Finales</p>
-                        </div>
-                        <div className="flex items-center gap-3 p-2 border border-default-100 rounded-xl">
-                            <div className="p-2 rounded-lg bg-default-50">
-                                <i className="fa-solid fa-file-export text-default-400 w-4 flex justify-center" />
-                            </div>
-                            <p className="text-xs font-semibold">Exportar avance (JSON)</p>
-                        </div>
+                    <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
+                    <CardBody className="px-5 pb-5 pt-2 flex flex-col justify-between gap-3">
+                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
+                            Exportá un archivo JSON con las materias aprobadas, regulares y en curso registradas en el Plan {plan || '17.14'}.
+                        </p>
+                        <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={handleExport}
+                            className="font-semibold text-xs h-9 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#1E293B] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#2A3540] self-start px-4"
+                            startContent={<i className="fa-solid fa-download text-xs text-[#005A36] dark:text-[#6EE7B7]" />}
+                        >
+                            Exportar avance (JSON)
+                        </Button>
                     </CardBody>
                 </Card>
             </div>

@@ -1,156 +1,154 @@
-import { useEffect, useRef, useState } from 'react';
-import MateriasList from '../components/Progreso/MateriasList';
-import ProgresoTotal from '../components/Progreso/ProgresoTotal';
-import { Button, Spinner } from '@heroui/react';
-import { Network } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import LeyendaEstados from '../components/Progreso/LeyendaEstados';
-import PlanSelectionModal from '../components/Progreso/modals/PlanSelectionModal';
-import ConsejoAvanzadosModal from '../components/Progreso/modals/ConsejoAvanzadosModal';
-import usePlanData from '../hooks/usePlanData';
-import ProgresoSearchFilters from '../components/Progreso/ProgresoSearchFilters';
-import InfoStatusBanner from '../components/Progreso/InfoStatusBanner';
+import { Spinner } from "@heroui/react";
+import { useActivePlan, usePlanCapabilities } from "../context/PlanContext";
+import usePlanData from "../hooks/usePlanData";
+import useProgresoDashboard from "../hooks/Progreso/useProgresoDashboard";
+import ProgresoTotal from "../components/Progreso/ProgresoTotal";
+import ProgresoSearchFilters from "../components/Progreso/ProgresoSearchFilters";
+import MateriasList from "../components/Progreso/MateriasList";
+import MateriaContextPanel from "../components/Progreso/MateriaContextPanel";
+import LeyendaEstados from "../components/Progreso/LeyendaEstados";
+import PlanSelectionModal from "../components/Progreso/modals/PlanSelectionModal";
 
-function Progreso({ plan, setPlan }) {
-    const navigate = useNavigate();
-    // Usamos el hook centralizado para la carga de datos y progreso
-    const { 
-        materias, 
-        progreso, 
-        setProgreso, 
-        progresoDetalles, 
-        setProgresoDetalles, 
-        cargandoPlan: cargando 
-    } = usePlanData(plan);
+/**
+ * Pantalla principal "Mi Progreso Académico".
+ * Estructura: Cabecera + KPIs jerarquizados -> Barra única de búsqueda/filtros ->
+ * Master-Detail (acordeones por año + panel contextual con divulgación progresiva) -> Leyenda.
+ */
+export default function Progreso() {
+  const { plan, setPlan } = useActivePlan();
+  const { policy } = usePlanCapabilities();
 
-    const carrera = "Licenciatura en Sistemas de Información";
-    const headerRef = useRef(null);
-    const [isSticky, setIsSticky] = useState(false);
-    const [isAvanzadosModalOpen, setIsAvanzadosModalOpen] = useState(false);
+  const {
+    materias,
+    progreso,
+    setProgreso,
+    progresoDetalles,
+    setProgresoDetalles,
+    cargandoPlan,
+  } = usePlanData(plan);
 
-    useEffect(() => {
-        window.scrollTo({ top: 0, behavior: 'instant' });
-    }, []);
+  const dashboard = useProgresoDashboard({
+    plan,
+    materias,
+    progreso,
+    setProgreso,
+    progresoDetalles,
+    setProgresoDetalles,
+  });
 
-    // Mostrar modal de consejos para avanzados si hay plan y no se ocultó antes
-    useEffect(() => {
-        if (plan && !cargando) {
-            const ocultar = localStorage.getItem('ocultar_consejo_avanzados');
-            if (ocultar !== 'true') {
-                // Pequeño delay para que no aparezca justo encima del cargando
-                const timer = setTimeout(() => setIsAvanzadosModalOpen(true), 800);
-                return () => clearTimeout(timer);
-            }
-        }
-    }, [plan, cargando]);
-
-    // Calcular el progreso total (materias aprobadas)
-    const totalProgreso = () => {
-        if (!materias.length) return 0;
-        let total = 0;
-        materias.forEach((m) => {
-            const estado = progreso[m.codigo];
-            if (estado === 'Aprobado' || estado === 'Promocionado') {
-                total += 1;
-            }
-        });
-        return total;
-    };
-    
-    const progress = materias.length > 0 
-        ? Math.round((totalProgreso() * 100) / materias.length) 
-        : 0;
-
-    const [busqueda, setBusqueda] = useState("");
-    const [filtros, setFiltros] = useState([]);
-
-    // Manejo de años abiertos/cerrados subido al nivel superior para compartir el botón con el buscador
-    const [isAnioOpen, setIsAnioOpen] = useState(() => {
-        const guardado = localStorage.getItem('materias_isAnioOpen:v1');
-        if (guardado) {
-            try { return JSON.parse(guardado); } catch (e) { return []; }
-        }
-        return [];
-    });
-
-    useEffect(() => {
-        localStorage.setItem('materias_isAnioOpen:v1', JSON.stringify(isAnioOpen));
-    }, [isAnioOpen]);
-
-    const handleMostrarTodo = () => {
-        if (isAnioOpen.length > 0) {
-            setIsAnioOpen([]);
-        } else {
-            const anios = ["taller", ...Array.from(new Set(materias.map((m) => String(m.anio || "")))).filter(Boolean)];
-            setIsAnioOpen(anios);
-        }
-    };
-
+  if (!plan) {
     return (
-        <div className="overflow-visible bg-default-100 min-h-screen">
-            <PlanSelectionModal 
-                isOpen={!plan} 
-                onSelect={(selectedPlan) => setPlan(selectedPlan)} 
-            />
-
-            {cargando && (
-                <div className='flex justify-center items-center h-screen'>
-                    <Spinner size="lg" label="Cargando materias..." />
-                </div>
-            )}
-
-            {!cargando && plan && (
-                <div>
-                    <ProgresoTotal
-                        carrera={carrera}
-                        plan={plan}
-                        progress={progress}
-                        progreso={progreso}
-                        progresoDetalles={progresoDetalles}
-                        materias={materias}
-                        isSticky={isSticky}
-                        headerRef={headerRef}
-                        setIsSticky={setIsSticky}
-                    />
-                    <div className='mx-5 md:mx-10 lg:mx-15 mt-6'>
-                        <ConsejoAvanzadosModal />
-                        <InfoStatusBanner 
-                            materias={materias}
-                            progreso={progreso}
-                            progresoDetalles={progresoDetalles}
-                            filtros={filtros}
-                            setFiltros={setFiltros}
-                        />
-                        <ProgresoSearchFilters 
-                            busqueda={busqueda}
-                            setBusqueda={setBusqueda}
-                            filtros={filtros}
-                            setFiltros={setFiltros}
-                        />
-                        <MateriasList
-                            plan={plan}
-                            progreso={progreso}
-                            setProgreso={setProgreso}
-                            progresoDetalles={progresoDetalles}
-                            setProgresoDetalles={setProgresoDetalles}
-                            materias={materias}
-                            cargando={cargando}
-                            isProgressSticky={isSticky}
-                            busqueda={busqueda}
-                            filtros={filtros}
-                            isAnioOpen={isAnioOpen}
-                            setIsAnioOpen={setIsAnioOpen}
-                            handleMostrarTodo={handleMostrarTodo}
-                        />
-                    </div>
-
-                    <div className="pb-12 mx-5 md:mx-10 lg:mx-15 pt-8 border-t border-default-200 mt-10">
-                        <LeyendaEstados materias={materias} />
-                    </div>
-                </div>
-            )}
-        </div>
+      <div className="max-w-4xl mx-auto px-4 py-12 text-center space-y-3">
+        <PlanSelectionModal isOpen={true} onSelect={setPlan} />
+        <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+          Seleccioná tu plan de estudios para consultar y registrar tu progreso.
+        </p>
+      </div>
     );
-}
+  }
 
-export default Progreso;
+  if (cargandoPlan) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 flex flex-col items-center justify-center gap-3">
+        <Spinner color="success" size="lg" />
+        <p className="text-sm text-[#64748B] dark:text-[#94A3B8]">
+          Cargando plan de estudios {plan}...
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5">
+      <ProgresoTotal
+        carrera={policy?.carrera}
+        plan={plan}
+        kpis={dashboard.kpis}
+      />
+
+      <ProgresoSearchFilters
+        busqueda={dashboard.busqueda}
+        setBusqueda={dashboard.setBusqueda}
+        estadoFiltro={dashboard.estadoFiltro}
+        setEstadoFiltro={dashboard.setEstadoFiltro}
+        soloIncompletas={dashboard.soloIncompletas}
+        setSoloIncompletas={dashboard.setSoloIncompletas}
+        incompletasCount={dashboard.kpis.incompletasCount}
+        vista={dashboard.vista}
+        setVista={dashboard.setVista}
+        areAllExpanded={dashboard.areAllExpanded}
+        toggleExpandAll={dashboard.toggleExpandAll}
+        isFiltering={dashboard.isFiltering}
+        yearGroups={dashboard.yearGroups}
+        plan={plan}
+        onRequestApproveGroup={dashboard.requestApproveGroup}
+        onRequestReset={dashboard.onResetOpen}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div
+          className={
+            dashboard.selectedMateria
+              ? "lg:col-span-8 min-w-0"
+              : "lg:col-span-12 min-w-0"
+          }
+        >
+          <MateriasList
+            progreso={progreso}
+            progresoDetalles={progresoDetalles}
+            vista={dashboard.vista}
+            isFiltering={dashboard.isFiltering}
+            filteredMaterias={dashboard.filteredMaterias}
+            clearFilters={dashboard.clearFilters}
+            yearGroups={dashboard.yearGroups}
+            expandedYears={dashboard.expandedYears}
+            setExpandedYears={dashboard.setExpandedYears}
+            selectedCodigo={dashboard.selectedCodigo}
+            onSelectMateria={(codigo) =>
+              dashboard.setSelectedCodigo(
+                dashboard.selectedCodigo === codigo ? null : codigo,
+              )
+            }
+            onRequestApproveGroup={dashboard.requestApproveGroup}
+            isResetOpen={dashboard.isResetOpen}
+            onResetOpenChange={dashboard.onResetOpenChange}
+            reestablecerProgreso={dashboard.reestablecerProgreso}
+            grupoAAprobar={dashboard.grupoAAprobar}
+            isAprobarAnioOpen={dashboard.isAprobarAnioOpen}
+            onAprobarAnioOpenChange={dashboard.onAprobarAnioOpenChange}
+            confirmApproveGroup={dashboard.confirmApproveGroup}
+            isConfirmationOpen={dashboard.isConfirmationOpen}
+            onConfirmationOpenChange={dashboard.onConfirmationOpenChange}
+            onConfirmationClose={dashboard.onConfirmationClose}
+            pendingBlockedTransition={dashboard.pendingBlockedTransition}
+            confirmarCascada={dashboard.confirmarCascada}
+            setMostrarConfirmacionCascada={dashboard.setMostrarConfirmacionCascada}
+            isCapturaOpen={dashboard.isCapturaOpen}
+            onCapturaOpenChange={dashboard.onCapturaOpenChange}
+            capturaConfig={dashboard.capturaConfig}
+            handleCapturaConfirm={dashboard.handleCapturaConfirm}
+          />
+        </div>
+
+        {dashboard.selectedMateria && (
+          <div className="lg:col-span-4 min-w-0">
+            <MateriaContextPanel
+              materia={dashboard.selectedMateria}
+              materias={materias}
+              progreso={progreso}
+              progresoDetalles={progresoDetalles}
+              setProgresoDetalles={setProgresoDetalles}
+              plan={plan}
+              cambioDeEstado={dashboard.cambioDeEstado}
+              onChangeEstado={dashboard.handleCambioDeEstado}
+              onSelectMateria={dashboard.setSelectedCodigo}
+              onClose={() => dashboard.setSelectedCodigo(null)}
+            />
+          </div>
+        )}
+      </div>
+
+      <LeyendaEstados />
+    </div>
+  );
+}

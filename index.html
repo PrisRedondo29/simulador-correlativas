@@ -28,8 +28,10 @@
     content="Herramienta para alumnos de la UNLu. Simulá tus finales, gestioná tus correlativas y proyectá tu fecha de graduación." />
   <meta property="twitter:image" content="/imgs/dashboard.png" />
 
-  <!-- Theme Color para móviles -->
-  <meta name="theme-color" content="#006fee" />
+  <!-- Theme Color & Color Scheme para móviles -->
+  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#005a36" />
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F1419" />
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -46,13 +48,25 @@
         display: flex;
         height: 100vh;
         width: 100vw;
-        background-color: #fafafa;
-        font-family: sans-serif;
+        background-color: #F8FAFC;
+        font-family: 'Inter', sans-serif;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        #loader-skeleton {
+          background-color: #0F1419;
+        }
+        .sk-sidebar {
+          border-right-color: #2A3540 !important;
+        }
+        .sk-box {
+          background-color: #161D24 !important;
+        }
       }
 
       .sk-sidebar {
         width: 256px;
-        border-right: 1px solid #eaeaea;
+        border-right: 1px solid #E2E8F0;
         display: none;
         padding: 24px;
         flex-direction: column;
@@ -66,9 +80,9 @@
       }
 
       .sk-box {
-        background-color: #f0f0f0;
-        border-radius: 8px;
-        animation: pulse 1.5s infinite ease-in-out;
+        background-color: #E2E8F0;
+        border-radius: 10px;
+        animation: pulse 1.6s infinite ease-in-out;
       }
 
       .sk-main {

@@ -61,13 +61,19 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
 
     const estiloEstado = (estado) => {
         switch (estado) {
-            case "Aprobado": return "success"
-            case "Promocionado": return "secondary"
-            case "Cursando": return "secondary"
-            case "Disponible": return "primary"
-            case "Regular": return "warning"
-            case "Libre": return "danger"
-            case "Bloqueado": default: return "default"
+            case "Aprobado":
+            case "Promocionado":
+                return "success";
+            case "Cursando":
+            case "Disponible":
+                return "primary";
+            case "Regular":
+                return "warning";
+            case "Libre":
+                return "danger";
+            case "Bloqueado":
+            default:
+                return "default";
         }
     }
 
@@ -228,7 +234,7 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                         <div className="flex items-center gap-3">
                                                             <Input
                                                                 id="input-anio-regularizacion"
-                                                                type="number" variant="faded" color="warning" size="sm" className="flex-1"
+                                                                type="number" variant="bordered" size="sm" className="flex-1"
                                                                 value={String(anioActualReg)} onChange={handleCambioAnio}
                                                             />
                                                             <Chip size="sm" variant="flat" color="default">{cuatriAsignado}° Cuatri</Chip>
@@ -239,7 +245,7 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                                         <label htmlFor="input-nota-cursada" className="text-xs font-semibold text-default-500 uppercase tracking-wide">Nota de Cursada</label>
                                                         <Input
                                                             id="input-nota-cursada"
-                                                            type="number" placeholder="0 - 10" variant="faded" color="warning" size="sm"
+                                                            type="number" placeholder="0 - 10" variant="bordered" size="sm"
                                                             value={detallesLocales.notaRegularizacion != null ? String(detallesLocales.notaRegularizacion) : ""}
                                                             onValueChange={handleCambioNotaCursada}
                                                         />
@@ -250,19 +256,19 @@ function DetalleMateriaModal({ isOpen, infoMateria, materias, progreso, progreso
                                             {isEquivalencia && (
                                                 <div className="flex flex-col gap-4">
                                                     <div className="flex flex-col gap-1">
-                                                        <label htmlFor="input-anio-otorgamiento" className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Año de Otorgamiento</label>
+                                                        <label htmlFor="input-anio-otorgamiento" className="text-xs font-semibold text-primary uppercase tracking-wide">Año de Otorgamiento</label>
                                                         <Input
                                                             id="input-anio-otorgamiento"
-                                                            type="number" variant="faded" color="primary" size="sm"
+                                                            type="number" variant="bordered" size="sm"
                                                             value={detallesLocales.anioExamen != null ? String(detallesLocales.anioExamen) : ""} 
                                                             onChange={handleCambioAnio}
                                                         />
                                                     </div>
                                                     <div className="flex flex-col gap-1">
-                                                        <label htmlFor="input-nota-equivalencia" className="text-xs font-semibold text-primary-600 uppercase tracking-wide">Nota de Equivalencia (Opcional)</label>
+                                                        <label htmlFor="input-nota-equivalencia" className="text-xs font-semibold text-primary uppercase tracking-wide">Nota de Equivalencia (Opcional)</label>
                                                         <Input
                                                             id="input-nota-equivalencia"
-                                                            type="number" placeholder="0 - 10" variant="faded" color="primary" size="sm"
+                                                            type="number" placeholder="0 - 10" variant="bordered" size="sm"
                                                             value={detallesLocales.notaFinal != null ? String(detallesLocales.notaFinal) : ""}
                                                             onValueChange={handleCambioNotaEquivalencia}
                                                         />

@@ -10,7 +10,7 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
 
     switch (estadoActual) {
         case 'Regular':
-            colorClass = "bg-warning-50 border-warning-200 text-warning-800";
+            colorClass = "bg-[#FFFBEB] dark:bg-[#2D2210]/70 border-[#FDE68A] dark:border-[#5C4318] text-[#92400E] dark:text-[#FCD34D]";
             if (statusPlan.cuatrimestresRestantes <= 1) {
                 icono = "⚠️";
                 mensaje = `¡Atención! Estás a punto de perder la regularidad por tiempo. Te queda(n) ${statusPlan.cuatrimestresRestantes} cuatrimestre(s) para rendir el final.`;
@@ -26,7 +26,7 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
             break;
 
         case 'Aprobado':
-            colorClass = "bg-success-50 border-success-200 text-success-800";
+            colorClass = "bg-[#ECFDF5] dark:bg-[#102A20]/80 border-[#A7F3D0] dark:border-[#1E4D38] text-[#166534] dark:text-[#86EFAC]";
             icono = "🎉";
             if (!detallesLocales.notaFinal) {
                 mensaje = "¡Felicidades por aprobar! Acordate de subir la nota del final para poder calcular correctamente tu promedio general de la carrera.";
@@ -36,13 +36,13 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
             break;
 
         case 'Promocionado':
-            colorClass = "bg-success-50 border-success-200 text-success-800";
+            colorClass = "bg-[#ECFDF5] dark:bg-[#112E22] border-[#A7F3D0] dark:border-[#2E8B63] text-[#005A36] dark:text-[#A7F3D0]";
             icono = "🌟";
             mensaje = "¡Felicidades por finalizar la materia con una nota destacada! Promocionar es un gran logro.";
             break;
 
         case 'Disponible':
-            colorClass = "bg-primary-50 border-primary-200 text-primary-800";
+            colorClass = "bg-[#F0F9FF] dark:bg-[#0F2636]/70 border-[#BAE6FD] dark:border-[#1E4E6E] text-[#075985] dark:text-[#BAE6FD]";
             icono = "📅";
             const cuatrimestreNum = Number(infoMateria.cuatrimestre) % 2 === 0 ? 2 : 1;
             const baseDisponible = "Ya cumplís con los requisitos para cursarla. ¡Muchos éxitos cuando decidas arrancarla! ";
@@ -54,13 +54,13 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
             break;
 
         case 'Bloqueado':
-            colorClass = "bg-default-50 border-default-200 text-default-800";
+            colorClass = "bg-[#F1F5F9] dark:bg-[#1A2129] border-[#E2E8F0] dark:border-[#2D3743] text-[#475569] dark:text-[#94A3B8]";
             icono = "🔒";
             mensaje = "Todavía te faltan requisitos. Enfocate en regularizar o aprobar las materias correlativas previas para desbloquear esta asignatura.";
             break;
 
         case 'Libre':
-            colorClass = "bg-danger-50 border-danger-200 text-danger-800";
+            colorClass = "bg-[#FEF2F2] dark:bg-[#2D1619]/70 border-[#FECACA] dark:border-[#5C262B] text-[#991B1B] dark:text-[#FCA5A5]";
             icono = "❌";
             mensaje = "Te quedaste libre en esta asignatura. Vas a tener que volver a cursarla o prepararla para rendir en condición de libre.";
             break;

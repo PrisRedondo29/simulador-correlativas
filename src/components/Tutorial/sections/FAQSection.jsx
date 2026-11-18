@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
-import { Accordion, AccordionItem, Button } from '@heroui/react'
+import { Accordion, AccordionItem } from '@heroui/react'
+import { usePlanCapabilities } from '../../../context/PlanContext'
 
 const faqData = [
     {
@@ -62,42 +63,50 @@ const categories = [
 
 export default function FAQSection() {
     const [selectedCategory, setSelectedCategory] = useState('todas')
+    const { canSimulateTransition } = usePlanCapabilities()
+
+    const visibleCategories = useMemo(
+        () => (canSimulateTransition ? categories : categories.filter(c => c.id !== 'planes')),
+        [canSimulateTransition]
+    )
+
+    const effectiveCategory = visibleCategories.some(c => c.id === selectedCategory) ? selectedCategory : 'todas'
 
     const filteredFaq = useMemo(() => {
-        if (selectedCategory === 'todas') return faqData
-        return faqData.filter(item => item.category === selectedCategory)
-    }, [selectedCategory])
+        const visibleFaq = canSimulateTransition
+            ? faqData
+            : faqData.filter(item => item.id !== 'cambio-plan-info')
+        if (effectiveCategory === 'todas') return visibleFaq
+        return visibleFaq.filter(item => item.category === effectiveCategory)
+    }, [effectiveCategory, canSimulateTransition])
 
     return (
-        <section className="py-8">
-            <div className="text-center mb-6">
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-foreground/50 bg-default-100 px-3 py-1 rounded-full mb-2">
-                    <i className="fa-solid fa-circle-question text-[9px]" />
-                    FAQ
-                </span>
-                <h2 className="text-2xl sm:text-3xl font-black text-foreground">
+        <section className="py-6">
+            <div className="text-center mb-5 space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
                     Preguntas frecuentes
                 </h2>
-                <p className="text-xs sm:text-sm text-foreground/50 mt-1 max-w-lg mx-auto">
+                <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] max-w-lg mx-auto">
                     Respuestas rápidas a las dudas más comunes sobre el funcionamiento del simulador.
                 </p>
             </div>
 
             {/* Categorías de Filtro */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mb-6 max-w-2xl mx-auto">
-                {categories.map(cat => {
-                    const isSelected = selectedCategory === cat.id
+            <div className="flex flex-wrap items-center justify-center gap-2 mb-5 max-w-2xl mx-auto">
+                {visibleCategories.map(cat => {
+                    const isSelected = effectiveCategory === cat.id
                     return (
                         <button
                             key={cat.id}
+                            type="button"
                             onClick={() => setSelectedCategory(cat.id)}
-                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer ${
                                 isSelected
-                                    ? 'bg-[#005a36] text-white shadow-xs scale-105'
-                                    : 'bg-default-100 dark:bg-default-50 text-foreground/70 hover:bg-default-200/80 hover:text-foreground'
+                                    ? 'bg-[#005A36] dark:bg-[#2E8B63] text-white font-semibold'
+                                    : 'bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] hover:bg-[#F1F5F9] dark:hover:bg-[#1E2730]'
                             }`}
                         >
-                            <i className={`fa-solid ${cat.icon} text-[10px] ${isSelected ? 'text-[#F5B82E]' : 'opacity-60'}`} />
+                            <i className={`fa-solid ${cat.icon} text-[11px] ${isSelected ? 'text-white' : 'opacity-65'}`} />
                             <span>{cat.label}</span>
                         </button>
                     )
@@ -107,13 +116,13 @@ export default function FAQSection() {
             <div className="max-w-3xl mx-auto">
                 <Accordion
                     variant="splitted"
-                    className="px-0 gap-3"
+                    className="px-0 gap-2.5"
                     itemClasses={{
-                        base: 'rounded-2xl border border-default-200 bg-background shadow-xs px-4',
-                        title: 'text-sm font-bold text-foreground',
-                        trigger: 'py-4 data-[hover=true]:opacity-80',
-                        content: 'pb-4 pt-0 text-xs sm:text-sm text-foreground/70 leading-relaxed',
-                        indicator: 'text-foreground/40',
+                        base: 'rounded-xl border border-[#E2E8F0] dark:border-[#2A3540] bg-white dark:bg-[#161D24] shadow-none px-4',
+                        title: 'text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]',
+                        trigger: 'py-3.5 data-[hover=true]:opacity-85',
+                        content: 'pb-4 pt-0 text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed',
+                        indicator: 'text-[#64748B]',
                     }}
                 >
                     {filteredFaq.map(item => (
@@ -122,7 +131,7 @@ export default function FAQSection() {
                             aria-label={item.question}
                             title={
                                 <div className="flex items-center gap-2.5">
-                                    <div className="w-6 h-6 rounded-lg bg-[#005a36]/10 dark:bg-emerald-500/20 text-[#005a36] dark:text-emerald-400 flex items-center justify-center shrink-0">
+                                    <div className="w-6 h-6 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center shrink-0">
                                         <i className={`fa-solid ${item.icon} text-[10px]`} />
                                     </div>
                                     <span className="text-xs sm:text-sm">{item.question}</span>

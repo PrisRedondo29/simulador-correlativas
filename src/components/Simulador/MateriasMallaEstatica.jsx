@@ -1,313 +1,293 @@
 import React, { useMemo, useState } from 'react';
 
 /**
- * MateriasMallaEstatica: Componente de Malla Curricular Nativa en HTML/CSS
- * Diseñado con Scroll en el Eje X (horizontal) nativo táctil para celulares.
+ * MateriasMallaEstatica: Malla Curricular Nativa en HTML/CSS.
+ * Unificada con la paleta serena institucional UNLu.
  */
 function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, cambioDeEstado, marcarTodasEnPantalla }) {
-  const items = projection?.items || {};
-  const labels = projection?.labels || {};
-  const maxCol = projection?.maxCol || 0;
+    const items = useMemo(() => projection?.items || {}, [projection]);
+    const labels = projection?.labels || {};
+    const maxCol = projection?.maxCol || 0;
 
-  // Estado local para resaltado interactivo de correlativas al pasar el cursor / tocar
-  const [hoveredCodigo, setHoveredCodigo] = useState(null);
+    const [hoveredCodigo, setHoveredCodigo] = useState(null);
 
-  // Determinar la columna que se está simulando activamente
-  const colActiva = useMemo(() => {
-    if (!items) return null;
-    for (const cod in items) {
-      if (items[cod]?.estado === 'Presente') {
-        return items[cod].columna;
-      }
-    }
-    return null;
-  }, [items]);
+    const colActiva = useMemo(() => {
+        if (!items) return null;
+        for (const cod in items) {
+            if (items[cod]?.estado === 'Presente') {
+                return items[cod].columna;
+            }
+        }
+        return null;
+    }, [items]);
 
-  // Obtener la materia hovered y sus correlativas para el resaltado
-  const hoveredMateria = useMemo(() => {
-    if (!hoveredCodigo || !materias) return null;
-    return materias.find((m) => m.codigo === hoveredCodigo);
-  }, [hoveredCodigo, materias]);
+    const hoveredMateria = useMemo(() => {
+        if (!hoveredCodigo || !materias) return null;
+        return materias.find((m) => m.codigo === hoveredCodigo);
+    }, [hoveredCodigo, materias]);
 
-  // Agrupar materias por cuatrimestre/columna
-  const columnasMap = useMemo(() => {
-    const map = {};
-    if (!materias) return map;
+    const columnasMap = useMemo(() => {
+        const map = {};
+        if (!materias) return map;
 
-    materias.forEach((m) => {
-      let col;
-      if (items[m.codigo]) {
-        col = items[m.codigo].columna;
-      } else {
-        col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
-      }
-      if (!map[col]) map[col] = [];
-      map[col].push(m);
-    });
-
-    return map;
-  }, [materias, items]);
-
-  const colKeys = useMemo(() => {
-    const keys = Object.keys(columnasMap).map(Number).sort((a, b) => a - b);
-    if (maxCol && maxCol > Math.max(...keys, 0)) {
-      const all = [];
-      for (let i = 1; i <= maxCol; i++) all.push(i);
-      return all;
-    }
-    return keys;
-  }, [columnasMap, maxCol]);
-
-  // Helper de badges y estilos por estado de la materia (todos usan border-2 para evitar layout shifts)
-  const getEstadoStyles = (materia) => {
-    const proj = items[materia.codigo];
-    const prog = progreso?.[materia.codigo];
-
-    let estadoFinal = 'Disponible';
-    if (proj) {
-      if (proj.estado === 'Presente') {
-        estadoFinal = (prog === 'Cursado' || prog === 'Aprobado' || prog === 'Promocionado') ? 'Seleccionada' : 'Disponible';
-      } else {
-        estadoFinal = proj.estado;
-      }
-    } else {
-      estadoFinal = prog || 'Disponible';
-    }
-
-    switch (estadoFinal) {
-      case 'Seleccionada':
-      case 'Cursando':
-      case 'Cursado':
-        return {
-          label: 'Cursando',
-          icon: 'fa-solid fa-play',
-          badgeClass: 'bg-blue-600 text-white font-bold',
-          borderClass: 'border-2 border-blue-500 bg-blue-50/90 dark:bg-blue-950/70 shadow-xs'
-        };
-      case 'Aprobado':
-      case 'Aprobada':
-      case 'Promocionado':
-      case 'Promocionada':
-        return {
-          label: 'Aprobada',
-          icon: 'fa-solid fa-circle-check',
-          badgeClass: 'bg-emerald-600 text-white font-bold',
-          borderClass: 'border-2 border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/50 shadow-xs'
-        };
-      case 'Regular':
-        return {
-          label: 'Regular',
-          icon: 'fa-solid fa-clock',
-          badgeClass: 'bg-amber-500 text-white font-bold',
-          borderClass: 'border-2 border-amber-400 bg-amber-50/60 dark:bg-amber-950/40 shadow-xs'
-        };
-      case 'Proyectada':
-      case 'Por Cursar':
-        return {
-          label: 'Futuro Cuatri',
-          icon: 'fa-solid fa-calendar-days',
-          badgeClass: 'bg-slate-100 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 border border-slate-300 dark:border-zinc-700',
-          borderClass: 'border-2 border-slate-200 dark:border-zinc-800 bg-slate-50/40 dark:bg-zinc-900/30'
-        };
-      case 'Bloqueado':
-      case 'Bloqueada':
-        return {
-          label: 'Bloqueada',
-          icon: 'fa-solid fa-lock',
-          badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-700',
-          borderClass: 'border-2 border-rose-200/80 dark:border-rose-950/60 bg-rose-50/30 dark:bg-rose-950/20 opacity-70'
-        };
-      case 'Disponible':
-      default:
-        return {
-          label: 'Disponible',
-          icon: 'fa-solid fa-unlock',
-          badgeClass: 'bg-sky-500 text-white font-bold shadow-xs',
-          borderClass: 'border-2 border-sky-400 dark:border-sky-500 bg-sky-50/70 dark:bg-sky-950/40 hover:border-sky-500 shadow-xs'
-        };
-    }
-  };
-
-  return (
-    <div className="w-full overflow-x-auto snap-x snap-mandatory flex gap-2.5 sm:gap-4 p-2 sm:p-6 select-none touch-pan-x scrollbar-thin scrollbar-thumb-default-300 dark:scrollbar-thumb-zinc-700 min-h-[600px] max-h-[840px] pb-36 rounded-3xl bg-slate-100/60 dark:bg-zinc-950/60 border border-default-200">
-      {colKeys.map((colNum) => {
-        const materiasCol = columnasMap[colNum] || [];
-        const anioCalculado = Math.ceil(colNum / 2);
-        const cuatriCalculado = colNum % 2 === 0 ? 2 : 1;
-        const colLabel = labels?.[colNum] || `${colNum}° Cuatrimestre`;
-        const esColActiva = colActiva === colNum;
-
-        // Horas semanales totales de la columna
-        const totalHorasSem = materiasCol.reduce((sum, m) => sum + (Number(m.horas_semanales) || 0), 0);
-
-        // Métricas de aprobación en la columna
-        const aprobadasCol = materiasCol.filter(m => {
-          const prog = progreso?.[m.codigo];
-          return prog === 'Aprobado' || prog === 'Aprobada' || prog === 'Promocionado' || prog === 'Promocionada';
-        }).length;
-
-        // Materias disponibles actualmente en la columna activa
-        const materiasDisponiblesActivas = materiasCol.filter(m => items[m.codigo]?.estado === 'Presente');
-        const todasInscriptasActivas = materiasDisponiblesActivas.length > 0 && materiasDisponiblesActivas.every(m => {
-          const prog = progreso?.[m.codigo];
-          return prog === 'Cursado' || prog === 'Aprobado';
+        materias.forEach((m) => {
+            let col;
+            if (items[m.codigo]) {
+                col = items[m.codigo].columna;
+            } else {
+                col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
+            }
+            if (!map[col]) map[col] = [];
+            map[col].push(m);
         });
 
-        return (
-          <div
-            key={`malla-col-${colNum}`}
-            className={`flex-none shrink-0 w-[calc(50vw-18px)] min-w-[155px] max-w-[210px] sm:max-w-none sm:w-[285px] snap-start flex flex-col gap-2 sm:gap-3 p-2 sm:p-3 rounded-2xl transition-all duration-150 ${
-              esColActiva
-                ? 'bg-white dark:bg-zinc-900 border-2 border-emerald-600 dark:border-emerald-500 shadow-md'
-                : 'bg-white/80 dark:bg-zinc-900/80 border border-slate-200/90 dark:border-zinc-800 shadow-xs'
-            }`}
-          >
-            {/* Header del Cuatrimestre */}
-            <div
-              className={`flex-none shrink-0 p-2 sm:p-3.5 rounded-xl shadow-xs flex flex-col gap-1 sm:gap-1.5 transition-colors ${
-                esColActiva
-                  ? 'bg-emerald-700 text-white dark:bg-emerald-800 shadow-sm'
-                  : 'bg-slate-800 text-white dark:bg-zinc-800'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider opacity-90 truncate">
-                  {anioCalculado}°A · {cuatriCalculado}°C
-                </span>
-                <span className="text-[9px] sm:text-[10px] bg-white/20 text-white font-bold px-1.5 sm:px-2 py-0.5 rounded-md backdrop-blur-xs shrink-0">
-                  {aprobadasCol}/{materiasCol.length}
-                </span>
-              </div>
+        return map;
+    }, [materias, items]);
 
-              <div className="flex items-center justify-between gap-1">
-                <h4 className="text-[11px] sm:text-xs font-black tracking-wide truncate">
-                  {colLabel}
-                </h4>
-                {totalHorasSem > 0 && (
-                  <span className="text-[9px] sm:text-[10px] font-mono opacity-80 shrink-0">
-                    {totalHorasSem}h/s
-                  </span>
-                )}
-              </div>
+    const colKeys = useMemo(() => {
+        const keys = Object.keys(columnasMap).map(Number).sort((a, b) => a - b);
+        if (maxCol && maxCol > Math.max(...keys, 0)) {
+            const all = [];
+            for (let i = 1; i <= maxCol; i++) all.push(i);
+            return all;
+        }
+        return keys;
+    }, [columnasMap, maxCol]);
 
-              {/* Pill resaltado + Botón de selección masiva en la columna activa */}
-              {esColActiva && (
-                <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-white/20 flex flex-col gap-1.5 sm:gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[8px] sm:text-[9px] font-extrabold uppercase tracking-widest bg-white text-emerald-900 px-1.5 sm:px-2 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs truncate">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-ping shrink-0" />
-                      CONFIGURANDO
-                    </span>
-                  </div>
+    const getEstadoStyles = (materia) => {
+        const proj = items[materia.codigo];
+        const prog = progreso?.[materia.codigo];
 
-                  {marcarTodasEnPantalla && materiasDisponiblesActivas.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        marcarTodasEnPantalla(todasInscriptasActivas ? 'No Cursado' : 'Cursado');
-                      }}
-                      className={`w-full py-1 sm:py-1.5 px-1.5 sm:px-3 rounded-lg font-black text-[10px] sm:text-xs transition-all flex items-center justify-center gap-1 sm:gap-1.5 shadow-sm active:scale-95 cursor-pointer ${
-                        todasInscriptasActivas
-                          ? 'bg-rose-100 hover:bg-rose-200 text-rose-800 border border-rose-300'
-                          : 'bg-white hover:bg-slate-100 text-emerald-900 border border-white/80'
-                      }`}
-                      title={todasInscriptasActivas ? "Quitar todas las materias del cuatrimestre" : "Seleccionar todas las materias disponibles"}
-                    >
-                      <i className={todasInscriptasActivas ? "fa-solid fa-rotate-left text-[10px] sm:text-xs text-rose-600" : "fa-solid fa-check-double text-[10px] sm:text-xs text-emerald-700"} />
-                      <span>{todasInscriptasActivas ? 'Quitar' : 'Seleccionar'}</span>
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+        let estadoFinal = 'Disponible';
+        if (proj) {
+            if (proj.estado === 'Presente') {
+                estadoFinal = (prog === 'Cursado' || prog === 'Aprobado' || prog === 'Promocionado') ? 'Seleccionada' : 'Disponible';
+            } else {
+                estadoFinal = proj.estado;
+            }
+        } else {
+            estadoFinal = prog || 'Disponible';
+        }
 
-            {/* Lista Vertical de Materias del Cuatrimestre */}
-            <div className="flex-1 overflow-y-auto flex flex-col gap-2 p-0.5 pb-32 scrollbar-none">
-              {materiasCol.map((materia) => {
-                const { label, icon, badgeClass, borderClass } = getEstadoStyles(materia);
-                const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
-                const isEsDisponiblenColActiva = items[materia.codigo]?.estado === 'Presente';
-
-                // Lógica de resaltado interactivo de correlativas (utilizando bordes INSET para cero desborde)
-                const isHovered = hoveredCodigo === materia.codigo;
-                const isRequeridaPorHovered = hoveredMateria && hoveredMateria.correlativas?.includes(materia.codigo);
-                const isDesbloqueadaPorHovered = hoveredMateria && materia.correlativas?.includes(hoveredMateria.codigo);
-
-                let hoverHighlightClass = '';
-                if (isHovered) {
-                  hoverHighlightClass = '!border-2 !border-primary-600 bg-primary-50/90 dark:bg-primary-950/80 shadow-sm';
-                } else if (isRequeridaPorHovered) {
-                  hoverHighlightClass = '!border-2 !border-amber-500 bg-amber-50 dark:bg-amber-950/80 shadow-sm';
-                } else if (isDesbloqueadaPorHovered) {
-                  hoverHighlightClass = '!border-2 !border-emerald-500 bg-emerald-50 dark:bg-emerald-950/80 shadow-sm';
-                }
-
-                const handleCardPress = () => {
-                  if (isEsDisponiblenColActiva && cambioDeEstado) {
-                    cambioDeEstado(materia.codigo);
-                  } else if (onNodeClick) {
-                    onNodeClick(materia.codigo);
-                  }
+        switch (estadoFinal) {
+            case 'Seleccionada':
+            case 'Cursando':
+            case 'Cursado':
+                return {
+                    label: 'Cursando',
+                    icon: 'fa-solid fa-play',
+                    badgeClass: 'bg-[#005A36] text-white dark:bg-[#2E8B63]',
+                    borderClass: 'border-2 border-[#005A36] dark:border-[#4A9D68] bg-[#F0FDF4] dark:bg-[#122D22]',
                 };
+            case 'Aprobado':
+            case 'Aprobada':
+            case 'Promocionado':
+            case 'Promocionada':
+                return {
+                    label: 'Aprobada',
+                    icon: 'fa-solid fa-circle-check',
+                    badgeClass: 'bg-[#D1FAE5] text-[#166534] dark:bg-[#173A24] dark:text-[#86EFAC]',
+                    borderClass: 'border border-[#A7F3D0] dark:border-[#1E4D38] bg-[#ECFDF5] dark:bg-[#102A20]/80',
+                };
+            case 'Regular':
+                return {
+                    label: 'Regular',
+                    icon: 'fa-regular fa-clock',
+                    badgeClass: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D]',
+                    borderClass: 'border border-[#FDE68A] dark:border-[#5C4318] bg-[#FFFBEB] dark:bg-[#2D2210]/70',
+                };
+            case 'Proyectada':
+            case 'Por Cursar':
+                return {
+                    label: 'Futuro cuatri',
+                    icon: 'fa-regular fa-calendar',
+                    badgeClass: 'bg-[#F1F5F9] text-[#475569] dark:bg-[#1E2730] dark:text-[#94A3B8]',
+                    borderClass: 'border border-dashed border-[#CBD5E1] dark:border-[#2A3540] bg-white dark:bg-[#161D24]',
+                };
+            case 'Bloqueado':
+            case 'Bloqueada':
+                return {
+                    label: 'Bloqueada',
+                    icon: 'fa-solid fa-lock',
+                    badgeClass: 'bg-[#E2E8F0]/80 text-[#475569] dark:bg-[#2A3540] dark:text-[#94A3B8]',
+                    borderClass: 'border border-[#E2E8F0] dark:border-[#2D3743] bg-[#F1F5F9] dark:bg-[#1A2129]',
+                };
+            case 'Disponible':
+            default:
+                return {
+                    label: 'Disponible',
+                    icon: 'fa-solid fa-lock-open',
+                    badgeClass: 'bg-[#E0F2FE] text-[#075985] dark:bg-[#16384F] dark:text-[#7DD3FC]',
+                    borderClass: 'border border-[#BAE6FD] dark:border-[#1E4E6E] bg-[#F0F9FF] dark:bg-[#0F2636]/70 hover:border-[#7DD3FC]',
+                };
+        }
+    };
+
+    return (
+        <div className="w-full overflow-x-auto snap-x snap-mandatory flex gap-3 sm:gap-4 p-3 sm:p-5 select-none touch-pan-x min-h-[580px] max-h-[800px] pb-28 bg-[#F8FAFC] dark:bg-[#0F1419]">
+            {colKeys.map((colNum) => {
+                const materiasCol = columnasMap[colNum] || [];
+                const anioCalculado = Math.ceil(colNum / 2);
+                const cuatriCalculado = colNum % 2 === 0 ? 2 : 1;
+                const colLabel = labels?.[colNum] || `${colNum}° Cuatrimestre`;
+                const esColActiva = colActiva === colNum;
+
+                const totalHorasSem = materiasCol.reduce((sum, m) => sum + (Number(m.horas_semanales) || 0), 0);
+
+                const aprobadasCol = materiasCol.filter(m => {
+                    const prog = progreso?.[m.codigo];
+                    return prog === 'Aprobado' || prog === 'Aprobada' || prog === 'Promocionado' || prog === 'Promocionada';
+                }).length;
+
+                const materiasDisponiblesActivas = materiasCol.filter(m => items[m.codigo]?.estado === 'Presente');
+                const todasInscriptasActivas = materiasDisponiblesActivas.length > 0 && materiasDisponiblesActivas.every(m => {
+                    const prog = progreso?.[m.codigo];
+                    return prog === 'Cursado' || prog === 'Aprobado';
+                });
 
                 return (
-                  <div
-                    key={materia.codigo}
-                    onClick={handleCardPress}
-                    onMouseEnter={() => setHoveredCodigo(materia.codigo)}
-                    onMouseLeave={() => setHoveredCodigo(null)}
-                    className={`flex-none shrink-0 w-full p-2 sm:p-3 rounded-xl border-2 transition-colors duration-150 cursor-pointer select-none box-border ${borderClass} ${hoverHighlightClass}`}
-                  >
-                    {/* Fila Superior: Nombre + Código */}
-                    <div className="flex justify-between items-start gap-1 w-full">
-                      <h5 className="text-[11px] sm:text-xs font-extrabold text-slate-900 dark:text-zinc-100 leading-snug text-left flex-1 line-clamp-3 sm:line-clamp-2">
-                        {materia.nombre}
-                      </h5>
-                      <span className="text-[9px] sm:text-[10px] font-mono font-bold text-slate-500 dark:text-zinc-400 bg-slate-100 dark:bg-zinc-800 px-1 sm:px-1.5 py-0.5 rounded shrink-0 border border-slate-200 dark:border-zinc-700">
-                        {materia.codigo}
-                      </span>
+                    <div
+                        key={`malla-col-${colNum}`}
+                        className={`flex-none shrink-0 w-[calc(52vw-20px)] min-w-[165px] max-w-[220px] sm:max-w-none sm:w-[275px] snap-start flex flex-col gap-2.5 p-2.5 rounded-2xl transition-colors ${
+                            esColActiva
+                                ? 'bg-white dark:bg-[#161D24] border-2 border-[#005A36] dark:border-[#4A9D68] shadow-xs'
+                                : 'bg-white/80 dark:bg-[#161D24]/80 border border-[#E2E8F0] dark:border-[#2A3540]'
+                        }`}
+                    >
+                        {/* Header del Cuatrimestre */}
+                        <div
+                            className={`flex-none shrink-0 p-3 rounded-xl flex flex-col gap-1 ${
+                                esColActiva
+                                    ? 'bg-[#005A36] dark:bg-[#1D5E43] text-white'
+                                    : 'bg-[#F1F5F9] dark:bg-[#1E2730] text-[#1E293B] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#2A3540]'
+                            }`}
+                        >
+                            <div className="flex items-center justify-between text-[10px] font-mono">
+                                <span className={esColActiva ? 'text-white/85' : 'text-[#64748B] dark:text-[#94A3B8]'}>
+                                    {anioCalculado}° Año · {cuatriCalculado}° C
+                                </span>
+                                <span
+                                    className={`px-1.5 py-0.5 rounded font-semibold tabular-nums ${
+                                        esColActiva
+                                            ? 'bg-white/20 text-white'
+                                            : 'bg-white dark:bg-[#161D24] text-[#475569] dark:text-[#CBD5E1]'
+                                    }`}
+                                >
+                                    {aprobadasCol}/{materiasCol.length}
+                                </span>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-1">
+                                <h4 className="text-xs font-semibold truncate">{colLabel}</h4>
+                                {totalHorasSem > 0 && (
+                                    <span className={`text-[10px] font-mono tabular-nums shrink-0 ${esColActiva ? 'text-white/80' : 'text-[#64748B] dark:text-[#94A3B8]'}`}>
+                                        {totalHorasSem}h/s
+                                    </span>
+                                )}
+                            </div>
+
+                            {esColActiva && (
+                                <div className="mt-1.5 pt-2 border-t border-white/20 flex flex-col gap-1.5">
+                                    <span className="text-[10px] font-medium text-white/90">
+                                        En curso en la simulación
+                                    </span>
+
+                                    {marcarTodasEnPantalla && materiasDisponiblesActivas.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => marcarTodasEnPantalla(todasInscriptasActivas ? 'No Cursado' : 'Cursado')}
+                                            className={`w-full py-1 px-2 rounded-lg font-semibold text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                                                todasInscriptasActivas
+                                                    ? 'bg-white/90 hover:bg-white text-[#991B1B]'
+                                                    : 'bg-white hover:bg-[#F8FAFC] text-[#005A36]'
+                                            }`}
+                                        >
+                                            <i className={todasInscriptasActivas ? 'fa-solid fa-rotate-left text-[10px]' : 'fa-solid fa-check-double text-[10px]'} />
+                                            <span>{todasInscriptasActivas ? 'Quitar todas' : 'Seleccionar todas'}</span>
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Lista Vertical de Materias del Cuatrimestre */}
+                        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pb-20">
+                            {materiasCol.map((materia) => {
+                                const { label, icon, badgeClass, borderClass } = getEstadoStyles(materia);
+                                const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
+                                const isDisponibleActiva = items[materia.codigo]?.estado === 'Presente';
+
+                                const isHovered = hoveredCodigo === materia.codigo;
+                                const isRequeridaPorHovered = hoveredMateria && hoveredMateria.correlativas?.includes(materia.codigo);
+                                const isDesbloqueadaPorHovered = hoveredMateria && materia.correlativas?.includes(hoveredMateria.codigo);
+
+                                let hoverHighlightClass = '';
+                                if (isHovered) {
+                                    hoverHighlightClass = '!border-2 !border-[#005A36] dark:!border-[#4A9D68]';
+                                } else if (isRequeridaPorHovered) {
+                                    hoverHighlightClass = '!border-2 !border-[#D97706] !bg-[#FFFBEB] dark:!bg-[#2D2210]';
+                                } else if (isDesbloqueadaPorHovered) {
+                                    hoverHighlightClass = '!border-2 !border-[#478559] !bg-[#ECFDF5] dark:!bg-[#102A20]';
+                                }
+
+                                const handleCardPress = () => {
+                                    if (isDisponibleActiva && cambioDeEstado) {
+                                        cambioDeEstado(materia.codigo);
+                                    } else if (onNodeClick) {
+                                        onNodeClick(materia.codigo);
+                                    }
+                                };
+
+                                return (
+                                    <button
+                                        key={materia.codigo}
+                                        type="button"
+                                        onClick={handleCardPress}
+                                        onMouseEnter={() => setHoveredCodigo(materia.codigo)}
+                                        onMouseLeave={() => setHoveredCodigo(null)}
+                                        className={`flex-none shrink-0 w-full p-2.5 sm:p-3 rounded-xl transition-colors duration-150 cursor-pointer text-left box-border ${borderClass} ${hoverHighlightClass}`}
+                                    >
+                                        <div className="flex justify-between items-start gap-1.5 w-full">
+                                            <h5 className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-snug flex-1 line-clamp-3 sm:line-clamp-2">
+                                                {materia.nombre}
+                                            </h5>
+                                            <span className="text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8] shrink-0 tabular-nums">
+                                                {materia.codigo}
+                                            </span>
+                                        </div>
+
+                                        {isRequeridaPorHovered && (
+                                            <div className="mt-1.5 text-[10px] font-medium text-[#92400E] dark:text-[#FCD34D]">
+                                                Requisito previo
+                                            </div>
+                                        )}
+                                        {isDesbloqueadaPorHovered && (
+                                            <div className="mt-1.5 text-[10px] font-medium text-[#166534] dark:text-[#86EFAC]">
+                                                Se habilita al aprobar
+                                            </div>
+                                        )}
+
+                                        <div className="mt-2 flex items-center justify-between gap-1.5 flex-wrap pt-1.5 border-t border-[#E2E8F0]/70 dark:border-[#2A3540]">
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-semibold inline-flex items-center gap-1 ${badgeClass}`}>
+                                                <i className={`${icon} text-[9px]`} aria-hidden="true" />
+                                                <span>{label}</span>
+                                            </span>
+
+                                            {hasCorrelativas && (
+                                                <span className="text-[10px] font-mono text-[#64748B] dark:text-[#94A3B8] truncate max-w-[95px]">
+                                                    Req: {materia.correlativas.join(', ')}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
-
-                    {/* Fila Media: Horas semanal / totales */}
-                    <div className="mt-1 flex items-center justify-between text-[9px] sm:text-[10px] text-slate-400 dark:text-zinc-500 font-medium">
-                      <span>{materia.horas_semanales ? `${materia.horas_semanales}h/s` : ''}</span>
-                      {materia.horas_totales && <span>{materia.horas_totales}h</span>}
-                    </div>
-
-                    {/* Indicador interactivo de correlativa */}
-                    {isRequeridaPorHovered && (
-                      <div className="mt-1 text-[8px] sm:text-[9px] font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded">
-                        ⚠️ Requisito
-                      </div>
-                    )}
-                    {isDesbloqueadaPorHovered && (
-                      <div className="mt-1 text-[8px] sm:text-[9px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded">
-                        🔓 Se habilita
-                      </div>
-                    )}
-
-                    {/* Fila Inferior: Badge de Estado + Correlativas */}
-                    <div className="mt-1.5 sm:mt-2.5 flex items-center justify-between gap-1 flex-wrap pt-1.5 sm:pt-2 border-t border-slate-100 dark:border-zinc-800/80 w-full">
-                      <span className={`text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-bold inline-flex items-center gap-1 ${badgeClass}`}>
-                        <i className={`${icon} text-[8px] sm:text-[9px]`} />
-                        <span>{label}</span>
-                      </span>
-
-                      {hasCorrelativas && (
-                        <span className="text-[8px] sm:text-[9px] font-mono text-slate-400 dark:text-zinc-500 truncate max-w-[65px] sm:max-w-[110px]">
-                          Req: {materia.correlativas.join(', ')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
                 );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+            })}
+        </div>
+    );
 }
 
 export default MateriasMallaEstatica;

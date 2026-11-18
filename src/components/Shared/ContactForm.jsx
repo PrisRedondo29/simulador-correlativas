@@ -101,33 +101,33 @@ const ContactForm = () => {
     };
 
     return (
-        <Card className="w-full max-w-2xl shadow-xs border border-slate-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-3xl mx-auto">
-            <CardBody className="p-6 sm:p-10">
-                <div className="mb-6 space-y-1">
-                    <h2 className="text-xl sm:text-2xl font-bold text-foreground">Envianos tu consulta</h2>
-                    <p className="text-slate-500 dark:text-zinc-400 text-xs sm:text-sm">
-                        ¿Necesitás realizar una consulta o comunicarte con el equipo? Podés hacerlo a través de nuestro formulario de contacto.
+        <Card shadow="none" className="w-full max-w-2xl border border-[#E2E8F0] dark:border-[#2A3540] bg-white dark:bg-[#161D24] rounded-2xl mx-auto">
+            <CardBody className="p-6 sm:p-8">
+                <div className="mb-5 space-y-1">
+                    <h2 className="text-lg sm:text-xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">Envianos tu consulta</h2>
+                    <p className="text-[#64748B] dark:text-[#94A3B8] text-xs sm:text-sm">
+                        Completá el formulario para reportar errores o enviarnos sugerencias.
                     </p>
                 </div>
 
                 <Form
                     ref={form}
                     onSubmit={onSubmit}
-                    className="flex flex-col gap-5 w-full"
+                    className="flex flex-col gap-4 w-full"
                     validationBehavior="native"
                 >
                     <Input
                         isRequired
                         name="user_name"
-                        label="TU NOMBRE"
+                        label="Nombre"
                         placeholder="Ej. Juan Pérez"
                         labelPlacement="outside"
                         variant="bordered"
                         radius="lg"
                         size="md"
                         classNames={{
-                            label: "font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1",
-                            inputWrapper: "bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 hover:border-[#005a36] focus-within:border-[#005a36] shadow-none"
+                            label: "font-semibold text-xs text-[#334155] dark:text-[#CBD5E1] mb-1",
+                            inputWrapper: "bg-[#F8FAFC] dark:bg-[#1E2730] border-[#E2E8F0] dark:border-[#2A3540] hover:border-[#005A36] focus-within:border-[#005A36] shadow-none"
                         }}
                     />
 
@@ -135,15 +135,15 @@ const ContactForm = () => {
                         isRequired
                         name="user_email"
                         type="email"
-                        label="TU DIRECCIÓN DE CORREO ELECTRÓNICO"
+                        label="Correo electrónico"
                         placeholder="ejemplo@correo.com"
                         labelPlacement="outside"
                         variant="bordered"
                         radius="lg"
                         size="md"
                         classNames={{
-                            label: "font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1",
-                            inputWrapper: "bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 hover:border-[#005a36] focus-within:border-[#005a36] shadow-none"
+                            label: "font-semibold text-xs text-[#334155] dark:text-[#CBD5E1] mb-1",
+                            inputWrapper: "bg-[#F8FAFC] dark:bg-[#1E2730] border-[#E2E8F0] dark:border-[#2A3540] hover:border-[#005A36] focus-within:border-[#005A36] shadow-none"
                         }}
                         errorMessage="Por favor, ingresa un correo electrónico válido."
                     />
@@ -151,7 +151,7 @@ const ContactForm = () => {
                     <Textarea
                         isRequired
                         name="message"
-                        label="MENSAJE"
+                        label="Mensaje"
                         placeholder="Escribí aquí tu consulta, detalle o sugerencia..."
                         labelPlacement="outside"
                         variant="bordered"
@@ -159,28 +159,28 @@ const ContactForm = () => {
                         size="md"
                         minRows={4}
                         classNames={{
-                            label: "font-bold text-[11px] uppercase tracking-wider text-slate-700 dark:text-zinc-300 mb-1",
-                            inputWrapper: "bg-slate-50 dark:bg-zinc-800/80 border-slate-200 dark:border-zinc-700 hover:border-[#005a36] focus-within:border-[#005a36] shadow-none"
+                            label: "font-semibold text-xs text-[#334155] dark:text-[#CBD5E1] mb-1",
+                            inputWrapper: "bg-[#F8FAFC] dark:bg-[#1E2730] border-[#E2E8F0] dark:border-[#2A3540] hover:border-[#005A36] focus-within:border-[#005A36] shadow-none"
                         }}
                     />
 
-                    <div className="w-full pt-2 flex flex-col gap-4">
+                    <div className="w-full pt-1 flex flex-col gap-3">
                         <Button
                             type="submit"
                             color="primary"
-                            size="lg"
+                            size="md"
                             isLoading={isLoading}
-                            className="w-full font-bold shadow-sm h-12 rounded-xl text-sm"
-                            endContent={!isLoading && <i className="fa-solid fa-paper-plane ml-2"></i>}
+                            className="w-full font-semibold h-11 rounded-xl text-sm bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white"
+                            endContent={!isLoading && <i className="fa-solid fa-paper-plane ml-1 text-xs"></i>}
                         >
                             {isLoading ? "Enviando..." : "Enviar mensaje"}
                         </Button>
 
                         {/* Mensaje de éxito/feedback */}
-                        <div className={`transition-all duration-300 ${action ? 'h-auto opacity-100' : 'h-0 opacity-0 overflow-hidden'}`}>
+                        <div className={`transition-all duration-200 ${action ? 'h-auto opacity-100' : 'h-0 opacity-0 overflow-hidden'}`}>
                             {action && (
-                                <div className="text-emerald-800 dark:text-emerald-300 flex items-center justify-center gap-2 font-bold text-sm bg-emerald-50 dark:bg-emerald-950/40 py-3 px-4 rounded-xl border border-emerald-200 dark:border-emerald-800 animate-in zoom-in duration-300">
-                                    <i className="fa-solid fa-circle-check text-emerald-600"></i>
+                                <div className="text-[#166534] dark:text-[#86EFAC] flex items-center justify-center gap-2 font-medium text-sm bg-[#ECFDF5] dark:bg-[#102A20] py-2.5 px-4 rounded-xl border border-[#A7F3D0] dark:border-[#1E4D38]">
+                                    <i className="fa-solid fa-circle-check"></i>
                                     {action}
                                 </div>
                             )}

@@ -1,203 +1,269 @@
-import React from 'react'
-import { Input, Button, Badge, Popover, PopoverTrigger, PopoverContent, Checkbox, Chip } from '@heroui/react'
-import { Search, ListFilter } from 'lucide-react'
-import materiasUtils from '../../utils/Progreso/materiasUtils'
+import { useEffect, useRef } from "react";
+import {
+  Button,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Switch,
+} from "@heroui/react";
+import {
+  CheckCheck,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  LayoutGrid,
+  List,
+  MoreVertical,
+  RotateCcw,
+  Search,
+} from "lucide-react";
+import SyncCloud from "./SyncCloud";
 
-function ProgresoSearchFilters({ busqueda, setBusqueda, filtros, setFiltros }) {
-    const searchInputRef = React.useRef(null);
-    const estados = materiasUtils.estadosPosibles.concat(['Bloqueado', 'Cursando']);
+const STATUS_FILTERS = [
+  { key: "todas", label: "Todas" },
+  { key: "Disponible", label: "Disponibles" },
+  { key: "Cursando", label: "Cursando" },
+  { key: "Regular", label: "Regulares" },
+  { key: "Aprobado", label: "Aprobadas" },
+  { key: "Promocionado", label: "Promocionadas" },
+  { key: "Bloqueado", label: "Bloqueadas" },
+  { key: "Libre", label: "Libres" },
+];
 
-    React.useEffect(() => {
-        const handleKeyDown = (e) => {
-            if ((e.ctrlKey && e.key.toLowerCase() === 'k') || (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA')) {
-                e.preventDefault();
-                searchInputRef.current?.focus();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
-    
-    const handleToggleFiltro = (estado) => {
-        setFiltros(prev => prev.includes(estado) ? prev.filter(f => f !== estado) : [...prev, estado]);
+/**
+ * Barra unificada de búsqueda, filtros por estado y acciones de gestión de Mi Progreso.
+ */
+export default function ProgresoSearchFilters({
+  busqueda,
+  setBusqueda,
+  estadoFiltro,
+  setEstadoFiltro,
+  soloIncompletas,
+  setSoloIncompletas,
+  incompletasCount = 0,
+  vista,
+  setVista,
+  areAllExpanded,
+  toggleExpandAll,
+  isFiltering,
+  yearGroups = [],
+  plan,
+  onRequestApproveGroup,
+  onRequestReset,
+}) {
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
     };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
-    const clearFiltros = () => setFiltros([]);
+  return (
+    <section
+      aria-label="Filtros y acciones de materias"
+      className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-3 sm:p-4 space-y-3 shadow-xs"
+    >
+      {/* Fila superior: buscador + acciones */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <Input
+            ref={inputRef}
+            aria-label="Buscar materia por nombre o código"
+            placeholder="Buscar materia o código..."
+            value={busqueda}
+            onValueChange={setBusqueda}
+            isClearable
+            onClear={() => setBusqueda("")}
+            size="sm"
+            variant="bordered"
+            startContent={<Search className="w-4 h-4 text-[#64748B] shrink-0" />}
+            endContent={
+              !busqueda && (
+                <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] bg-[#F1F5F9] dark:bg-[#1E2730] rounded border border-[#E2E8F0] dark:border-[#334155]">
+                  Ctrl+K
+                </kbd>
+              )
+            }
+            classNames={{
+              inputWrapper:
+                "bg-[#F8FAFC] dark:bg-[#11171D] border-[#E2E8F0] dark:border-[#24303C] min-h-10",
+            }}
+          />
+        </div>
 
-    return (
-        <div className="flex flex-col gap-3 mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
-            <div className="flex items-center gap-2">
-                {/* Buscador */}
-                <div className="flex-1">
-                    <Input
-                        ref={searchInputRef}
-                        isClearable
-                        radius="xl"
-                        placeholder="Buscar materia... (Ctrl+K)"
-                        startContent={<Search size={18} className="text-default-400" />}
-                        endContent={
-                            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-default-400 bg-default-100 border border-default-200 rounded-md">
-                                <span className="text-xs">⌘</span>K
-                            </kbd>
-                        }
-                        value={busqueda}
-                        onValueChange={setBusqueda}
-                        onClear={() => setBusqueda("")}
-                        classNames={{
-                            input: "text-small",
-                            inputWrapper: "h-11 bg-background border-default-200 shadow-sm hover:border-default-300 focus-within:ring-2 ring-primary/20 transition-all",
-                        }}
-                    />
-                </div>
+        <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2 shrink-0">
+          {/* Solo incompletas */}
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C]">
+            <Switch
+              size="sm"
+              isSelected={soloIncompletas}
+              onValueChange={setSoloIncompletas}
+              aria-label="Mostrar solo materias con datos incompletos"
+              classNames={{
+                wrapper:
+                  "group-data-[selected=true]:bg-[#005A36] dark:group-data-[selected=true]:bg-[#2E8B63]",
+              }}
+            >
+              <span className="text-xs font-medium text-[#334155] dark:text-[#CBD5E1] whitespace-nowrap">
+                Solo incompletas
+                {incompletasCount > 0 ? ` (${incompletasCount})` : ""}
+              </span>
+            </Switch>
+          </div>
 
-                {/* Botón de Filtros */}
-                <Badge 
-                    content={filtros.length} 
-                    color="primary" 
-                    isInvisible={filtros.length === 0}
-                    shape="circle"
-                    className="font-bold"
-                >
-                    <Popover placement="bottom-end" shadow="lg" showArrow offset={10}>
-                        <PopoverTrigger>
-                            <Button 
-                                isIconOnly 
-                                radius="full" 
-                                variant="flat" 
-                                className={`h-11 w-11 ${filtros.length > 0 ? 'bg-primary/10 text-primary' : 'bg-background border-default-200 text-default-500 border'}`}
-                            >
-                                <ListFilter size={20} />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[280px] p-4">
-                            <div className="flex flex-col gap-4 w-full">
-                                <div className="flex items-center justify-between border-b border-default-100 pb-2">
-                                    <span className="text-sm font-black uppercase tracking-wider">Filtrar por estado</span>
-                                    {filtros.length > 0 && (
-                                        <Button size="sm" variant="light" color="danger" className="h-7 px-2 font-bold min-w-unit-0" onPress={clearFiltros}>
-                                            Limpiar
-                                        </Button>
-                                    )}
-                                </div>
-                                <div className="grid grid-cols-1 gap-1">
-                                    {/* Opción especial: Falta Información */}
-                                    {(() => {
-                                        const isFaltaInfoSelected = filtros.includes('falta_info');
-                                        return (
-                                            <div 
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={(e) => {
-                                                    if (e.target.tagName !== 'INPUT') {
-                                                        handleToggleFiltro('falta_info');
-                                                    }
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' || e.key === ' ') {
-                                                        e.preventDefault();
-                                                        handleToggleFiltro('falta_info');
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors border mb-1 ${isFaltaInfoSelected ? 'bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-300' : 'hover:bg-default-50 border-transparent'}`}
-                                            >
-                                                <div className={`size-8 rounded-lg flex items-center justify-center bg-amber-500/20 text-amber-600 dark:text-amber-400`}>
-                                                    <i className="fa-solid fa-triangle-exclamation text-sm"></i>
-                                                </div>
-                                                <span className="text-sm font-bold flex-1">
-                                                    Falta Información
-                                                </span>
-                                                <Checkbox 
-                                                    isSelected={isFaltaInfoSelected} 
-                                                    size="sm"
-                                                    onChange={() => handleToggleFiltro('falta_info')}
-                                                    classNames={{ wrapper: "rounded-md" }}
-                                                />
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {estados.map((estado) => {
-                                        const estilo = materiasUtils.obtenerEstiloPorEstado(estado);
-                                        const isSelected = filtros.includes(estado);
-                                        
-                                        return (
-                                            <div 
-                                                key={estado}
-                                                role="button"
-                                                tabIndex={0}
-                                                onClick={(e) => {
-                                                    if (e.target.tagName !== 'INPUT') {
-                                                        handleToggleFiltro(estado);
-                                                    }
-                                                }}
-                                                onKeyDown={(e) => {
-                                                    if (e.key === 'Enter' || e.key === ' ') {
-                                                        e.preventDefault();
-                                                        handleToggleFiltro(estado);
-                                                    }
-                                                }}
-                                                className={`flex items-center gap-3 p-2 rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-default-100' : 'hover:bg-default-50'}`}
-                                            >
-                                                <div className={`size-8 rounded-lg flex items-center justify-center bg-background border border-default-200 ${isSelected ? estilo.colorText : 'text-default-300'}`}>
-                                                    <i className={`fa-solid ${estilo.icon} text-sm`}></i>
-                                                </div>
-                                                <span className={`text-sm font-bold flex-1 ${isSelected ? 'text-foreground' : 'text-default-500'}`}>
-                                                    {estado}
-                                                </span>
-                                                <Checkbox 
-                                                    isSelected={isSelected} 
-                                                    size="sm"
-                                                    onChange={() => handleToggleFiltro(estado)}
-                                                    classNames={{ wrapper: "rounded-md" }}
-                                                />
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        </PopoverContent>
-                    </Popover>
-                </Badge>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Segmented Grid / List */}
+            <div
+              role="group"
+              aria-label="Modo de visualización"
+              className="inline-flex items-center rounded-lg border border-[#E2E8F0] dark:border-[#24303C] bg-[#F8FAFC] dark:bg-[#11171D] p-0.5"
+            >
+              <button
+                type="button"
+                onClick={() => setVista("grid")}
+                aria-label="Vista en grilla"
+                aria-pressed={vista === "grid"}
+                className={`inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors cursor-pointer ${
+                  vista === "grid"
+                    ? "bg-[#FFFFFF] dark:bg-[#1E2730] text-[#005A36] dark:text-[#6EE7B7] shadow-xs"
+                    : "text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setVista("list")}
+                aria-label="Vista en lista"
+                aria-pressed={vista === "list"}
+                className={`inline-flex items-center justify-center w-8 h-8 rounded-md transition-colors cursor-pointer ${
+                  vista === "list"
+                    ? "bg-[#FFFFFF] dark:bg-[#1E2730] text-[#005A36] dark:text-[#6EE7B7] shadow-xs"
+                    : "text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9]"
+                }`}
+              >
+                <List className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Chips de filtros activos */}
-            {filtros.length > 0 && (
-                <div className="flex flex-wrap gap-2 animate-in fade-in duration-300">
-                    {filtros.map(f => {
-                        const isSpecial = f === 'falta_info';
-                        const label = isSpecial ? 'Falta Información' : f;
-                        const chipColor = isSpecial ? 'warning' : materiasUtils.obtenerEstiloPorEstado(f).accent;
+            {/* Mostrar todo / Ocultar todo */}
+            <Button
+              size="sm"
+              variant="bordered"
+              isDisabled={isFiltering || yearGroups.length === 0}
+              onPress={toggleExpandAll}
+              className="border-[#E2E8F0] dark:border-[#24303C] text-[#334155] dark:text-[#CBD5E1] font-medium min-h-9"
+              startContent={
+                areAllExpanded ? (
+                  <ChevronsDownUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronsUpDown className="w-3.5 h-3.5" />
+                )
+              }
+            >
+              {areAllExpanded ? "Ocultar todo" : "Mostrar todo"}
+            </Button>
 
-                        return (
-                            <Chip
-                                key={f}
-                                size="sm"
-                                variant="flat"
-                                color={chipColor}
-                                onClose={() => handleToggleFiltro(f)}
-                                classNames={{
-                                    base: "h-7 border border-default-200",
-                                    content: "font-bold text-[10px] uppercase"
-                                }}
-                            >
-                                {label}
-                            </Chip>
-                        );
-                    })}
-                    {filtros.length > 1 && (
-                        <Button 
-                            size="sm" 
-                            variant="light" 
-                            className="h-7 px-2 text-[10px] font-black uppercase text-danger"
-                            onPress={clearFiltros}
-                        >
-                            Limpiar todo
-                        </Button>
-                    )}
-                </div>
+            {/* Aprobar hasta... */}
+            {yearGroups.length > 0 && (
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-medium min-h-9"
+                    startContent={<CheckCheck className="w-3.5 h-3.5" />}
+                  >
+                    <span className="hidden sm:inline">Aprobar hasta...</span>
+                    <span className="sm:hidden">Aprobar</span>
+                  </Button>
+                </DropdownTrigger>
+                <DropdownMenu
+                  aria-label="Aprobar materias hasta el año seleccionado"
+                  onAction={(key) => {
+                    const idx = yearGroups.findIndex((g) => g.key === String(key));
+                    if (idx !== -1) {
+                      const targetGroup = yearGroups[idx];
+                      const materiasHasta = yearGroups
+                        .slice(0, idx + 1)
+                        .flatMap((g) => g.materias);
+                      onRequestApproveGroup(`Hasta ${targetGroup.label}`, materiasHasta);
+                    }
+                  }}
+                >
+                  {yearGroups.map((group) => (
+                    <DropdownItem key={group.key}>
+                      Hasta {group.label}
+                    </DropdownItem>
+                  ))}
+                </DropdownMenu>
+              </Dropdown>
             )}
-        </div>
-    )
-}
 
-export default ProgresoSearchFilters
+            {/* Sincronización manual si corresponde */}
+            <SyncCloud plan={plan} />
+
+            {/* Menú secundario (Reestablecer) */}
+            <Dropdown>
+              <DropdownTrigger>
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="bordered"
+                  aria-label="Más opciones de progreso"
+                  className="border-[#E2E8F0] dark:border-[#24303C] text-[#475569] dark:text-[#CBD5E1] min-w-9 h-9"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownTrigger>
+              <DropdownMenu aria-label="Acciones adicionales">
+                <DropdownItem
+                  key="reset"
+                  color="danger"
+                  className="text-danger"
+                  startContent={<RotateCcw className="w-4 h-4" />}
+                  onPress={onRequestReset}
+                >
+                  Reestablecer progreso
+                </DropdownItem>
+              </DropdownMenu>
+            </Dropdown>
+          </div>
+        </div>
+      </div>
+
+      {/* Fila inferior: pills de estado en una sola línea desplazable horizontalmente */}
+      <div
+        role="group"
+        aria-label="Filtrar por estado"
+        className="flex items-center gap-1.5 flex-nowrap overflow-x-auto pb-1 -mb-1"
+      >
+        {STATUS_FILTERS.map((item) => {
+          const isActive = estadoFiltro === item.key;
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => setEstadoFiltro(item.key)}
+              aria-pressed={isActive}
+              className={`shrink-0 whitespace-nowrap min-h-8 px-3 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                isActive
+                  ? "bg-[#005A36] text-white dark:bg-[#2E8B63] shadow-xs"
+                  : "bg-[#F1F5F9] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1] hover:bg-[#E2E8F0] dark:hover:bg-[#283440]"
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}

@@ -1,202 +1,84 @@
-import { Card, CardHeader, CardBody, CardFooter, Chip, Popover, PopoverTrigger, PopoverContent, Button, Divider, addToast } from "@heroui/react"
-import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import estadoUtils from "../../utils/Progreso/estadoUtils";
-import regularidadUtils from "../../utils/Progreso/regularidadUtils";
-import materiasUtils from "../../utils/Progreso/materiasUtils";
-import { trackFriccionCorrelativa } from "../../services/analyticsService";
 
-function MateriaCard({ materia, todasLasMaterias, estado, detalles, actualizarEstados, abrirInfo, vista = 'grid', plan = null }) {
-    const [isOpen, setIsOpen] = useState(false);
+/**
+ * Tarjeta mínima de materia para Mi Progreso.
+ * Muestra únicamente nombre, código (con aviso discreto si hay datos incompletos)
+ * y un único badge de estado para minimizar la carga visual.
+ */
+export default function MateriaCard({
+  materia,
+  estado = "Disponible",
+  isIncomplete = false,
+  isSelected = false,
+  vista = "grid",
+  onSelect,
+}) {
+  const config =
+    estadoUtils.ESTADO_CONFIG[estado] || estadoUtils.ESTADO_CONFIG.Disponible;
+  const isBlocked = estado === "Bloqueado";
 
-    if (!estado) return <p>Cargando Materia…</p>
-    const { codigo, correlativas, nombre, anio, cuatrimestre, horas_totales, horas_semanales } = materia;
-
-    const config = estadoUtils.ESTADO_CONFIG[estado] || estadoUtils.ESTADO_CONFIG["Disponible"];
-
-    const handleOpenPopover = (open) => {
-        setIsOpen(open);
-        if (open && estado === 'Bloqueado') {
-            const impacto = todasLasMaterias ? materiasUtils.calcularImpactoTapon(codigo, todasLasMaterias) : 0;
-            trackFriccionCorrelativa({ 
-                plan: plan ?? 'unknown',
-                materia_codigo: codigo,
-                materia_nombre: nombre,
-                impacto
-            });
-        }
-    };
-
-    const handleAction = (actionType, arg) => {
-        setIsOpen(false); // Cerramos el popover automáticamente
-        if (actionType === 'estado') {
-            actualizarEstados(arg);
-            const colorMap = {
-                'Aprobado': 'success',
-                'Promocionado': 'secondary',
-                'Regular': 'warning',
-                'Cursando': 'primary',
-                'Libre': 'danger',
-                'Disponible': 'default'
-            };
-            addToast({
-                title: 'Estado actualizado',
-                description: `${nombre}: cambiado a ${arg}`,
-                color: colorMap[arg] || 'primary'
-            });
-        } else if (actionType === 'detalles') {
-            abrirInfo(arg);
-        }
-    };
-
-    const cardContent = (
-        <Card
-            isPressable={false}
-            className={`w-full h-full flex flex-col justify-between border transition-all duration-300 font-medium ${config.estilo} ${vista === 'list' ? 'flex-row items-center justify-between p-2 h-auto' : ''} ${estado === 'Bloqueado' ? 'opacity-60 grayscale-[0.2]' : ''} ${estado === 'Cursando' ? 'shadow-[0_0_14px_3px_rgba(99,102,241,0.30)] border-indigo-400/80' : 'shadow-2xs sm:shadow-sm hover:shadow-md hover:-translate-y-0.5'}`}
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect?.(materia.codigo)}
+      aria-pressed={isSelected}
+      aria-label={`${materia.nombre} (${materia.codigo}), estado ${estado}${
+        isIncomplete ? ", datos académicos incompletos" : ""
+      }`}
+      className={`group w-full text-left rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 px-3.5 py-3 min-h-[60px] ${
+        isSelected
+          ? "border-2 border-[#005A36] dark:border-[#4A9D68] bg-[#F0FDF4]/85 dark:bg-[#122D22]/75 shadow-xs"
+          : isBlocked
+            ? "border border-[#E2E8F0] dark:border-[#24303C] bg-[#F8FAFC] dark:bg-[#131920] hover:border-[#CBD5E1] dark:hover:border-[#334155]"
+            : "border border-[#E2E8F0] dark:border-[#24303C] bg-[#FFFFFF] dark:bg-[#161D24] hover:border-[#005A36]/50 dark:hover:border-[#4A9D68]/55 hover:bg-[#F8FAFC]/80 dark:hover:bg-[#1B242D]"
+      }`}
+    >
+      <div className="min-w-0 flex-1 space-y-0.5">
+        <p
+          className={`text-sm font-medium leading-snug ${
+            vista === "list" ? "truncate" : "line-clamp-2"
+          } ${
+            isBlocked
+              ? "text-[#475569] dark:text-[#94A3B8]"
+              : "text-[#1E293B] dark:text-[#F1F5F9]"
+          }`}
         >
-            <CardHeader className={`flex flex-wrap gap-1 items-center justify-between shrink-0 p-2 sm:p-3 pb-1 ${vista === 'list' ? 'w-auto gap-4 p-2' : ''}`}>
-                <Chip color={config.color} variant="flat" size="sm" className="h-5 sm:h-6 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2">
-                    <i className={`${config.icono} mr-1 text-[10px] sm:text-xs`} />
-                    <span>{estado}</span>
-                </Chip>
-                
-                {/* Indicadores sutiles de falta de información */}
-                {estado === 'Regular' && !detalles?.fechaRegularidad && !detalles?.notaRegularizacion && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-circle-exclamation mr-1 text-[9px]" />
-                        Falta Info
-                    </Chip>
-                )}
-                {estado === 'Regular' && !detalles?.fechaRegularidad && detalles?.notaRegularizacion && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-calendar-circle-exclamation mr-1 text-[9px]" />
-                        Falta Año
-                    </Chip>
-                )}
-                {estado === 'Regular' && detalles?.fechaRegularidad && !detalles?.notaRegularizacion && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-pen-to-square mr-1 text-[9px]" />
-                        Falta Nota
-                    </Chip>
-                )}
+          {materia.nombre}
+        </p>
 
-                {(estado === 'Aprobado' || estado === 'Promocionado') && !detalles?.notaFinal && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 text-[9px] sm:text-[11px] font-semibold opacity-90 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-pen-to-square mr-1 text-[9px]" />
-                        Falta Nota
-                    </Chip>
-                )}
+        <div className="flex items-center gap-2 text-xs text-[#64748B] dark:text-[#94A3B8] tabular-nums">
+          <span>{materia.codigo}</span>
+          {isIncomplete && (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#B45309] dark:text-[#FBBF24]"
+              title="Falta cargar año, nota o intentos"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#D97706] dark:bg-[#FBBF24]"
+                aria-hidden="true"
+              />
+              Incompleta
+            </span>
+          )}
+        </div>
+      </div>
 
-                {/* Indicadores de Equivalencia o Libre */}
-                {detalles?.esEquivalencia && (
-                    <Chip color="primary" variant="flat" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] border border-primary/20 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-handshake mr-1 text-[9px]" />
-                        Equiv.
-                    </Chip>
-                )}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.badgeClass}`}
+        >
+          <i className={`${config.icono} text-[11px]`} aria-hidden="true" />
+          <span>{estado}</span>
+        </span>
 
-                {detalles?.rendidaLibre && estado === 'Aprobado' && (
-                    <Chip color="danger" variant="flat" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] border border-danger/20 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-user-slash mr-1 text-[9px]" />
-                        Libre
-                    </Chip>
-                )}
-
-                {/* Indicador de recursada */}
-                {detalles?.historial && detalles.historial.length > 0 && (
-                    <Chip color="primary" variant="flat" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] border border-primary/20 px-1 sm:px-1.5">
-                        <i className="fa-solid fa-clock-rotate-left mr-1 text-[9px]" />
-                        Rec ({detalles.historial.length})
-                    </Chip>
-                )}
-
-                {estado === 'Regular' && detalles?.fechaRegularidad && (
-                    <Chip color="warning" variant="dot" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] px-1 sm:px-1.5">
-                        Vence: {regularidadUtils.obtenerFechaVencimientoLabel(detalles.fechaRegularidad)}
-                    </Chip>
-                )}
-                {estado === 'Aprobado' && detalles?.intentosFinal?.some(i => i.estado === 'aprobado') && (
-                    <Chip color="success" variant="dot" size="sm" className="h-5 sm:h-6 font-bold text-[9px] sm:text-[11px] px-1 sm:px-1.5">
-                        Aprob: {detalles.intentosFinal.find(i => i.estado === 'aprobado').fecha?.split("-")[0] || 'S/F'}
-                    </Chip>
-                )}
-            </CardHeader>
-
-            <CardBody className={`py-1.5 px-2 sm:px-3 flex-1 flex items-center justify-center ${vista === 'list' ? 'flex-row flex-1 justify-between p-2 overflow-hidden gap-4' : ''}`}>
-                <div className={`text-foreground font-bold tracking-tight text-xs sm:text-sm w-full ${vista === 'list' ? 'flex-1 pr-4 truncate' : 'line-clamp-3 sm:line-clamp-2'} leading-snug`} title={nombre}>
-                    {nombre}
-                </div>
-            </CardBody>
-
-            <CardFooter className={`flex justify-between items-center pt-0.5 pb-2 px-2 sm:px-3 shrink-0 ${vista === 'list' ? 'w-auto p-2 justify-end gap-3' : ''}`}>
-                <span className="text-[10px] sm:text-xs text-default-400 font-semibold tracking-wide">
-                    {materia.mostrarCodigo === false ? '---' : codigo}
-                </span>
-
-                {/* Muestro la Nota final si está cargada */}
-                {(estado === 'Aprobado' || estado === 'Promocionado') && detalles?.notaFinal ? (
-                    <span className="text-[10px] sm:text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-500/20">
-                        Nota: {detalles.notaFinal}
-                    </span>
-                ) : (
-                    <span />
-                )}
-            </CardFooter>
-        </Card>
-    );
-
-    return (
-        <Popover placement="bottom" showArrow={true} className="w-full max-w-[280px]" isOpen={isOpen} onOpenChange={handleOpenPopover}>
-            <PopoverTrigger>
-                <div role="button" aria-label="Cambiar estado" className="w-full cursor-pointer hover:scale-[1.02] transition-transform">
-                    {cardContent}
-                </div>
-            </PopoverTrigger>
-            <PopoverContent>
-                <div className="px-2 py-3 w-full flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                        <i className="fa-solid fa-gear text-default-500"></i>
-                        <span className="text-small font-bold">Cambiar Estado</span>
-                    </div>
-                    <Divider />
-
-                    {estado === "Bloqueado" && (
-                        <div className="bg-warning/10 border border-warning/30 rounded-lg p-2 text-xs text-warning-700 font-medium mb-1">
-                            <i className="fa-solid fa-triangle-exclamation mr-1"></i>
-                            Esta materia requiere correlativas. Al marcarla, se aprobarán/regularizarán sus dependencias automáticamente.
-                        </div>
-                    )}
-
-                    <div className="flex flex-col gap-2 w-full mt-1">
-                        {/* Cursando: disponible si no está ya en ese estado ni aprobado/promocionado */}
-                        {!['Cursando', 'Aprobado', 'Promocionado'].includes(estado) && (
-                            <Button size="sm" color="secondary" variant="flat" className="justify-start font-bold" startContent={<i className="fa-solid fa-pencil w-4" />} onPress={() => handleAction('estado', 'Cursando')}>
-                                Cursando
-                            </Button>
-                        )}
-                        {/* Regular: no mostrar si ya está Regular, Aprobado o Promocionado */}
-                        {!['Regular', 'Aprobado', 'Promocionado'].includes(estado) && (
-                            <Button size="sm" color="warning" variant="flat" className="justify-start font-bold" startContent={<i className="fa-solid fa-clock w-4" />} onPress={() => handleAction('estado', 'Regular')}>
-                                Regular
-                            </Button>
-                        )}
-                        <Button size="sm" color="success" variant="flat" className="justify-start font-bold" startContent={<i className="fa-solid fa-check w-4" />} onPress={() => handleAction('estado', 'Aprobado')}>
-                            Aprobado
-                        </Button>
-                        <Button size="sm" color="success" variant="flat" className="justify-start font-bold" startContent={<i className="fa-solid fa-ranking-star w-4" />} onPress={() => handleAction('estado', 'Promocionado')}>
-                            Promocionado
-                        </Button>
-                        <Divider className="my-1" />
-                        <Button size="sm" color="default" variant="flat" className="justify-start font-bold" startContent={<i className="fa-solid fa-circle-info w-4" />} onPress={() => handleAction('detalles', materia)}>
-                            Detalles
-                        </Button>
-                        <Button size="sm" color="danger" variant="flat" className="justify-start font-bold" startContent={<i className="fa-solid fa-rotate-left w-4" />} onPress={() => handleAction('estado', 'Reiniciar')}>
-                            Reiniciar Estado
-                        </Button>
-                    </div>
-                </div>
-            </PopoverContent>
-        </Popover>
-    );
+        {isSelected && (
+          <ChevronRight
+            className="w-4 h-4 text-[#005A36] dark:text-[#6EE7B7] shrink-0"
+            aria-hidden="true"
+          />
+        )}
+      </div>
+    </button>
+  );
 }
-
-export default MateriaCard;

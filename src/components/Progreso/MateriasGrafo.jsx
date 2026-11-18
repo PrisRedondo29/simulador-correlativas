@@ -29,7 +29,7 @@ const SemesterNode = ({ data }) => {
 
   return (
     <div className="pointer-events-none select-none">
-      <div className="bg-primary text-white font-black px-6 py-3 rounded-2xl text-sm tracking-wider shadow-lg text-center uppercase min-w-[140px]">
+      <div className="bg-[#005A36] dark:bg-[#1D5E43] text-white font-semibold px-5 py-2.5 rounded-xl text-xs tracking-wide shadow-xs text-center uppercase min-w-[140px]">
         {data.label}
       </div>
     </div>
@@ -323,8 +323,8 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
           ...e,
           type: 'straight',
           animated: true,
-          style: { stroke: '#2563eb', strokeWidth: 3, opacity: 1 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#2563eb', width: 16, height: 16 },
+          style: { stroke: '#005A36', strokeWidth: 2.5, opacity: 1 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#005A36', width: 14, height: 14 },
         };
       }
       return {
@@ -336,7 +336,7 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
   }, [edges, activeNodeId]);
 
   return (
-    <div className="w-full h-full min-h-[600px] sm:min-h-[700px] relative overflow-hidden bg-slate-50 dark:bg-zinc-950 rounded-3xl">
+    <div className="w-full h-full min-h-[580px] sm:min-h-[680px] relative overflow-hidden bg-[#F8FAFC] dark:bg-[#0F1419] rounded-2xl">
       {nodes.length === 0 && (
         <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-xs flex flex-col items-center justify-center p-8 gap-4 animate-pulse">
           <div className="flex items-center gap-3">
@@ -346,33 +346,35 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
         </div>
       )}
 
-      <div className="absolute top-2 left-2 right-2 z-30 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-30 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
         <div className="flex items-center gap-1.5 pointer-events-auto">
-          <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-md border border-slate-200/80 dark:border-zinc-700 rounded-xl">
-            <Button isIconOnly onPress={() => rfZoomIn()} title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={16} /></Button>
-            <Button isIconOnly onPress={() => rfZoomOut()} title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={16} /></Button>
-            <Button isIconOnly onPress={handleGoHome} title="Inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={16} /></Button>
-            <Button isIconOnly onPress={handleFitAll} title="Ver toda la malla" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Maximize size={16} /></Button>
+          <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
+            <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
+            <Button isIconOnly onPress={() => rfZoomOut()} aria-label="Alejar" title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={15} /></Button>
+            <Button isIconOnly onPress={handleGoHome} aria-label="Inicio" title="Inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
+            <Button isIconOnly onPress={handleFitAll} aria-label="Ver toda la malla" title="Ver toda la malla" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Maximize size={15} /></Button>
           </ButtonGroup>
 
-          <ButtonGroup size="sm" variant="flat" className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-md border border-slate-200/80 dark:border-zinc-700 rounded-xl">
+          <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
             <Button
               isIconOnly
               color={direction === 'LR' ? 'primary' : 'default'}
               onPress={() => setDirection('LR')}
+              aria-label="Vista horizontal"
               title="Horizontal"
               className="min-w-8 h-8 sm:min-w-9 sm:h-9"
             >
-              <ArrowRight size={16} />
+              <ArrowRight size={15} />
             </Button>
             <Button
               isIconOnly
               color={direction === 'TB' ? 'primary' : 'default'}
               onPress={() => setDirection('TB')}
+              aria-label="Vista vertical"
               title="Vertical"
               className="min-w-8 h-8 sm:min-w-9 sm:h-9"
             >
-              <ArrowDown size={16} />
+              <ArrowDown size={15} />
             </Button>
           </ButtonGroup>
         </div>
@@ -385,10 +387,10 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
       </div>
 
       {!activeNodeId && nodes.length > 0 && (
-        <div className="absolute top-14 sm:top-auto sm:bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md text-foreground/60 text-[10px] sm:text-[11px] font-semibold px-3 py-1 rounded-full shadow-md border border-slate-200/60 dark:border-zinc-700 flex items-center gap-1.5 whitespace-nowrap">
-            <i className="fa-solid fa-hand-pointer text-primary/70" />
-            Tocá una materia para ver sus correlativas
+        <div className="absolute top-14 sm:top-auto sm:bottom-20 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="bg-white dark:bg-[#161D24] text-[#64748B] dark:text-[#94A3B8] text-[11px] font-medium px-3 py-1 rounded-full shadow-2xs border border-[#E2E8F0] dark:border-[#2A3540] flex items-center gap-1.5 whitespace-nowrap">
+            <i className="fa-solid fa-hand-pointer text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+            Pasá o tocá una materia para ver sus correlativas
           </div>
         </div>
       )}

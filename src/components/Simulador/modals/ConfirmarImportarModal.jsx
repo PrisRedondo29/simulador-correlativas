@@ -44,7 +44,7 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                 {(onClose) => (
                     <>
                         <ModalHeader className="flex flex-col gap-1 pb-2">
-                            <div className="flex items-center gap-2 text-secondary">
+                            <div className="flex items-center gap-2 text-[#005A36] dark:text-[#6EE7B7]">
                                 <i className="fa-solid fa-cloud-arrow-down" />
                                 <h3 className="text-lg font-bold">Importar Progreso Real</h3>
                             </div>
@@ -114,7 +114,7 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                             <Button variant="light" onPress={onClose} className="font-bold">
                                 Cancelar
                             </Button>
-                            <Button color="secondary" onPress={() => { onConfirm(); onClose(); }} className="font-bold shadow-lg shadow-secondary/20">
+                            <Button color="primary" onPress={() => { onConfirm(); onClose(); }} className="font-semibold rounded-xl">
                                 Sí, Importar Avance
                             </Button>
                         </ModalFooter>

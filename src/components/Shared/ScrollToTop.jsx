@@ -29,18 +29,18 @@ function ScrollToTop() {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-8 duration-300">
+        <div className="fixed bottom-5 right-5 z-40 animate-in fade-in duration-200">
             <Button 
                 isIconOnly 
                 color="primary" 
-                variant="shadow" 
-                size="lg" 
-                className="rounded-full shadow-xl size-14"
+                variant="solid" 
+                size="md" 
+                className="rounded-full shadow-md size-11 bg-[#005A36] dark:bg-[#2E8B63] text-white border border-white/15"
                 onPress={scrollToTop}
-                aria-label="Ir arriba"
+                aria-label="Volver arriba"
                 data-html2canvas-ignore // Muy importante para que no salga bugueado en el PDF
             >
-                <i className="fa-solid fa-arrow-up text-xl"></i>
+                <i className="fa-solid fa-arrow-up text-sm"></i>
             </Button>
         </div>
     );
