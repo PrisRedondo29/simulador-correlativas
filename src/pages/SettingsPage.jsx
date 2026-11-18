@@ -171,13 +171,20 @@ export default function SettingsPage({ plan, setPlan }) {
 
                         <Input
                             label="Alias / Nombre"
-                            placeholder="Tu nombre público"
+                            placeholder={user ? 'Tu nombre público' : 'Iniciá sesión para editar tu alias'}
                             labelPlacement="outside"
                             description="Se muestra en el saludo inicial."
                             value={alias}
                             onValueChange={setAlias}
                             variant="bordered"
                             isDisabled={!user}
+                            classNames={{
+                                base: !user ? 'opacity-80' : '',
+                                label: 'text-xs font-medium text-[#334155] dark:text-[#CBD5E1]',
+                                input: 'text-sm text-[#1E293B] dark:text-[#F1F5F9] placeholder:text-[#64748B]',
+                                inputWrapper: 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#11171D]',
+                                description: 'text-xs text-[#64748B] dark:text-[#94A3B8]',
+                            }}
                             startContent={<i className="fa-solid fa-user text-[#64748B] text-xs mr-1" />}
                             endContent={
                                 user && (
@@ -201,7 +208,11 @@ export default function SettingsPage({ plan, setPlan }) {
                             value={user?.email || 'Modo visitante (local)'}
                             variant="bordered"
                             isReadOnly
-                            isDisabled={!user}
+                            classNames={{
+                                label: 'text-xs font-medium text-[#334155] dark:text-[#CBD5E1]',
+                                input: 'text-sm text-[#475569] dark:text-[#CBD5E1]',
+                                inputWrapper: 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#11171D]',
+                            }}
                             startContent={<i className="fa-solid fa-envelope text-[#64748B] text-xs mr-1" />}
                         />
                     </CardBody>
@@ -225,7 +236,6 @@ export default function SettingsPage({ plan, setPlan }) {
                         </label>
                         <Tabs
                             aria-label="Selección de Plan"
-                            color="primary"
                             variant="bordered"
                             fullWidth
                             selectedKey={plan || '17.14'}
@@ -235,9 +245,10 @@ export default function SettingsPage({ plan, setPlan }) {
                             }}
                             classNames={{
                                 base: 'w-full',
-                                tabList: 'w-full bg-[#F1F5F9] dark:bg-[#1E2730] p-1 border border-[#E2E8F0] dark:border-[#2A3540]',
-                                cursor: 'bg-white dark:bg-[#161D24] shadow-2xs',
+                                tabList: 'w-full bg-[#F1F5F9] dark:bg-[#1E2730] p-1 border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl',
+                                cursor: 'bg-white dark:bg-[#161D24] border border-[#005A36]/40 dark:border-[#4A9D68]/50 shadow-2xs rounded-lg',
                                 tab: 'h-9 px-2',
+                                tabContent: 'text-[#475569] dark:text-[#94A3B8] group-data-[selected=true]:text-[#005A36] dark:group-data-[selected=true]:text-[#6EE7B7]',
                             }}
                         >
                             <Tab
