@@ -148,7 +148,7 @@ export default function Progreso() {
         )}
       </div>
 
-      <LeyendaEstados />
+      <LeyendaEstados materias={materias} />
     </div>
   );
 }

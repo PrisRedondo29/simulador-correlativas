@@ -1,7 +1,7 @@
 import { Accordion, AccordionItem, Chip } from '@heroui/react';
 import materiasUtils from '../../utils/Progreso/materiasUtils';
 
-function LeyendaEstados({ materias }) {
+function LeyendaEstados({ materias = [] }) {
     const estados = [
         { name: 'Aprobado', desc: 'Materia completada' },
         { name: 'Regular', desc: 'Cursada vigente (final pendiente)' },
