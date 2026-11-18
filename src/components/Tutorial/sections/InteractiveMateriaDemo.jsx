@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Chip, Button } from '@heroui/react';
 import MateriaCard from '../../Progreso/MateriaCard';
 import DetalleMateriaModal from '../../Progreso/modals/DetalleMateriaModal';
+import { esMateriaIncompleta } from '../../../utils/Progreso/materiasUtils';
 
 export default function InteractiveMateriaDemo() {
     const [estado, setEstado] = useState('Disponible');
@@ -119,9 +120,9 @@ export default function InteractiveMateriaDemo() {
                         <MateriaCard
                             materia={materiaDemo}
                             estado={estado}
-                            detalles={detalles}
-                            actualizarEstados={handleCambioEstado}
-                            abrirInfo={() => setIsDetailOpen(true)}
+                            isIncomplete={esMateriaIncompleta(materiaDemo, estado, detalles)}
+                            isSelected={isDetailOpen}
+                            onSelect={() => setIsDetailOpen(true)}
                         />
                     </div>
 
@@ -137,7 +138,7 @@ export default function InteractiveMateriaDemo() {
                             Gestión de estados
                         </h4>
                         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                            Al hacer clic sobre la tarjeta se despliega el menú rápido para cambiar entre Cursando, Regular, Aprobado o Promocionado, actualizando correlativas y promedios al instante.
+                            Al hacer clic sobre la tarjeta se abre su panel de detalle para cambiar entre Cursando, Regular, Aprobado o Promocionado, actualizando correlativas y promedios al instante.
                         </p>
                     </section>
 
