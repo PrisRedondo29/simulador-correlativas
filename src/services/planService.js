@@ -1,9 +1,11 @@
 /**
  * Servicio para gestionar los planes de estudio, materias y equivalencias
- * con carga dinámica real (code-splitting por carrera) y caché en memoria,
- * guiado declarativamente por careersRegistry.js.
+ * con carga dinámica real (code-splitting por carrera), caché local versionado
+ * (Stale-While-Revalidate contra `catalog_meta/index` y `catalog_plans/{planId}`)
+ * y reconciliación no destructiva del progreso estudiantil ante nuevas versiones.
  */
 
+import { doc, getDoc } from 'firebase/firestore';
 import {
     CAREERS_REGISTRY,
     getCareerByPlan,
@@ -11,20 +13,258 @@ import {
     getPlanEntry,
     normalizePlanNumber,
 } from '../config/careersRegistry';
+import { reconciliarProgresoConNuevaVersionPlan } from '../utils/Plan/planMigration';
+import { normalizarPlanCanonico, validarPlanEstudios } from '../utils/Plan/planValidator';
+import { db } from './firebase';
+import storageRepository from './storageRepository';
 
 /** @typedef {import('../types/domain').CareerConfig} CareerConfig */
 /** @typedef {import('../types/domain').PlanData} PlanData */
 /** @typedef {import('../types/domain').Materia} Materia */
 /** @typedef {import('../types/domain').EquivalenciasMap} EquivalenciasMap */
+/** @typedef {import('../types/domain').PublishedPlanSnapshot} PublishedPlanSnapshot */
+/** @typedef {import('../types/domain').CatalogMetaEntry} CatalogMetaEntry */
+
+export const DEFAULT_CATALOG_TTL_MS = 12 * 60 * 60 * 1000; // 12 horas
 
 /**
  * @param {CareerConfig[]} [registry]
+ * @param {{
+ *   storageRepo?: typeof storageRepository,
+ *   ttlMs?: number,
+ *   enableRemoteCheck?: boolean,
+ *   fetchRemoteCatalogMeta?: () => Promise<Record<string, CatalogMetaEntry> | null>,
+ *   fetchRemotePublishedPlan?: (planNumero: string) => Promise<PublishedPlanSnapshot | null>,
+ * }} [options]
  */
-export function createPlanService(registry = CAREERS_REGISTRY) {
+export function createPlanService(registry = CAREERS_REGISTRY, options = {}) {
+    const {
+        storageRepo = storageRepository,
+        ttlMs = DEFAULT_CATALOG_TTL_MS,
+        enableRemoteCheck = true,
+        fetchRemoteCatalogMeta,
+        fetchRemotePublishedPlan,
+    } = options;
+
     /** @type {Map<string, PlanData[]>} */
     const careerCache = new Map();
     /** @type {Map<string, EquivalenciasMap>} */
     const equivalenciasCache = new Map();
+    /** @type {Promise<Record<string, CatalogMetaEntry> | null> | null} */
+    let inFlightMetaCheck = null;
+
+    /**
+     * Lee `catalog_meta/index` desde Firestore (o mediante el fetcher inyectado en tests).
+     * @returns {Promise<Record<string, CatalogMetaEntry> | null>}
+     */
+    async function defaultFetchRemoteMeta() {
+        if (typeof fetchRemoteCatalogMeta === 'function') {
+            return fetchRemoteCatalogMeta();
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return null;
+        }
+        if (!db) return null;
+        try {
+            const snap = await getDoc(doc(db, 'catalog_meta', 'index'));
+            if (!snap.exists()) return null;
+            const data = snap.data();
+            if (!data || typeof data.plans !== 'object') return null;
+            return /** @type {Record<string, CatalogMetaEntry>} */ (data.plans);
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Lee `catalog_plans/{planNumero}` desde Firestore (o mediante el fetcher inyectado).
+     * @param {string} planNumero
+     * @returns {Promise<PublishedPlanSnapshot | null>}
+     */
+    async function defaultFetchRemotePlan(planNumero) {
+        if (typeof fetchRemotePublishedPlan === 'function') {
+            return fetchRemotePublishedPlan(planNumero);
+        }
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return null;
+        }
+        if (!db) return null;
+        try {
+            const snap = await getDoc(doc(db, 'catalog_plans', planNumero));
+            if (!snap.exists()) return null;
+            const data = snap.data();
+            if (!data || typeof data.version !== 'number' || !Array.isArray(data.materias)) {
+                return null;
+            }
+            return /** @type {PublishedPlanSnapshot} */ ({
+                plan_numero: String(data.plan_numero || planNumero),
+                carrera: typeof data.carrera === 'string' ? data.carrera : undefined,
+                version: data.version,
+                materias: data.materias,
+                changelogMessage:
+                    typeof data.changelogMessage === 'string' ? data.changelogMessage : null,
+                codeMappings:
+                    data.codeMappings && typeof data.codeMappings === 'object'
+                        ? data.codeMappings
+                        : null,
+            });
+        } catch {
+            return null;
+        }
+    }
+
+    /**
+     * Aplica un snapshot publicado válido en el caché local y reconcilia de forma
+     * no destructiva el progreso/detalles/cursada del estudiante, registrando la
+     * notificación con el motivo del cambio (`changelogMessage`).
+     *
+     * @param {PublishedPlanSnapshot} snapshot
+     * @returns {PlanData | null}
+     */
+    function applyPublishedPlanSnapshot(snapshot) {
+        const normalizedPlanNum = normalizePlanNumber(snapshot?.plan_numero);
+        if (!normalizedPlanNum) return null;
+
+        const validacion = validarPlanEstudios({
+            plan_numero: normalizedPlanNum,
+            carrera: snapshot.carrera,
+            version: snapshot.version,
+            materias: snapshot.materias,
+        });
+
+        if (!validacion.ok || !validacion.planNormalizado) {
+            return null;
+        }
+
+        const cachedPrev = storageRepo.getCachedPublishedPlan(normalizedPlanNum);
+        const versionAnterior = cachedPrev?.appliedVersion ?? cachedPrev?.version ?? 1;
+
+        if (snapshot.version > versionAnterior) {
+            const currentProgreso = storageRepo.getProgreso(normalizedPlanNum, null);
+            const currentDetalles = storageRepo.getProgresoDetalles(normalizedPlanNum, null);
+            const currentCursada = storageRepo.getCursada(normalizedPlanNum, null);
+
+            const migracion = reconciliarProgresoConNuevaVersionPlan({
+                planNumero: normalizedPlanNum,
+                nuevoPlan: validacion.planNormalizado,
+                versionNueva: snapshot.version,
+                versionAnterior,
+                codeMappings: snapshot.codeMappings || null,
+                changelogMessage: snapshot.changelogMessage || null,
+                progreso: currentProgreso,
+                progresoDetalles: currentDetalles,
+                cursada: currentCursada,
+            });
+
+            if (migracion.applied) {
+                if (currentProgreso) {
+                    storageRepo.setProgreso(normalizedPlanNum, migracion.progreso, {
+                        silent: true,
+                    });
+                }
+                if (currentDetalles) {
+                    storageRepo.setProgresoDetalles(
+                        normalizedPlanNum,
+                        migracion.progresoDetalles,
+                        { silent: true },
+                    );
+                }
+                if (currentCursada && migracion.cursada) {
+                    storageRepo.setCursada(normalizedPlanNum, migracion.cursada, {
+                        silent: true,
+                    });
+                }
+                if (migracion.notice) {
+                    storageRepo.setPlanUpdateNotice(normalizedPlanNum, migracion.notice);
+                }
+            }
+        }
+
+        const snapshotToStore = {
+            ...snapshot,
+            plan_numero: normalizedPlanNum,
+            materias: validacion.planNormalizado.materias,
+            appliedVersion: snapshot.version,
+        };
+        storageRepo.setCachedPublishedPlan(normalizedPlanNum, snapshotToStore, {
+            silent: true,
+        });
+
+        return {
+            plan_numero: normalizedPlanNum,
+            carrera: snapshot.carrera,
+            version: snapshot.version,
+            materias: validacion.planNormalizado.materias,
+        };
+    }
+
+    /**
+     * Revalida en segundo plano (con TTL) si existe una versión nueva del plan en Firestore.
+     * Solo descarga `catalog_plans/{plan}` si `remoteVersion > localVersion`.
+     *
+     * @param {string} normalizedPlanNum
+     * @param {{ force?: boolean }} [opts]
+     * @returns {Promise<PlanData | null>}
+     */
+    async function revalidatePlanIfStale(normalizedPlanNum, { force = false } = {}) {
+        if (!enableRemoteCheck) return null;
+
+        const now = Date.now();
+        const metaCache = storageRepo.getCatalogMetaCache();
+        const isFresh =
+            !force &&
+            metaCache &&
+            typeof metaCache.checkedAt === 'number' &&
+            now - metaCache.checkedAt < ttlMs;
+
+        /** @type {Record<string, CatalogMetaEntry> | null} */
+        let plansMeta = isFresh ? metaCache.plans : null;
+
+        if (!plansMeta) {
+            if (!inFlightMetaCheck) {
+                inFlightMetaCheck = defaultFetchRemoteMeta().finally(() => {
+                    inFlightMetaCheck = null;
+                });
+            }
+            plansMeta = await inFlightMetaCheck;
+            if (plansMeta) {
+                storageRepo.setCatalogMetaCache(
+                    {
+                        checkedAt: now,
+                        plans: plansMeta,
+                    },
+                    { silent: true },
+                );
+            }
+        }
+
+        const remoteEntry = plansMeta?.[normalizedPlanNum];
+        if (!remoteEntry || typeof remoteEntry.version !== 'number') {
+            return null;
+        }
+
+        const cachedLocal = storageRepo.getCachedPublishedPlan(normalizedPlanNum);
+        const localVersion = cachedLocal?.version ?? 1;
+
+        if (remoteEntry.version <= localVersion) {
+            return null;
+        }
+
+        const remoteSnapshot = await defaultFetchRemotePlan(normalizedPlanNum);
+        if (!remoteSnapshot || remoteSnapshot.version <= localVersion) {
+            return null;
+        }
+
+        const applied = applyPublishedPlanSnapshot(remoteSnapshot);
+        if (applied && typeof window !== 'undefined') {
+            try {
+                window.dispatchEvent(new Event('progress-hydrated'));
+            } catch {
+                // entorno sin window.dispatchEvent
+            }
+        }
+        return applied;
+    }
 
     /**
      * @param {CareerConfig | null} career
@@ -42,17 +282,22 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
         const mod = await career.loadPlans();
         /** @type {PlanData[]} */
         const rawPlans = Array.isArray(mod) ? mod : (mod?.default || []);
-        const plans = career.name
-            ? rawPlans.map((p) => (p.carrera ? p : { ...p, carrera: career.name }))
-            : rawPlans;
+        const plans = rawPlans.map((p) => {
+            const normalized = normalizarPlanCanonico(p);
+            return career.name && !normalized.carrera
+                ? { ...normalized, carrera: career.name }
+                : normalized;
+        });
         careerCache.set(cacheKey, plans);
         return plans;
     }
 
     return {
         /**
-         * Obtiene un plan completo (con materias) de forma asíncrona,
-         * cargando únicamente el JSON de la carrera correspondiente y cacheándolo en memoria.
+         * Obtiene un plan completo (con materias) de forma asíncrona:
+         * 1. Si hay una versión publicada válida en `storageRepository`, la devuelve al instante.
+         * 2. Si no, devuelve el JSON base empaquetado con code-splitting por carrera.
+         * 3. Dispara en segundo plano `revalidatePlanIfStale` respetando el TTL (Stale-While-Revalidate).
          * @param {string | null | undefined} planNumber - Número del plan (ej: "17.14")
          * @returns {Promise<PlanData | null>}
          */
@@ -63,9 +308,26 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
             const career = getCareerByPlan(normalized, registry);
             if (!career) return null;
 
+            const cachedPublished = storageRepo.getCachedPublishedPlan(normalized);
+            if (cachedPublished) {
+                void revalidatePlanIfStale(normalized);
+                return {
+                    plan_numero: cachedPublished.plan_numero,
+                    carrera: cachedPublished.carrera || career.name,
+                    version: cachedPublished.version,
+                    materias: cachedPublished.materias,
+                };
+            }
+
             const plans = await loadCareerPlans(career);
-            return plans.find((p) => p.plan_numero === normalized) ?? null;
+            const staticPlan = plans.find((p) => p.plan_numero === normalized) ?? null;
+
+            void revalidatePlanIfStale(normalized);
+            return staticPlan;
         },
+
+        applyPublishedPlanSnapshot,
+        revalidatePlanIfStale,
 
         /**
          * Obtiene el listado de materias de un plan específico de forma asíncrona.

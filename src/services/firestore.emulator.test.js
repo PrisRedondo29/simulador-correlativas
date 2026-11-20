@@ -144,6 +144,51 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
         await assertSucceeds(getDoc(doc(dbAdmin, 'app_logs', createdLogRef.id)));
         await assertSucceeds(getDocs(collection(dbAdmin, 'app_logs')));
         await assertSucceeds(deleteDoc(doc(dbAdmin, 'app_logs', createdLogRef.id)));
+
+        // catalog_meta y catalog_plans: solo admin puede publicar/actualizar/eliminar;
+        // cualquier cliente (incluso anónimo) puede hacer get de catalog_meta/index y catalog_plans/{planId}
+        await assertFails(
+            setDoc(doc(dbA, 'catalog_meta', 'index'), {
+                plans: { '17.14': { version: 2 } },
+                updatedAt: serverTimestamp(),
+            }),
+        );
+        await assertFails(
+            setDoc(doc(dbA, 'catalog_plans', '17.14'), {
+                plan_numero: '17.14',
+                version: 2,
+                materias: [{ codigo: '11071', nombre: 'Intro', anio: 1, correlativas: [] }],
+                updatedAt: serverTimestamp(),
+            }),
+        );
+
+        await assertSucceeds(
+            setDoc(doc(dbAdmin, 'catalog_meta', 'index'), {
+                plans: { '17.14': { version: 2 } },
+                updatedAt: serverTimestamp(),
+                updatedBy: 'uid-admin',
+            }),
+        );
+        await assertSucceeds(
+            setDoc(doc(dbAdmin, 'catalog_plans', '17.14'), {
+                plan_numero: '17.14',
+                carrera: 'Licenciatura en Sistemas de Información',
+                version: 2,
+                materias: [{ codigo: '11071B', nombre: 'Intro', anio: 1, correlativas: [] }],
+                changelogMessage: 'Actualización de código 11071 a 11071B',
+                codeMappings: { '11071': '11071B' },
+                updatedAt: serverTimestamp(),
+                updatedBy: 'uid-admin',
+            }),
+        );
+
+        // El simulador estudiantil (incluso sin login) puede leer catalog_meta/index y catalog_plans/17.14,
+        // pero no puede listar toda la colección catalog_plans
+        await assertSucceeds(getDoc(doc(unauthDb, 'catalog_meta', 'index')));
+        await assertSucceeds(getDoc(doc(unauthDb, 'catalog_plans', '17.14')));
+        await assertFails(getDocs(collection(unauthDb, 'catalog_plans')));
+        await assertFails(getDocs(collection(dbA, 'catalog_plans')));
+        await assertSucceeds(getDocs(collection(dbAdmin, 'catalog_plans')));
     });
 
     it('rechaza inyección de campos no permitidos, mutación de uid/createdAt, config inválida y salto de syncRevision', async () => {

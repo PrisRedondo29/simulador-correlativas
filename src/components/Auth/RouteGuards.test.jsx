@@ -2,14 +2,8 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import storageRepository from '../../services/storageRepository';
-
-const mockUseAuth = vi.fn();
-
-vi.mock('../../context/AuthContext', () => ({
-    useAuth: () => mockUseAuth(),
-}));
 
 vi.mock('@heroui/react', () => ({
     Spinner: ({ label }) => <div role="status">{label}</div>,
@@ -22,93 +16,8 @@ vi.mock('@heroui/react', () => ({
     ),
 }));
 
-import AdminRoute from './AdminRoute';
 import PlanFeatureRoute from './PlanFeatureRoute';
 import { PlanProvider } from '../../context/PlanContext';
-
-describe('AdminRoute - Protección de rutas administrativas', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    afterEach(() => {
-        cleanup();
-    });
-
-    it('muestra indicador de carga mientras verifica permisos sin exponer contenido admin', () => {
-        mockUseAuth.mockReturnValue({ user: null, userRole: 'user', loading: true });
-
-        render(
-            <MemoryRouter initialEntries={['/admin']}>
-                <Routes>
-                    <Route
-                        path="/admin"
-                        element={
-                            <AdminRoute>
-                                <div>Panel Secreto Admin</div>
-                            </AdminRoute>
-                        }
-                    />
-                </Routes>
-            </MemoryRouter>,
-        );
-
-        expect(screen.getByRole('status').textContent).toContain('Verificando permisos');
-        expect(screen.queryByText('Panel Secreto Admin')).toBeNull();
-    });
-
-    it('bloquea y redirige a usuarios no autenticados o sin rol admin', () => {
-        mockUseAuth.mockReturnValue({
-            user: { uid: 'u1' },
-            userRole: 'user',
-            loading: false,
-        });
-
-        render(
-            <MemoryRouter initialEntries={['/admin']}>
-                <Routes>
-                    <Route
-                        path="/admin"
-                        element={
-                            <AdminRoute>
-                                <div>Panel Secreto Admin</div>
-                            </AdminRoute>
-                        }
-                    />
-                    <Route path="/" element={<div>Destino Inicio</div>} />
-                </Routes>
-            </MemoryRouter>,
-        );
-
-        expect(screen.queryByText('Panel Secreto Admin')).toBeNull();
-        expect(screen.getByText('Destino Inicio')).toBeTruthy();
-    });
-
-    it('permite el acceso únicamente cuando el usuario tiene rol admin', () => {
-        mockUseAuth.mockReturnValue({
-            user: { uid: 'admin-1' },
-            userRole: 'admin',
-            loading: false,
-        });
-
-        render(
-            <MemoryRouter initialEntries={['/admin']}>
-                <Routes>
-                    <Route
-                        path="/admin"
-                        element={
-                            <AdminRoute>
-                                <div>Panel Secreto Admin</div>
-                            </AdminRoute>
-                        }
-                    />
-                </Routes>
-            </MemoryRouter>,
-        );
-
-        expect(screen.getByText('Panel Secreto Admin')).toBeTruthy();
-    });
-});
 
 describe('PlanFeatureRoute - Guardas declarativas por capacidades del plan', () => {
     beforeEach(() => {

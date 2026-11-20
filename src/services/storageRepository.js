@@ -25,6 +25,9 @@ import {
 /** @typedef {import('../types/domain').ApplyRemoteBundleResult} ApplyRemoteBundleResult */
 /** @typedef {import('../types/domain').RestoreRecoveryBackupResult} RestoreRecoveryBackupResult */
 /** @typedef {import('../types/domain').UserCloudConfig} UserCloudConfig */
+/** @typedef {import('../types/domain').CatalogMetaCache} CatalogMetaCache */
+/** @typedef {import('../types/domain').PublishedPlanSnapshot} PublishedPlanSnapshot */
+/** @typedef {import('../types/domain').PlanUpdateNotice} PlanUpdateNotice */
 
 export const STORAGE_SCHEMA_VERSION = 3;
 export const STORAGE_CHANGE_EVENT = 'unlu-storage-updated';
@@ -42,6 +45,11 @@ export const STORAGE_KEYS = {
     SIMULADOR_VISTA: 'simulador_vista_preferida',
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
+    CATALOG_META_CACHE: 'unlu_catalog_meta:v1',
+    /** @param {string} plan */
+    catalogPlanCache: (plan) => `unlu_catalog_plan+${plan}`,
+    /** @param {string} plan */
+    planUpdateNotice: (plan) => `unlu_plan_update_notice+${plan}`,
     /** @param {string} plan */
     progreso: (plan) => `progreso+${plan}`,
     /** @param {string} plan */
@@ -671,6 +679,82 @@ export function createStorageRepository(storage = getBrowserStorage()) {
             setRaw(STORAGE_KEYS.OCULTAR_CONFIRMACION_CASCADA, mostrar ? 'false' : 'true', {
                 silent: true,
             }),
+
+        // --- Catálogo remoto versionado (Stale-While-Revalidate) y avisos de migración ---
+        /** @returns {CatalogMetaCache | null} */
+        getCatalogMetaCache: () => {
+            /** @type {CatalogMetaCache | null} */
+            const parsed = getJSON(STORAGE_KEYS.CATALOG_META_CACHE, /** @type {any} */ (null));
+            if (!parsed || typeof parsed !== 'object' || typeof parsed.plans !== 'object') {
+                return null;
+            }
+            return parsed;
+        },
+
+        /**
+         * @param {CatalogMetaCache} meta
+         * @param {StorageWriteOptions} [options]
+         */
+        setCatalogMetaCache: (meta, options = { silent: true }) =>
+            setJSON(STORAGE_KEYS.CATALOG_META_CACHE, meta, options),
+
+        /**
+         * @param {string | null | undefined} plan
+         * @returns {PublishedPlanSnapshot | null}
+         */
+        getCachedPublishedPlan: (plan) => {
+            if (!plan) return null;
+            /** @type {PublishedPlanSnapshot | null} */
+            const parsed = getJSON(
+                STORAGE_KEYS.catalogPlanCache(plan),
+                /** @type {any} */ (null),
+            );
+            if (
+                !parsed ||
+                typeof parsed !== 'object' ||
+                typeof parsed.version !== 'number' ||
+                !Array.isArray(parsed.materias)
+            ) {
+                return null;
+            }
+            return parsed;
+        },
+
+        /**
+         * @param {string | null | undefined} plan
+         * @param {PublishedPlanSnapshot} snapshot
+         * @param {StorageWriteOptions} [options]
+         */
+        setCachedPublishedPlan: (plan, snapshot, options = { silent: true }) =>
+            plan ? setJSON(STORAGE_KEYS.catalogPlanCache(plan), snapshot, options) : false,
+
+        /**
+         * @param {string | null | undefined} plan
+         * @returns {PlanUpdateNotice | null}
+         */
+        getPlanUpdateNotice: (plan) => {
+            if (!plan) return null;
+            /** @type {PlanUpdateNotice | null} */
+            const parsed = getJSON(
+                STORAGE_KEYS.planUpdateNotice(plan),
+                /** @type {any} */ (null),
+            );
+            if (!parsed || typeof parsed !== 'object' || typeof parsed.version !== 'number') {
+                return null;
+            }
+            return parsed;
+        },
+
+        /**
+         * @param {string | null | undefined} plan
+         * @param {PlanUpdateNotice | null} notice
+         * @param {StorageWriteOptions} [options]
+         */
+        setPlanUpdateNotice: (plan, notice, options = {}) => {
+            if (!plan) return false;
+            if (!notice) return remove(STORAGE_KEYS.planUpdateNotice(plan), options);
+            return setJSON(STORAGE_KEYS.planUpdateNotice(plan), notice, options);
+        },
     };
 }
 

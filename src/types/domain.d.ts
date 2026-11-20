@@ -102,7 +102,96 @@ export interface Materia {
 export interface PlanData {
     plan_numero: string;
     carrera?: string;
+    version?: number;
     materias: Materia[];
+}
+
+export type PlanValidationIssueCode =
+    | 'INVALID_PLAN_METADATA'
+    | 'EMPTY_SUBJECTS'
+    | 'INVALID_SUBJECT_FIELD'
+    | 'DUPLICATE_CODE'
+    | 'SELF_DEPENDENCY'
+    | 'DANGLING_PREREQUISITE'
+    | 'CYCLE_DETECTED';
+
+export interface PlanValidationIssue {
+    code: PlanValidationIssueCode;
+    severity: 'error' | 'warning';
+    codigoMateria?: string;
+    mensaje: string;
+    detalles?: Record<string, unknown>;
+}
+
+export interface PlanValidationResult {
+    ok: boolean;
+    errores: PlanValidationIssue[];
+    advertencias: PlanValidationIssue[];
+    ciclos: string[][];
+    planNormalizado: PlanData | null;
+}
+
+export interface PlanDiffCambioCorrelativa {
+    codigo: string;
+    nombre: string;
+    correlativasAntes: string[];
+    correlativasDespues: string[];
+    cursadaAntes: Required<RequisitoCorrelativa>[];
+    cursadaDespues: Required<RequisitoCorrelativa>[];
+    finalAntes: Required<RequisitoCorrelativa>[];
+    finalDespues: Required<RequisitoCorrelativa>[];
+}
+
+export interface PlanVersionDiff {
+    materiasAgregadas: Array<{ codigo: string; nombre: string }>;
+    materiasEliminadas: Array<{ codigo: string; nombre: string }>;
+    materiasRenombradas: Array<{ codigo: string; nombreAntes: string; nombreDespues: string }>;
+    cambiosCorrelativas: PlanDiffCambioCorrelativa[];
+    requiereMapeoCodigos: boolean;
+    tieneImpactoCascada: boolean;
+    totalCambios: number;
+}
+
+export interface PublishedPlanSnapshot {
+    plan_numero: string;
+    carrera?: string;
+    version: number;
+    materias: Materia[];
+    changelogMessage?: string | null;
+    codeMappings?: Record<string, string> | null;
+    updatedAt?: string | null;
+    appliedVersion?: number;
+}
+
+export interface CatalogMetaEntry {
+    version: number;
+    updatedAt?: string | null;
+    changelogMessage?: string | null;
+}
+
+export interface CatalogMetaCache {
+    checkedAt: number;
+    plans: Record<string, CatalogMetaEntry>;
+}
+
+export interface PlanUpdateNotice {
+    planNumero: string;
+    version: number;
+    previousVersion: number;
+    changelogMessage: string | null;
+    codigosMigrados: Array<{ desde: string; hacia: string }>;
+    materiasRecalculadas: string[];
+    appliedAt: string;
+}
+
+export interface PlanMigrationResult {
+    applied: boolean;
+    progreso: ProgresoMap;
+    progresoDetalles: ProgresoDetallesMap;
+    cursada: CursadaPlanData | null;
+    codigosMigrados: Array<{ desde: string; hacia: string }>;
+    materiasRecalculadas: string[];
+    notice: PlanUpdateNotice | null;
 }
 
 export type ProgresoMap = Record<string, EstadoMateria>;
@@ -291,6 +380,7 @@ export interface NotificationContext {
     progreso?: ProgresoMap;
     progresoDetalles?: ProgresoDetallesMap;
     cursada?: CursadaPlanData | null;
+    planUpdateNotice?: PlanUpdateNotice | null;
     isAuthenticated?: boolean;
     canSimulateTransition?: boolean;
     transitionInfo?: TransitionConfig | null;

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
     buildNotifications,
+    estrategiaActualizacionPlan,
     estrategiaEventosProximos,
     estrategiaUltimoIntentoFinal,
     estrategiaVencimientoRegularidad,
@@ -189,5 +190,27 @@ describe('notificationStrategies - Patrón Strategy de alertas académicas', () 
             },
         });
         expect(lejano).toBeNull();
+    });
+
+    it('notifica al alumno cuando el plan activo fue actualizado desde el Panel Admin indicando el motivo del cambio y códigos migrados', () => {
+        const notif = estrategiaActualizacionPlan({
+            activePlan: '17.14',
+            planUpdateNotice: {
+                planNumero: '17.14',
+                version: 3,
+                previousVersion: 2,
+                changelogMessage: 'Se corrigió el código de Intro a la Programación',
+                codigosMigrados: [{ desde: '11071', hacia: '11071B' }],
+                materiasRecalculadas: ['11073'],
+                appliedAt: '2026-11-20T18:00:00.000Z',
+            },
+        });
+
+        expect(notif).not.toBeNull();
+        expect(notif?.id).toBe('plan-update-17.14-v3');
+        expect(notif?.title).toContain('Plan 17.14 actualizado (v3)');
+        expect(notif?.description).toContain('Motivo: "Se corrigió el código de Intro a la Programación"');
+        expect(notif?.description).toContain('11071 → 11071B');
+        expect(notif?.description).toContain('1 materia');
     });
 });

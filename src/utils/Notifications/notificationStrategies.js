@@ -31,7 +31,52 @@ function formatearNombres(materias, limite = 2) {
 }
 
 /**
- * 0. Alerta por evaluaciones o entregas registradas en Mi Cursada dentro de los próximos 7 días.
+ * 0-A. Alerta institucional cuando el Plan de Estudios activo recibió una actualización
+ * publicada desde el Panel Admin (con motivo del cambio y/o migración de códigos/correlativas).
+ * @type {NotificationStrategy}
+ */
+export function estrategiaActualizacionPlan({ activePlan, planUpdateNotice }) {
+    if (!planUpdateNotice || planUpdateNotice.planNumero !== activePlan) {
+        return null;
+    }
+
+    /** @type {string[]} */
+    const fragmentos = [];
+    if (planUpdateNotice.changelogMessage) {
+        fragmentos.push(`Motivo: "${planUpdateNotice.changelogMessage}"`);
+    }
+    if (planUpdateNotice.codigosMigrados?.length > 0) {
+        const mapeos = planUpdateNotice.codigosMigrados
+            .slice(0, 2)
+            .map((m) => `${m.desde} → ${m.hacia}`)
+            .join(', ');
+        fragmentos.push(`Se actualizó tu progreso en los códigos (${mapeos})`);
+    }
+    if (planUpdateNotice.materiasRecalculadas?.length > 0) {
+        const cant = planUpdateNotice.materiasRecalculadas.length;
+        fragmentos.push(
+            `Se recalcularon correlativas en ${cant} ${cant === 1 ? 'materia' : 'materias'}`,
+        );
+    }
+
+    const detalle =
+        fragmentos.length > 0
+            ? `${fragmentos.join(' · ')}.`
+            : `Se aplicó la versión ${planUpdateNotice.version} del Plan ${activePlan} conservando tu progreso.`;
+
+    return {
+        id: `plan-update-${activePlan}-v${planUpdateNotice.version}`,
+        icon: 'fa-solid fa-wand-magic-sparkles',
+        tone: 'info',
+        title: `Plan ${activePlan} actualizado (v${planUpdateNotice.version})`,
+        description: detalle,
+        path: '/progreso',
+        time: `Versión ${planUpdateNotice.version}`,
+    };
+}
+
+/**
+ * 0-B. Alerta por evaluaciones o entregas registradas en Mi Cursada dentro de los próximos 7 días.
  * @type {NotificationStrategy}
  */
 export function estrategiaEventosProximos({ activePlan, cursada, materias = [] }) {
@@ -246,6 +291,7 @@ export function estrategiaRespaldoCuenta({ isAuthenticated }) {
 
 /** @type {NotificationStrategy[]} */
 export const DEFAULT_NOTIFICATION_STRATEGIES = [
+    estrategiaActualizacionPlan,
     estrategiaUltimoIntentoFinal,
     estrategiaEventosProximos,
     estrategiaVencimientoRegularidad,

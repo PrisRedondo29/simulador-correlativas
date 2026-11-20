@@ -66,6 +66,32 @@ rules_version = '2';
 //   - uid: string | null (optional; if non-null, caller must be authenticated and uid == request.auth.uid)
 //   - context: map (optional, max 10 entries)
 //
+// Collection: catalog_meta
+// Document ID: {docId} (publicly readable only for 'index')
+// Access: Public curriculum catalog version index (non-PII).
+//         Anyone may get 'index' to check remote curriculum versions.
+//         Only verified admins (/roles/{uid}.role == 'admin') may list, create,
+//         update (with schema validation), or delete catalog metadata.
+// Fields:
+//   - plans: map (required, max 50 entries)
+//   - updatedAt: timestamp (required)
+//   - updatedBy: string | null (optional, max 128 chars; prefer non-PII admin UID)
+//
+// Collection: catalog_plans
+// Document ID: {planId} (e.g. '17.14', '17.13')
+// Access: Public university study plan definitions (non-PII).
+//         Anyone may get individual plans by ID. Only verified admins may list,
+//         create, update (with schema validation), or delete plan documents.
+// Fields:
+//   - plan_numero: string (required, 1..20 chars)
+//   - carrera: string | null (optional, max 160 chars)
+//   - version: int (required, >= 1)
+//   - materias: list (required, 1..150 items)
+//   - changelogMessage: string | null (optional, max 500 chars)
+//   - codeMappings: map | null (optional, max 150 entries)
+//   - updatedAt: timestamp (required)
+//   - updatedBy: string | null (optional, max 128 chars; prefer non-PII admin UID)
+//
 // All other collections and subcollections:
 //   Explicitly denied by default fallback rule.
 //
@@ -369,6 +395,56 @@ service cloud.firestore {
     }
 
     // ===============================================================
+    // Catalog Schema & Domain Validators
+    // ===============================================================
+
+    function isValidCatalogMeta(data) {
+      return hasRequiredFields(['plans', 'updatedAt']) &&
+        hasOnlyAllowedFields(['plans', 'updatedAt', 'updatedBy']) &&
+        data.plans is map &&
+        data.plans.size() <= 50 &&
+        data.updatedAt is timestamp &&
+        (!('updatedBy' in data) ||
+          data.updatedBy == null ||
+          (data.updatedBy is string && data.updatedBy.size() <= 128));
+    }
+
+    function isValidCatalogPlan(data) {
+      return hasRequiredFields(['plan_numero', 'version', 'materias', 'updatedAt']) &&
+        hasOnlyAllowedFields([
+          'plan_numero',
+          'carrera',
+          'version',
+          'materias',
+          'changelogMessage',
+          'codeMappings',
+          'updatedAt',
+          'updatedBy'
+        ]) &&
+        data.plan_numero is string &&
+        data.plan_numero.size() >= 1 &&
+        data.plan_numero.size() <= 20 &&
+        (!('carrera' in data) ||
+          data.carrera == null ||
+          (data.carrera is string && data.carrera.size() <= 160)) &&
+        data.version is int &&
+        data.version >= 1 &&
+        data.materias is list &&
+        data.materias.size() >= 1 &&
+        data.materias.size() <= 150 &&
+        (!('changelogMessage' in data) ||
+          data.changelogMessage == null ||
+          (data.changelogMessage is string && data.changelogMessage.size() <= 500)) &&
+        (!('codeMappings' in data) ||
+          data.codeMappings == null ||
+          (data.codeMappings is map && data.codeMappings.size() <= 150)) &&
+        data.updatedAt is timestamp &&
+        (!('updatedBy' in data) ||
+          data.updatedBy == null ||
+          (data.updatedBy is string && data.updatedBy.size() <= 128));
+    }
+
+    // ===============================================================
     // Collection Rules
     // ===============================================================
 
@@ -392,6 +468,22 @@ service cloud.firestore {
     match /app_logs/{logId} {
       allow create: if isValidAppLogCreate(request.resource.data);
       allow get, list, update, delete: if isAdmin();
+    }
+
+    // Public catalog version index (single-doc 'index' readable; admin-only management)
+    match /catalog_meta/{docId} {
+      allow get: if docId == 'index';
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidCatalogMeta(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Public curriculum plan definitions (get by ID; admin-only listing and management)
+    match /catalog_plans/{planId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidCatalogPlan(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // Default deny for all other collections and subcollections

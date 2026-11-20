@@ -29,7 +29,6 @@ const ROUTE_TITLES = {
     '/como-usar': 'Cómo usar',
     '/config': 'Configuración',
     '/contacto': 'Contacto',
-    '/admin': 'Administración',
 };
 
 // ─── Panel de usuario (sección inferior del sidebar) ──────────────────────────
