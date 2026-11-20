@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { addToast } from '@heroui/react'
 import planService from '../../services/planService'
-import { useAuth } from '../../context/AuthContext'
 import { trackAvanceSemestre, trackProyeccionEgreso, trackIntencionCursada, trackAlertaDesercion } from '../../services/analyticsService'
 
 const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
@@ -23,34 +22,43 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
 
     // ─── Carga de materias e inicialización ──────────────────────────────────
     useEffect(() => {
-        if (!plan) return
-        setCargando(true)
-        try {
-            const planData = planService.getPlanByNumber(plan)
-            if (!planData) {
-                addToast({ title: 'Plan no encontrado', description: `No existe el plan "${plan}". Intentá recargar la página.`, color: 'danger' });
-                setCargando(false);
-                return;
-            }
-            const data = planData.materias
-            setMaterias(data)
+        if (!plan) return;
+        let active = true;
 
-            // Siempre iniciamos desde cero para una simulación limpia
-            let nuevoProgreso = {}
-            data.forEach(m => { nuevoProgreso[m.codigo] = 'No Cursado' })
-            
-            setProgresoSimulado(nuevoProgreso)
-            setProgresoBase(nuevoProgreso)
-            setAnioActual(Number(anioInicio) || new Date().getFullYear())
-            setCuatri(cuatriInicio || '1')
-            setHistorialSemestres([])
-            setSimulacionTerminada(false)
-        } catch (error) {
-            if (import.meta.env.DEV) console.error(error)
-        } finally {
-            setCargando(false)
-        }
-    }, [plan]) // Only re-run when plan changes. anioInicio/cuatriInicio are initial values.
+        const cargarPlan = async () => {
+            setCargando(true);
+            try {
+                const planData = await planService.getPlanByNumber(plan);
+                if (!active) return;
+
+                if (!planData) {
+                    addToast({ title: 'Plan no encontrado', description: `No existe el plan "${plan}". Intentá recargar la página.`, color: 'danger' });
+                    return;
+                }
+                const data = planData.materias;
+                setMaterias(data);
+
+                // Siempre iniciamos desde cero para una simulación limpia
+                const nuevoProgreso = {};
+                data.forEach(m => { nuevoProgreso[m.codigo] = 'No Cursado'; });
+
+                setProgresoSimulado(nuevoProgreso);
+                setProgresoBase(nuevoProgreso);
+                setAnioActual(Number(anioInicio) || new Date().getFullYear());
+                setCuatri(cuatriInicio || '1');
+                setHistorialSemestres([]);
+                setSimulacionTerminada(false);
+            } catch (error) {
+                if (import.meta.env.DEV) console.error(error);
+            } finally {
+                if (active) setCargando(false);
+            }
+        };
+
+        cargarPlan();
+        return () => { active = false; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [plan]); // Only re-run when plan changes. anioInicio/cuatriInicio are initial values.
 
 
     // ─── Handlers de navegación ─────────────────────────────────────────────
@@ -78,7 +86,7 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio }) => {
                     description: 'Avanzaste sin haber modificado el estado de ninguna materia mostrada.',
                     color: 'warning'
                 })
-            } catch (_) { /* no-op */ }
+            } catch { /* no-op */ }
         }
 
         const semestreCompletado = {

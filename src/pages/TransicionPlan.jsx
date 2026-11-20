@@ -5,6 +5,7 @@ import {
     Chip,
     Accordion,
     AccordionItem,
+    Spinner,
 } from '@heroui/react';
 import {
     AlertTriangle,
@@ -58,8 +59,22 @@ function TransicionPlan() {
         };
     }, []);
 
-    const plan1713 = useMemo(() => planService.getPlanByNumber('17.13'), []);
-    const plan1714 = useMemo(() => planService.getPlanByNumber('17.14'), []);
+    const [plan1713, setPlan1713] = useState(null);
+    const [plan1714, setPlan1714] = useState(null);
+
+    useEffect(() => {
+        let active = true;
+        Promise.all([
+            planService.getPlanByNumber('17.13'),
+            planService.getPlanByNumber('17.14'),
+        ]).then(([p13, p14]) => {
+            if (!active) return;
+            setPlan1713(p13);
+            setPlan1714(p14);
+        });
+        return () => { active = false; };
+    }, []);
+
     const materias1713 = useMemo(() => plan1713?.materias || [], [plan1713]);
     const materias1714 = useMemo(() => plan1714?.materias || [], [plan1714]);
 
@@ -90,6 +105,14 @@ function TransicionPlan() {
         mensajePrincipal,
         recomendacionCorta,
     } = elegibilidad;
+
+    if (!plan1713 || !plan1714) {
+        return (
+            <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1419] flex items-center justify-center">
+                <Spinner color="success" size="lg" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1419] pb-14">

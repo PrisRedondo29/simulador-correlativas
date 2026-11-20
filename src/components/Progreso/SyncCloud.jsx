@@ -21,7 +21,8 @@ export default function SyncCloud({ plan }) {
 
             if (esPrimerGuardado) {
                 const progresoLocal = JSON.parse(localStorage.getItem(`progreso+${plan}`)) || {};
-                const materiasPlan = planService.getPlanByNumber(plan)?.materias || [];
+                const planData = await planService.getPlanByNumber(plan);
+                const materiasPlan = planData?.materias || [];
                 const aprobadas = Object.values(progresoLocal).filter(s => s === 'Aprobado' || s === 'Promocionado').length;
 
                 trackProgresoInicial({

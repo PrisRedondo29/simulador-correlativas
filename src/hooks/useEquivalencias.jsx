@@ -1,12 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import planService from '../services/planService';
 import equivalenciasData from '../data/equivalencias.json';
 import materiasUtils from '../utils/Progreso/materiasUtils';
-import { addToast } from '@heroui/react';
 
 export const useEquivalencias = () => {
-    const planViejo = useMemo(() => planService.getPlanByNumber("17.13"), []);
-    const planNuevo = useMemo(() => planService.getPlanByNumber("17.14"), []);
+    const [planViejo, setPlanViejo] = useState(null);
+    const [planNuevo, setPlanNuevo] = useState(null);
 
     const [progreso, setProgreso] = useState(() => {
         const storageKey = "progreso+17.13";
@@ -18,27 +17,43 @@ export const useEquivalencias = () => {
                 // fallback
             }
         }
-        const initial = {};
-        planViejo?.materias.forEach(m => {
-            initial[m.codigo] = m.tesis ? materiasUtils.bloquear : materiasUtils.estadosPosibles[0];
-        });
-        return initial;
+        return {};
     });
 
     const [filtro, setFiltro] = useState('todas');
     const [busqueda, setBusqueda] = useState('');
 
     useEffect(() => {
-        const storageKey = "progreso+17.13";
-        const storageData = localStorage.getItem(storageKey);
-        if (storageData) {
-            try {
-                setProgreso(JSON.parse(storageData));
-            } catch {
-                // fallback
+        let active = true;
+        Promise.all([
+            planService.getPlanByNumber("17.13"),
+            planService.getPlanByNumber("17.14"),
+        ]).then(([viejo, nuevo]) => {
+            if (!active) return;
+            setPlanViejo(viejo);
+            setPlanNuevo(nuevo);
+
+            const storageKey = "progreso+17.13";
+            const storageData = localStorage.getItem(storageKey);
+            if (storageData) {
+                try {
+                    setProgreso(JSON.parse(storageData));
+                    return;
+                } catch {
+                    // fallback
+                }
             }
-        }
-    }, [planViejo]);
+            if (viejo?.materias) {
+                const initial = {};
+                viejo.materias.forEach(m => {
+                    initial[m.codigo] = m.tesis ? materiasUtils.bloquear : materiasUtils.estadosPosibles[0];
+                });
+                setProgreso(initial);
+            }
+        });
+
+        return () => { active = false; };
+    }, []);
 
     // NUEVO MOTOR DE MAPEO: Grupos de Equivalencia (Many-to-One y One-to-One)
     const gruposEquivalencia = useMemo(() => {

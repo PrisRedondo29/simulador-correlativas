@@ -21,9 +21,22 @@ function TransicionModal({ isOpen, onOpenChange, plan = "17.13", progreso = {} }
     const [paso, setPaso] = useState(1); // 1: Aviso & Conteo, 2: Resultados
     const [anioAnalisis, setAnioAnalisis] = useState(2025);
 
-    // Cargar materias de ambos planes
-    const plan1713 = useMemo(() => planService.getPlanByNumber("17.13"), []);
-    const plan1714 = useMemo(() => planService.getPlanByNumber("17.14"), []);
+    // Cargar materias de ambos planes de forma dinámica
+    const [plan1713, setPlan1713] = useState(null);
+    const [plan1714, setPlan1714] = useState(null);
+
+    useEffect(() => {
+        let active = true;
+        Promise.all([
+            planService.getPlanByNumber("17.13"),
+            planService.getPlanByNumber("17.14"),
+        ]).then(([p13, p14]) => {
+            if (!active) return;
+            setPlan1713(p13);
+            setPlan1714(p14);
+        });
+        return () => { active = false; };
+    }, []);
 
     const materias1713 = useMemo(() => plan1713?.materias || [], [plan1713]);
     const materias1714 = useMemo(() => plan1714?.materias || [], [plan1714]);

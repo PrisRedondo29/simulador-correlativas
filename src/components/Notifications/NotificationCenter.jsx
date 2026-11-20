@@ -20,6 +20,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     const [isOpen, setIsOpen] = useState(false);
     const [progreso, setProgreso] = useState({});
     const [progresoDetalles, setProgresoDetalles] = useState({});
+    const [materiasPlan, setMateriasPlan] = useState([]);
     const [readIds, setReadIds] = useState(() => {
         try {
             const raw = localStorage.getItem(READ_STORAGE_KEY);
@@ -53,10 +54,17 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
         };
     }, [activePlan, isOpen]);
 
+    useEffect(() => {
+        let active = true;
+        planService.getPlanByNumber(activePlan).then((planData) => {
+            if (active) setMateriasPlan(planData?.materias || []);
+        });
+        return () => { active = false; };
+    }, [activePlan]);
+
     const notificaciones = useMemo(() => {
         const list = [];
-        const planData = planService.getPlanByNumber(activePlan);
-        const materias = planData?.materias || [];
+        const materias = materiasPlan;
 
         const disponibles = materias.filter(m => progreso[m.codigo] === 'Disponible').length;
         const regulares = materias.filter(m => progreso[m.codigo] === 'Regular');
@@ -140,7 +148,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
         }
 
         return list;
-    }, [activePlan, progreso, progresoDetalles, isAuthenticated, canSimulateTransition, transitionInfo]);
+    }, [activePlan, materiasPlan, progreso, progresoDetalles, isAuthenticated, canSimulateTransition, transitionInfo]);
 
     const unreadCount = useMemo(
         () => notificaciones.filter(n => !readIds.includes(n.id)).length,
