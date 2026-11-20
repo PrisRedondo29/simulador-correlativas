@@ -2,17 +2,17 @@ import { auth, db } from './firebase';
 import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { mapFirebaseError } from '../utils/errorCodes';
-import storageRepository from './storageRepository';
 
 const provider = new GoogleAuthProvider();
 
 // ─── Schema del documento de usuario ─────────────────────────────────────────
-// Solo almacenamos lo estrictamente necesario. Nunca guardamos tokens,
-// contraseñas ni información sensible del objeto User de Firebase.
+// Solo almacenamos el perfil inicial. Los datos académicos nunca se transfieren
+// automáticamente al registrar una cuenta para evitar fugas entre cuentas en
+// dispositivos compartidos; la conciliación segura ocurre en AuthContext.
 const SCHEMA_VERSION = 1;
 
 /**
- * Construye el documento de usuario para Firestore.
+ * Construye el documento inicial de perfil de usuario para Firestore.
  * Existe como función separada para facilitar futuras migraciones de schema.
  *
  * @param {import('firebase/auth').User} user
@@ -26,46 +26,8 @@ const buildUserDoc = (user) => ({
     materiasAprobadas: [],
     createdAt: serverTimestamp(),
     schemaVersion: SCHEMA_VERSION,
+    syncRevision: 0,
 });
-
-/**
- * Extrae progreso local significativo del localStorage para subir a la nube
- * cuando un usuario nuevo se registra (migración de invitado a cuenta).
- * @returns {Record<string, Record<string, string>> | null}
- */
-const getMeaningfulLocalProgress = () => {
-    if (typeof localStorage === 'undefined') return null;
-
-    /** @type {Record<string, Record<string, string>>} */
-    const localData = {};
-    let hasMeaningfulData = false;
-
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('progreso+')) {
-            const plan = key.split('+')[1];
-            const raw = localStorage.getItem(key);
-            if (!plan || !raw) continue;
-
-            try {
-                const data = JSON.parse(raw);
-                if (!data || typeof data !== 'object') continue;
-                localData[plan] = data;
-                if (
-                    Object.values(data).some((s) =>
-                        ['Aprobado', 'Regular', 'Cursando', 'Promocionado'].includes(String(s)),
-                    )
-                ) {
-                    hasMeaningfulData = true;
-                }
-            } catch {
-                // Ignorar entradas corruptas en localStorage
-            }
-        }
-    }
-
-    return hasMeaningfulData ? localData : null;
-};
 
 /**
  * @param {unknown} err
@@ -83,7 +45,7 @@ const extractErrorCode = (err) => {
 
 /**
  * Abre el popup de Google OAuth y autentica al usuario en Firebase Auth.
- * Si es la primera vez que ingresa, crea su documento en Firestore.
+ * Si es la primera vez que ingresa, crea únicamente su documento de perfil en Firestore.
  *
  * @returns {Promise<{ user: import('firebase/auth').User, firestoreWarning: string | null }>}
  * @throws {import('../utils/errorCodes').AppError} Si falla el paso de Auth
@@ -110,28 +72,7 @@ export const loginConGoogle = async () => {
         const userSnap = await getDoc(userRef);
 
         if (!userSnap.exists()) {
-            const newUserDoc = buildUserDoc(user);
-
-            const localProgress = getMeaningfulLocalProgress();
-            if (localProgress) {
-                /** @type {Record<string, unknown>} */
-                const progresoMap = {};
-                /** @type {Record<string, unknown>} */
-                const detallesMap = {};
-
-                for (const [plan, prog] of Object.entries(localProgress)) {
-                    progresoMap[plan] = prog;
-                    const detalles = storageRepository.getProgresoDetalles(plan, null);
-                    if (detalles) {
-                        detallesMap[plan] = detalles;
-                    }
-                }
-
-                newUserDoc.progreso = progresoMap;
-                newUserDoc.progresoDetalles = detallesMap;
-            }
-
-            await setDoc(userRef, newUserDoc);
+            await setDoc(userRef, buildUserDoc(user));
         }
     } catch (firestoreError) {
         const mapped = mapFirebaseError(firestoreError);

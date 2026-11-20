@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import ThemeSwitcher from './Shared/ThemeSwitcher';
 import LoginModal from './Auth/LoginModal';
 import NotificationCenter from './Notifications/NotificationCenter';
+import SyncStatusMenu from './Sync/SyncStatusMenu';
 import { DEFAULT_PLAN, getAcademicNavItems } from '../config/planPolicies';
 import { useActivePlan, usePlanCapabilities } from '../context/PlanContext';
 
@@ -367,9 +368,10 @@ export function TopUtilityBar({ plan }) {
                     title="Cambiar plan de estudios en Configuración"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-xs font-medium text-[#334155] dark:text-[#E2E8F0] hover:border-[#005A36]/40 dark:hover:border-[#4A9D68]/50 transition-colors cursor-pointer"
                 >
-                    <i className="fa-solid fa-scroll text-[11px] text-[#005A36] dark:text-[#6EE7B7]" />
+                    <i className="fa-solid fa-scroll text-[11px] text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
                     <span>Plan {activePlan}</span>
                 </button>
+                <SyncStatusMenu plan={activePlan} variant="light-bar" />
                 <NotificationCenter plan={activePlan} variant="light-bar" />
             </div>
         </header>
@@ -456,6 +458,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                     >
                         Plan {activePlan}
                     </button>
+                    <SyncStatusMenu plan={activePlan} variant="dark-header" onSignInPress={onLoginOpen} />
                     <NotificationCenter plan={activePlan} variant="dark-header" />
                 </div>
             </header>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Button,
     Input,
@@ -25,9 +25,12 @@ export default function SettingsPage({ plan, setPlan }) {
         user,
         userData,
         loading,
-        getProgresoLocal,
         refetchUserData,
         signIn,
+        recoveryBackup,
+        restorePreviousBackup,
+        exportBackupJson,
+        importBackupJson,
     } = useAuth();
     const {
         career,
@@ -42,6 +45,7 @@ export default function SettingsPage({ plan, setPlan }) {
 
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
+    const importInputRef = useRef(null);
 
     useEffect(() => {
         if (userData?.config?.alias) {
@@ -81,29 +85,64 @@ export default function SettingsPage({ plan, setPlan }) {
     };
 
     const handleExport = () => {
-        const exportPlan = activePlan;
-        const rawProgreso = getProgresoLocal(exportPlan);
+        exportBackupJson(activePlan);
+        addToast({
+            title: 'Respaldo exportado',
+            description: 'Se descargó un archivo JSON con todos tus planes, notas, cursada y simulaciones.',
+            color: 'success',
+        });
+    };
 
-        const minifyProgreso = (prog) => Object.fromEntries(
-            Object.entries(prog || {}).filter(([, state]) =>
-                ['Aprobado', 'Regular', 'Cursado', 'Promocionado'].includes(state)
-            )
-        );
+    const handleImportFileChange = async (event) => {
+        const file = event.target.files?.[0];
+        event.target.value = '';
+        if (!file) return;
 
-        const fullData = {
-            plan: exportPlan,
-            timestamp: new Date().toISOString(),
-            progreso: minifyProgreso(rawProgreso),
-        };
+        try {
+            const rawText = await file.text();
+            const res = importBackupJson(rawText);
+            if (!res.ok) {
+                addToast({
+                    title: 'No se pudo importar',
+                    description: res.error || 'El archivo no corresponde a un respaldo válido.',
+                    color: 'danger',
+                });
+                return;
+            }
+            if (res.planActivo && setPlan) {
+                setPlan(res.planActivo);
+            }
+            addToast({
+                title: 'Respaldo importado',
+                description: res.backedUp
+                    ? 'Se restauraron tus datos y se guardó una copia previa de seguridad.'
+                    : 'Se cargaron los datos del archivo JSON correctamente.',
+                color: 'success',
+            });
+        } catch {
+            addToast({
+                title: 'Error de lectura',
+                description: 'No se pudo leer el archivo seleccionado.',
+                color: 'danger',
+            });
+        }
+    };
 
-        const blob = new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `progreso_unlu_${exportPlan}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        addToast({ title: 'Exportado', description: `Se descargó el respaldo del Plan ${exportPlan}.`, color: 'success' });
+    const handleRestorePreviousBackup = () => {
+        const res = restorePreviousBackup();
+        if (res.ok) {
+            addToast({
+                title: 'Copia restaurada',
+                description: 'Se recuperó el estado anterior a la última sobrescritura.',
+                color: 'success',
+            });
+        } else {
+            addToast({
+                title: 'Aviso',
+                description: res.message || 'No hay una copia previa disponible.',
+                color: 'warning',
+            });
+        }
     };
 
     if (loading) return null;
@@ -389,17 +428,58 @@ export default function SettingsPage({ plan, setPlan }) {
                     <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
                     <CardBody className="px-5 pb-5 pt-2 flex flex-col justify-between gap-3">
                         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                            Exportá un archivo JSON con las materias aprobadas, regulares y en curso registradas en el Plan {activePlan}.
+                            Exportá o importá un respaldo portable en JSON con todos tus planes, notas, regularidades, Mi Cursada y simulaciones.
                         </p>
-                        <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={handleExport}
-                            className="font-semibold text-xs h-9 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#1E293B] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#2A3540] self-start px-4"
-                            startContent={<i className="fa-solid fa-download text-xs text-[#005A36] dark:text-[#6EE7B7]" />}
-                        >
-                            Exportar avance (JSON)
-                        </Button>
+
+                        <label htmlFor="import-backup-json" className="sr-only">
+                            Seleccionar archivo JSON de respaldo
+                        </label>
+                        <input
+                            ref={importInputRef}
+                            id="import-backup-json"
+                            type="file"
+                            accept="application/json,.json"
+                            tabIndex={-1}
+                            className="sr-only"
+                            onChange={handleImportFileChange}
+                        />
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={handleExport}
+                                className="font-semibold text-xs h-9 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#1E293B] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#2A3540] px-4"
+                                startContent={<i className="fa-solid fa-download text-xs text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />}
+                            >
+                                Exportar respaldo (JSON)
+                            </Button>
+
+                            <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={() => importInputRef.current?.click()}
+                                className="font-semibold text-xs h-9 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#1E293B] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#2A3540] px-4"
+                                startContent={<i className="fa-solid fa-upload text-xs text-[#475569] dark:text-[#CBD5E1]" aria-hidden="true" />}
+                            >
+                                Importar JSON
+                            </Button>
+                        </div>
+
+                        {recoveryBackup && (
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#F1F5F9] dark:border-[#2A3540]">
+                                <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                    Copia automática disponible ({new Date(recoveryBackup.savedAt).toLocaleDateString('es-AR')})
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleRestorePreviousBackup}
+                                    className="text-xs font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline cursor-pointer shrink-0"
+                                >
+                                    Restaurar copia
+                                </button>
+                            </div>
+                        )}
                     </CardBody>
                 </Card>
             </div>
