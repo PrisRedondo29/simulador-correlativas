@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Simulador de Correlativas UNLu">
+  <defs>
+    <linearGradient id="unlu-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#006B41"/>
+      <stop offset="100%" stop-color="#004D2E"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#unlu-bg)"/>
+  <!-- Subtle institutional inner frame -->
+  <rect x="28" y="28" width="456" height="456" rx="88" fill="none" stroke="#FFFFFF" stroke-opacity="0.14" stroke-width="4"/>
+  <!-- Graduation cap (mortarboard) -->
+  <polygon points="256,112 404,182 256,252 108,182" fill="#FFFFFF"/>
+  <path d="M168,224 L168,284 C168,308 207,326 256,326 C305,326 344,308 344,284 L344,224 L256,266 Z" fill="#FFFFFF" fill-opacity="0.92"/>
+  <!-- Tassel in warm academic gold -->
+  <line x1="382" y1="194" x2="382" y2="274" stroke="#FCD34D" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="382" cy="284" r="14" fill="#FCD34D"/>
+  <!-- Minimalist 3-node correlatives progression path -->
+  <line x1="156" y1="382" x2="256" y2="382" stroke="#86EFAC" stroke-width="10" stroke-linecap="round"/>
+  <line x1="256" y1="382" x2="356" y2="382" stroke="#86EFAC" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="156" cy="382" r="18" fill="#FFFFFF"/>
+  <circle cx="256" cy="382" r="18" fill="#86EFAC"/>
+  <circle cx="356" cy="382" r="18" fill="#FCD34D"/>
+</svg>

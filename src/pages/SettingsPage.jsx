@@ -19,6 +19,7 @@ import { DEFAULT_PLAN } from '../config/planPolicies';
 import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
 import { trackSeleccionCarrera } from '../services/analyticsService';
+import usePwaInstall from '../hooks/usePwaInstall';
 
 export default function SettingsPage({ plan, setPlan }) {
     const {
@@ -46,6 +47,7 @@ export default function SettingsPage({ plan, setPlan }) {
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
     const importInputRef = useRef(null);
+    const { canInstall, isInstalling, triggerInstall } = usePwaInstall();
 
     useEffect(() => {
         if (userData?.config?.alias) {
@@ -477,6 +479,38 @@ export default function SettingsPage({ plan, setPlan }) {
                                     className="text-xs font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline cursor-pointer shrink-0"
                                 >
                                     Restaurar copia
+                                </button>
+                            </div>
+                        )}
+
+                        {canInstall && (
+                            <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#F1F5F9] dark:border-[#2A3540]">
+                                <div className="min-w-0">
+                                    <p className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                                        Aplicación instalable offline
+                                    </p>
+                                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                        Usá el portal como app independiente sin conexión.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    aria-disabled={isInstalling ? 'true' : undefined}
+                                    onClick={async () => {
+                                        if (isInstalling) return;
+                                        const res = await triggerInstall();
+                                        if (res.outcome === 'accepted') {
+                                            addToast({
+                                                title: 'Aplicación instalada',
+                                                description: 'Ya podés abrir el simulador desde tu pantalla de inicio.',
+                                                color: 'success',
+                                            });
+                                        }
+                                    }}
+                                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 h-8 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38] hover:opacity-90 cursor-pointer shrink-0 aria-disabled:opacity-60"
+                                >
+                                    <i className="fa-solid fa-mobile-screen-button text-[11px]" aria-hidden="true" />
+                                    Instalar app
                                 </button>
                             </div>
                         )}

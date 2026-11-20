@@ -13,6 +13,7 @@ import storageRepository, { STORAGE_KEYS } from './services/storageRepository';
 
 const Footer = lazy(() => import('./components/Footer'));
 const SyncModal = lazy(() => import('./components/SyncModal'));
+const PwaUpdatePrompt = lazy(() => import('./components/Pwa/PwaUpdatePrompt'));
 
 function AppContent() {
     const { isCriticalError } = useAuth();
@@ -60,6 +61,7 @@ function App() {
                         <AutoScrollTop />
                         <Suspense fallback={null}>
                             <SyncModal />
+                            <PwaUpdatePrompt />
                         </Suspense>
                         <AppContent />
                     </BrowserRouter>

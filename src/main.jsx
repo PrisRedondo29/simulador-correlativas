@@ -18,10 +18,10 @@ createRoot(document.getElementById('root')).render(
   <HeroUIProvider>
     <ToastProvider placement="bottom-right" maxVisibleToasts={1} />
     <NextThemesProvider attribute="class" defaultTheme='light' themes={['light', 'dark']} enableSystem={false}>
-      {/* Esta etiqueta main es la clave para que pinte todo el fondo y cambie el color del texto base */}
-      <main className="text-foreground bg-background min-h-screen">
+      {/* Contenedor raíz de tema; el landmark <main> único vive dentro de App.jsx */}
+      <div className="text-foreground bg-background min-h-screen">
         <App />
-      </main>
+      </div>
     </NextThemesProvider>
   </HeroUIProvider>
 )
