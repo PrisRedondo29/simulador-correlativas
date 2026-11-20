@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { usePlanCapabilities } from '../../context/PlanContext';
 
 function HeaderEquivalencias({
+    sourcePlan,
+    targetPlan,
     progresoViejo,
     progresoNuevo,
     totalMaterias,
@@ -18,16 +20,18 @@ function HeaderEquivalencias({
 
     const horasDiferencia = Math.abs(restantesViejo - restantesNuevo);
     const esMasEficiente = restantesNuevo < restantesViejo;
+    const origenLabel = sourcePlan ? `Plan ${sourcePlan}` : 'Plan origen';
+    const destinoLabel = targetPlan ? `Plan ${targetPlan}` : 'Plan destino';
 
     return (
         <header className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
                 <div className="space-y-1">
                     <h1 className="text-2xl sm:text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">
-                        Equivalencias <span className="text-[#005A36] dark:text-[#6EE7B7]">Plan 17.14</span>
+                        Equivalencias <span className="text-[#005A36] dark:text-[#6EE7B7]">{destinoLabel}</span>
                     </h1>
                     <p className="text-[#64748B] dark:text-[#94A3B8] text-xs sm:text-sm max-w-2xl">
-                        Mapeo oficial desde Plan 17.13 hacia Plan 17.14.
+                        Mapeo oficial desde {origenLabel} hacia {destinoLabel}.
                         {canSimulateTransition && transitionInfo && (
                             <>
                                 {' '}
@@ -60,19 +64,19 @@ function HeaderEquivalencias({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Plan 17.13 */}
+                {/* Plan Origen */}
                 <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
                     <CardBody className="gap-2 p-3.5 sm:p-4">
                         <div className="flex justify-between items-center">
                             <span className="text-xs font-semibold text-[#475569] dark:text-[#CBD5E1]">
-                                Plan 17.13 (Origen)
+                                {origenLabel} (Origen)
                             </span>
                             <span className="text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums">
                                 {progresoViejo}%
                             </span>
                         </div>
                         <Progress
-                            aria-label="Progreso Plan 17.13"
+                            aria-label={`Progreso ${origenLabel}`}
                             value={progresoViejo}
                             size="sm"
                             classNames={{
@@ -87,19 +91,19 @@ function HeaderEquivalencias({
                     </CardBody>
                 </Card>
 
-                {/* Plan 17.14 */}
+                {/* Plan Destino */}
                 <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#A7F3D0] dark:border-[#1E4D38] rounded-2xl">
                     <CardBody className="gap-2 p-3.5 sm:p-4">
                         <div className="flex justify-between items-center">
                             <span className="text-xs font-semibold text-[#005A36] dark:text-[#86EFAC]">
-                                Plan 17.14 (Destino)
+                                {destinoLabel} (Destino)
                             </span>
                             <span className="text-sm font-bold text-[#005A36] dark:text-[#86EFAC] tabular-nums">
                                 {progresoNuevo}%
                             </span>
                         </div>
                         <Progress
-                            aria-label="Progreso Plan 17.14"
+                            aria-label={`Progreso ${destinoLabel}`}
                             value={progresoNuevo}
                             size="sm"
                             classNames={{

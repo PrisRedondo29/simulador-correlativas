@@ -73,7 +73,7 @@ export function estrategiaUltimoIntentoFinal({ activePlan, materias = [], progre
 /**
  * 3. Alerta de transición de plan (solo si el plan activo tiene la capacidad habilitada).
  */
-export function estrategiaTransicionPlan({ activePlan, canSimulateTransition, transitionInfo }) {
+export function estrategiaTransicionPlan({ activePlan, careerShortName, canSimulateTransition, transitionInfo }) {
     if (!canSimulateTransition || !transitionInfo) return null;
 
     return {
@@ -83,7 +83,7 @@ export function estrategiaTransicionPlan({ activePlan, canSimulateTransition, tr
         title: `Transición de Plan (${transitionInfo.shortBadge})`,
         description: `Evaluá si ya te corresponde pasar del Plan ${activePlan} al Plan ${transitionInfo.targetPlan}.`,
         path: transitionInfo.route,
-        time: 'UNLu LSI',
+        time: careerShortName ? `UNLu ${careerShortName}` : 'UNLu',
     };
 }
 

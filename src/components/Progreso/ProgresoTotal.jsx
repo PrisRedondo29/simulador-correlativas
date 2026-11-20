@@ -30,7 +30,7 @@ import { usePlanCapabilities } from "../../context/PlanContext";
  * tres indicadores secundarios sin duplicar información.
  */
 export default function ProgresoTotal({ carrera, plan, kpis }) {
-  const { canSimulateTransition, transitionInfo } = usePlanCapabilities();
+  const { policy, canSimulateTransition, transitionInfo } = usePlanCapabilities();
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const [showStickyBar, setShowStickyBar] = useState(false);
 
@@ -105,7 +105,7 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
         <div className="space-y-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs sm:text-sm font-medium text-[#64748B] dark:text-[#94A3B8] truncate">
-              {carrera || "Licenciatura en Sistemas de Información"}
+              {carrera || policy.carrera}
             </span>
             <Chip
               size="sm"

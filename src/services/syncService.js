@@ -2,6 +2,39 @@ import { saveUserProgreso, getUserData } from './dbService';
 import storageRepository from './storageRepository';
 
 /**
+ * Aplana mapas anidados que Firestore pudo generar cuando un ID de plan contiene punto
+ * (ej: { "17": { "14": { "11071": "Aprobado" } } } -> { "17.14": { "11071": "Aprobado" } }).
+ * Funciona de forma genérica para cualquier prefijo de carrera (17.14, 20.08, etc.).
+ */
+export function normalizeNestedPlanMap(rawMap = {}) {
+    if (!rawMap || typeof rawMap !== 'object') return {};
+
+    const normalized = { ...rawMap };
+
+    for (const [key, value] of Object.entries(rawMap)) {
+        if (!/^\d+$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) {
+            continue;
+        }
+
+        const nestedNumericEntries = Object.entries(value).filter(
+            ([subKey, subVal]) => /^\d+$/.test(subKey) && subVal && typeof subVal === 'object',
+        );
+
+        if (nestedNumericEntries.length > 0) {
+            for (const [subKey, subVal] of nestedNumericEntries) {
+                const flatPlanKey = `${key}.${subKey}`;
+                if (!normalized[flatPlanKey]) {
+                    normalized[flatPlanKey] = subVal;
+                }
+            }
+            delete normalized[key];
+        }
+    }
+
+    return normalized;
+}
+
+/**
  * Sube el progreso actual de un plan a la nube de forma manual.
  * Se asegura de leer tanto el progreso (estados) como los detalles (notas, fechas)
  * desde storageRepository antes de enviarlos.
@@ -12,14 +45,13 @@ export const uploadPlanProgress = async (uid, plan) => {
         const detalles = storageRepository.getProgresoDetalles(plan, {});
 
         if (!progreso) {
-            throw new Error("No hay datos locales para este plan.");
+            throw new Error('No hay datos locales para este plan.');
         }
 
-        // Se pasa tanto el progreso como los detalles al servicio de base de datos.
         await saveUserProgreso(uid, plan, progreso, detalles || {});
         return true;
     } catch (error) {
-        if (import.meta.env.DEV) console.error("Error al subir datos:", error);
+        if (import.meta.env.DEV) console.error('Error al subir datos:', error);
         throw error;
     }
 };
@@ -33,13 +65,12 @@ export const downloadAllProgress = async (uid) => {
         const cloudData = await getUserData(uid);
         if (!cloudData) return false;
 
-        let progreso = cloudData.progreso || {};
-        let detalles = cloudData.progresoDetalles || {};
-        let simulaciones = cloudData.simulaciones || {};
+        let progreso = normalizeNestedPlanMap(cloudData.progreso || {});
+        let detalles = normalizeNestedPlanMap(cloudData.progresoDetalles || {});
+        let simulaciones = normalizeNestedPlanMap(cloudData.simulaciones || {});
 
         // Normalización: Extraemos datos de llaves con puntos literales (ej: "progreso.17.14")
-        // y también intentamos aplanar mapas anidados que pudieron crearse por el bug de updateDoc
-        Object.keys(cloudData).forEach(key => {
+        Object.keys(cloudData).forEach((key) => {
             if (key.startsWith('progreso.')) {
                 const plan = key.substring('progreso.'.length);
                 if (!progreso[plan]) progreso[plan] = cloudData[key];
@@ -54,30 +85,20 @@ export const downloadAllProgress = async (uid) => {
             }
         });
 
-        // Caso especial: si el bug de updateDoc creó { progreso: { "17": { "14": ... } } }
-        // Necesitamos reconstruir "17.14" en el mapa plano
-        if (progreso['17'] && typeof progreso['17'] === 'object' && progreso['17']['14']) {
-            if (!progreso['17.14']) progreso['17.14'] = progreso['17']['14'];
-        }
-        if (detalles['17'] && typeof detalles['17'] === 'object' && detalles['17']['14']) {
-            if (!detalles['17.14']) detalles['17.14'] = detalles['17']['14'];
-        }
+        if (import.meta.env.DEV) console.log('🛠️ Progreso procesado para sincronización:', { progreso, detalles });
 
-        if (import.meta.env.DEV) console.log("🛠️ Progreso procesado para sincronización:", { progreso, detalles });
-
-        const hasAnyData = Object.keys(progreso).length > 0 || 
-                           Object.keys(detalles).length > 0 || 
-                           Object.keys(simulaciones).length > 0 || 
-                           cloudData.config;
+        const hasAnyData =
+            Object.keys(progreso).length > 0 ||
+            Object.keys(detalles).length > 0 ||
+            Object.keys(simulaciones).length > 0 ||
+            cloudData.config;
 
         if (!hasAnyData) {
             return false;
         }
 
-        // Limpiamos cualquier progreso local viejo para evitar mezclas indeseadas.
         storageRepository.clearAcademicCache();
 
-        // Escribimos los datos de la nube en el repositorio local (modo silent para emitir 1 sola hidratación al final).
         for (const [plan, data] of Object.entries(progreso)) {
             if (data && typeof data === 'object') {
                 storageRepository.setProgreso(plan, data, { silent: true });
@@ -104,13 +125,12 @@ export const downloadAllProgress = async (uid) => {
             storageRepository.setPlanActivo(cloudData.config.planActivo, { silent: true });
         }
 
-        // Avisamos a la UI que los datos han cambiado y necesita recargarse.
         window.dispatchEvent(new Event('progress-hydrated'));
         window.dispatchEvent(new Event('storage'));
-        
+
         return cloudData;
     } catch (error) {
-        if (import.meta.env.DEV) console.error("Error al descargar datos:", error);
+        if (import.meta.env.DEV) console.error('Error al descargar datos:', error);
         throw error;
     }
 };

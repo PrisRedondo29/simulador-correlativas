@@ -5,7 +5,7 @@ import tituloIntermedioUtils from './tituloIntermedioUtils';
 const materias1713 = sistemasData.find((p) => p.plan_numero === '17.13')?.materias || [];
 const materias1714 = sistemasData.find((p) => p.plan_numero === '17.14')?.materias || [];
 
-describe('tituloIntermedioUtils - Título Intermedio (Analista)', () => {
+describe('tituloIntermedioUtils - Título Intermedio declarativo por plan', () => {
     it('filtra hasta 6° cuatrimestre en Plan 17.14 y hasta 7° en Plan 17.13 sin incluir Tesina', () => {
         const intermedio14 = tituloIntermedioUtils.getMateriasIntermedio('17.14', materias1714);
         const intermedio13 = tituloIntermedioUtils.getMateriasIntermedio('17.13', materias1713);
@@ -31,5 +31,44 @@ describe('tituloIntermedioUtils - Título Intermedio (Analista)', () => {
         expect(res.completadas).toBe(2);
         expect(res.totales).toBe(intermedio14.length);
         expect(res.porcentaje).toBe(Math.round((2 * 100) / intermedio14.length));
+    });
+
+    it('soporta reglas declarativas de otras carreras (por cuatrimestre, por lista de códigos o sin título intermedio)', () => {
+        const customRegistry = [
+            {
+                id: 'demo',
+                planPrefix: '30',
+                name: 'Licenciatura Demo',
+                shortName: 'Demo',
+                available: true,
+                plans: [
+                    {
+                        planNumero: '30.01',
+                        features: { intermediateTitle: true },
+                        intermediateTitle: { name: 'Técnico Universitario', codigos: ['D1', 'D3'] },
+                    },
+                    {
+                        planNumero: '30.02',
+                        features: { intermediateTitle: false },
+                        intermediateTitle: null,
+                    },
+                ],
+            },
+        ];
+
+        const materiasDemo = [
+            { codigo: 'D1', cuatrimestre: 1 },
+            { codigo: 'D2', cuatrimestre: 2 },
+            { codigo: 'D3', cuatrimestre: 5 },
+            { codigo: 'D4', cuatrimestre: 6, tesis: true },
+        ];
+
+        expect(tituloIntermedioUtils.getTituloIntermedioNombre('30.01', customRegistry)).toBe('Técnico Universitario');
+        expect(
+            tituloIntermedioUtils.getMateriasIntermedio('30.01', materiasDemo, customRegistry).map((m) => m.codigo),
+        ).toEqual(['D1', 'D3']);
+
+        expect(tituloIntermedioUtils.getTituloIntermedioNombre('30.02', customRegistry)).toBe('');
+        expect(tituloIntermedioUtils.getMateriasIntermedio('30.02', materiasDemo, customRegistry)).toEqual([]);
     });
 });

@@ -14,8 +14,8 @@ import { useAuth } from '../context/AuthContext';
 import ThemeSwitcher from './Shared/ThemeSwitcher';
 import LoginModal from './Auth/LoginModal';
 import NotificationCenter from './Notifications/NotificationCenter';
-import { getAcademicNavItems } from '../config/planPolicies';
-import { useActivePlan } from '../context/PlanContext';
+import { DEFAULT_PLAN, getAcademicNavItems } from '../config/planPolicies';
+import { useActivePlan, usePlanCapabilities } from '../context/PlanContext';
 
 const ROUTE_TITLES = {
     '/': 'Inicio',
@@ -343,8 +343,9 @@ SidebarFooter.propTypes = {
 export function TopUtilityBar({ plan }) {
     const location = useLocation();
     const navigate = useNavigate();
+    const { policy } = usePlanCapabilities();
     const pageTitle = ROUTE_TITLES[location.pathname] || 'Portal Estudiantil';
-    const activePlan = plan || '17.14';
+    const activePlan = plan || DEFAULT_PLAN;
 
     return (
         <header className="hidden lg:flex h-14 sticky top-0 z-30 bg-white/95 dark:bg-[#161D24]/95 border-b border-[#E2E8F0] dark:border-[#2A3540] px-8 items-center justify-between">
@@ -354,7 +355,7 @@ export function TopUtilityBar({ plan }) {
                 </span>
                 <span className="text-[#CBD5E1] dark:text-[#3B4958]" aria-hidden="true">/</span>
                 <span className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] truncate">
-                    Licenciatura en Sistemas de Información · UNLu
+                    {policy.carrera} · UNLu
                 </span>
             </div>
 
@@ -383,10 +384,11 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
     const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onOpenChange: onDrawerOpenChange } = useDisclosure();
     const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
     const { signIn, firestoreWarning, clearFirestoreWarning } = useAuth();
+    const { policy } = usePlanCapabilities();
     const navigate = useNavigate();
     const location = useLocation();
     const pageTitle = ROUTE_TITLES[location.pathname] || 'Portal Estudiantil';
-    const activePlan = plan || '17.14';
+    const activePlan = plan || DEFAULT_PLAN;
 
     const handleSignIn = async (rememberMe) => {
         try {
@@ -438,7 +440,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                                 {pageTitle}
                             </span>
                             <span className="text-[10px] text-white/75 truncate leading-tight">
-                                UNLu · LSI
+                                UNLu · {policy.careerShortName}
                             </span>
                         </div>
                     </button>

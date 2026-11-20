@@ -1,17 +1,14 @@
-import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Radio, RadioGroup, Select, SelectItem } from '@heroui/react'
+import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Select, SelectItem } from '@heroui/react'
 import selectUtils from '../../../utils/Simulador/selectUtils.js'
+import { DEFAULT_PLAN } from '../../../config/planPolicies'
 import { useState, useEffect } from 'react'
 
 function ConfiguracionSimulador({ isOpen, onOpenChange, onClose, setAnio, setCuatri, setPlan, initialPlan }) {
 
-    const [confiPlan, setConfiPlan] = useState(initialPlan || "17.14")
+    const [selectedPlan, setSelectedPlan] = useState(null)
     const [confiAnio, setConfiAnio] = useState("2026")
     const [confiCuatri, setConfiCuatri] = useState("1")
-
-    // Update internal state if initialPlan changes
-    useEffect(() => {
-        if (initialPlan) setConfiPlan(initialPlan);
-    }, [initialPlan]);
+    const confiPlan = selectedPlan || initialPlan || DEFAULT_PLAN
 
     const handleConfigurar = () => {
         setAnio(confiAnio)
@@ -97,7 +94,7 @@ function ConfiguracionSimulador({ isOpen, onOpenChange, onClose, setAnio, setCua
                                         aria-label="Seleccionar Plan de estudio"
                                         variant="flat"
                                         selectedKeys={[confiPlan]}
-                                        onSelectionChange={(keys) => setConfiPlan(Array.from(keys)[0])}
+                                        onSelectionChange={(keys) => setSelectedPlan(Array.from(keys)[0])}
                                         classNames={{
                                         trigger: "bg-default-50 border border-default-100 rounded-2xl shadow-sm h-14",
                                         label: "text-foreground/80 font-medium"

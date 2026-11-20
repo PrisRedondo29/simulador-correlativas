@@ -1,3 +1,5 @@
+import { getAvailableCareers, getAvailablePlans } from '../../config/careersRegistry';
+
 const generateYears = () => {
     const years = [];
     for (let i = 1980; i <= 2035; i++) {
@@ -9,17 +11,21 @@ const generateYears = () => {
 const anios = generateYears();
 
 const cuatris = [
-    { key: "1", label: "1° Cuatrimestre" },
-    { key: "2", label: "2° Cuatrimestre" },
-]
+    { key: '1', label: '1° Cuatrimestre' },
+    { key: '2', label: '2° Cuatrimestre' },
+];
 
-const plans = [
-    { key: "17.14", label: "17.14" },
-    { key: "17.13", label: "17.13" },
-]
+const multipleCareers = getAvailableCareers().length > 1;
+
+const plans = getAvailablePlans().map((plan) => ({
+    key: plan.planNumero,
+    label: multipleCareers ? `${plan.careerShortName} · Plan ${plan.planNumero}` : plan.planNumero,
+    careerId: plan.careerId,
+    carrera: plan.carrera,
+}));
 
 export default {
     anios,
     cuatris,
-    plans
-}
+    plans,
+};

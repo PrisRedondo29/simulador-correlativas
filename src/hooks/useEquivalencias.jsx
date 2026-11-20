@@ -1,54 +1,81 @@
 import { useState, useEffect, useMemo } from 'react';
 import planService from '../services/planService';
-import storageRepository from '../services/storageRepository';
-import equivalenciasData from '../data/equivalencias.json';
+import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
+import { DEFAULT_PLAN, getPlanEquivalenciasMeta } from '../config/planPolicies';
+import { usePlanCapabilities } from '../context/PlanContext';
 import materiasUtils from '../utils/Progreso/materiasUtils';
 
+const esAprobadaConFinal = (estado) => estado === 'Aprobado' || estado === 'Promocionado';
+
 export const useEquivalencias = () => {
+    const { plan, equivalenciasInfo } = usePlanCapabilities();
+    const activePlan = plan || DEFAULT_PLAN;
+    const eqMeta = equivalenciasInfo || getPlanEquivalenciasMeta(activePlan);
+    const sourcePlan = eqMeta?.sourcePlan || null;
+    const targetPlan = eqMeta?.targetPlan || null;
+
     const [planViejo, setPlanViejo] = useState(null);
     const [planNuevo, setPlanNuevo] = useState(null);
-
-    const [progreso, setProgreso] = useState(() => storageRepository.getProgreso('17.13', {}));
+    const [equivalenciasData, setEquivalenciasData] = useState({});
+    const [progreso, setProgreso] = useState(() =>
+        sourcePlan ? storageRepository.getProgreso(sourcePlan, {}) : {},
+    );
 
     const [filtro, setFiltro] = useState('todas');
     const [busqueda, setBusqueda] = useState('');
 
     useEffect(() => {
+        if (!sourcePlan) return undefined;
+
+        const syncProgreso = () => {
+            const saved = storageRepository.getProgreso(sourcePlan, null);
+            if (saved) setProgreso(saved);
+        };
+
+        return subscribeStorageChanges(syncProgreso);
+    }, [sourcePlan]);
+
+    useEffect(() => {
+        if (!sourcePlan || !targetPlan) return undefined;
+
         let active = true;
         Promise.all([
-            planService.getPlanByNumber("17.13"),
-            planService.getPlanByNumber("17.14"),
-        ]).then(([viejo, nuevo]) => {
+            planService.getPlanByNumber(sourcePlan),
+            planService.getPlanByNumber(targetPlan),
+            planService.getEquivalenciasByPlan(activePlan),
+        ]).then(([viejo, nuevo, eqMap]) => {
             if (!active) return;
             setPlanViejo(viejo);
             setPlanNuevo(nuevo);
+            setEquivalenciasData(eqMap || {});
 
-            const saved = storageRepository.getProgreso('17.13', null);
+            const saved = storageRepository.getProgreso(sourcePlan, null);
             if (saved) {
                 setProgreso(saved);
                 return;
             }
             if (viejo?.materias) {
                 const initial = {};
-                viejo.materias.forEach(m => {
+                viejo.materias.forEach((m) => {
                     initial[m.codigo] = m.tesis ? materiasUtils.bloquear : materiasUtils.estadosPosibles[0];
                 });
                 setProgreso(initial);
             }
         });
 
-        return () => { active = false; };
-    }, []);
+        return () => {
+            active = false;
+        };
+    }, [activePlan, sourcePlan, targetPlan]);
 
-    // NUEVO MOTOR DE MAPEO: Grupos de Equivalencia (Many-to-One y One-to-One)
+    // Motor de mapeo: Grupos de Equivalencia (Many-to-One y One-to-One)
     const gruposEquivalencia = useMemo(() => {
         if (!planViejo || !planNuevo) return [];
 
-        // 1. Mapear todas las materias del Plan Nuevo a sus orígenes
-        const grupos = planNuevo.materias.map(mNueva => {
+        const grupos = planNuevo.materias.map((mNueva) => {
             const codigosOrigen = equivalenciasData[mNueva.codigo] || [];
-            const materiasOrigen = planViejo.materias.filter(mVieja => 
-                codigosOrigen.includes(mVieja.codigo) || mVieja.codigo === mNueva.codigo
+            const materiasOrigen = planViejo.materias.filter(
+                (mVieja) => codigosOrigen.includes(mVieja.codigo) || mVieja.codigo === mNueva.codigo,
             );
 
             return {
@@ -56,89 +83,80 @@ export const useEquivalencias = () => {
                 materiaNueva: mNueva,
                 materiasViejas: materiasOrigen.length > 0 ? materiasOrigen : [],
                 esEquivalente: materiasOrigen.length > 0,
-                // AHORA: El orden lo dicta el Plan Nuevo
                 anio: mNueva.anio,
-                cuatrimestre: mNueva.cuatrimestre
+                cuatrimestre: mNueva.cuatrimestre,
             };
         });
 
-        // 2. Identificar materias del Plan Viejo que se quedaron huérfanas (sin equivalencia)
         const codigosViejosMapeados = new Set();
-        grupos.forEach(g => g.materiasViejas.forEach(m => codigosViejosMapeados.add(m.codigo)));
-        
+        grupos.forEach((g) => g.materiasViejas.forEach((m) => codigosViejosMapeados.add(m.codigo)));
+
         const huerfanas = planViejo.materias
-            .filter(m => !codigosViejosMapeados.has(m.codigo))
-            .map(mVieja => ({
+            .filter((m) => !codigosViejosMapeados.has(m.codigo))
+            .map((mVieja) => ({
                 id: `huerfana-${mVieja.codigo}`,
-                materiaNueva: { nombre: "Sin equivalente directo", codigo: "N/A", horas_totales: "0", horas_semanales: "0" },
+                materiaNueva: { nombre: 'Sin equivalente directo', codigo: 'N/A', horas_totales: '0', horas_semanales: '0' },
                 materiasViejas: [mVieja],
                 esEquivalente: false,
                 anio: mVieja.anio,
-                cuatrimestre: mVieja.cuatrimestre
+                cuatrimestre: mVieja.cuatrimestre,
             }));
 
         return [...grupos, ...huerfanas].sort((a, b) => {
-            if (a.anio !== b.anio) return parseInt(a.anio) - parseInt(b.anio);
-            return parseInt(a.cuatrimestre) - parseInt(b.cuatrimestre);
+            if (a.anio !== b.anio) return parseInt(a.anio, 10) - parseInt(b.anio, 10);
+            return parseInt(a.cuatrimestre, 10) - parseInt(b.cuatrimestre, 10);
         });
-    }, [planViejo, planNuevo]);
+    }, [planViejo, planNuevo, equivalenciasData]);
 
     const materiasFiltradas = useMemo(() => {
-        const normalize = (text) => 
-            text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        
+        const normalize = (text) =>
+            text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
         const searchNormalized = normalize(busqueda);
 
-        return gruposEquivalencia.filter(grupo => {
-            // Busqueda en cualquier materia vieja del grupo o en la nueva
-            const matchesBusqueda = 
-                normalize(grupo.materiaNueva.nombre).includes(searchNormalized) || 
-                grupo.materiasViejas.some(m => normalize(m.nombre).includes(searchNormalized) || m.codigo.includes(busqueda));
-            
-            // Para el filtro de estado, consideramos el estado del grupo (Equivalencia aceptada si TODAS están aprobadas)
-            const todasAprobadas = grupo.materiasViejas.length > 0 && 
-                grupo.materiasViejas.every(m => progreso[m.codigo] === materiasUtils.estadosPosibles[2]);
-            
+        return gruposEquivalencia.filter((grupo) => {
+            const matchesBusqueda =
+                normalize(grupo.materiaNueva.nombre).includes(searchNormalized) ||
+                grupo.materiasViejas.some(
+                    (m) => normalize(m.nombre).includes(searchNormalized) || m.codigo.includes(busqueda),
+                );
+
+            const todasAprobadas =
+                grupo.materiasViejas.length > 0 &&
+                grupo.materiasViejas.every((m) => esAprobadaConFinal(progreso[m.codigo]));
+
             if (filtro === 'aprobadas') return matchesBusqueda && todasAprobadas;
             if (filtro === 'pendientes') return matchesBusqueda && !todasAprobadas;
-            
+
             return matchesBusqueda;
         });
     }, [gruposEquivalencia, progreso, filtro, busqueda]);
 
-    // MOTOR DE CÁLCULO DE HORAS
+    // Motor de cálculo de horas
     const comparativaHoras = useMemo(() => {
         if (!planViejo || !planNuevo) return null;
 
-        // 1. Calcular Horas Plan Viejo
         let viejoTotales = 0;
         let viejoRestantes = 0;
-        planViejo.materias.forEach(m => {
-            const h = parseInt(m.horas_totales) || 0;
+        planViejo.materias.forEach((m) => {
+            const h = parseInt(m.horas_totales, 10) || 0;
             viejoTotales += h;
-            if (progreso[m.codigo] !== materiasUtils.estadosPosibles[2]) {
+            if (!esAprobadaConFinal(progreso[m.codigo])) {
                 viejoRestantes += h;
             }
         });
 
-        // 2. Calcular Horas Plan Nuevo (Considerando herencia de equivalencias compleja)
         let nuevoTotales = 0;
         let nuevoRestantes = 0;
 
-        planNuevo.materias.forEach(m => {
-            const h = parseInt(m.horas_totales) || 0;
+        planNuevo.materias.forEach((m) => {
+            const h = parseInt(m.horas_totales, 10) || 0;
             nuevoTotales += h;
 
             const equivs = equivalenciasData[m.codigo];
-            let estaAprobada = false;
-
-            if (equivs) {
-                // Si tiene equivalencias en el JSON, deben estar TODAS aprobadas en el plan viejo
-                estaAprobada = equivs.every(c => progreso[c] === materiasUtils.estadosPosibles[2]);
-            } else {
-                // Si no tiene equivalencia en JSON, buscamos por código directo
-                estaAprobada = progreso[m.codigo] === materiasUtils.estadosPosibles[2];
-            }
+            const estaAprobada = equivs
+                ? equivs.every((c) => esAprobadaConFinal(progreso[c]))
+                : esAprobadaConFinal(progreso[m.codigo]);
 
             if (!estaAprobada) {
                 nuevoRestantes += h;
@@ -147,13 +165,16 @@ export const useEquivalencias = () => {
 
         return {
             viejo: { totales: viejoTotales, restantes: viejoRestantes },
-            nuevo: { totales: nuevoTotales, restantes: nuevoRestantes }
+            nuevo: { totales: nuevoTotales, restantes: nuevoRestantes },
         };
-    }, [progreso, planViejo, planNuevo]);
+    }, [progreso, planViejo, planNuevo, equivalenciasData]);
 
     return {
         planViejo,
         planNuevo,
+        sourcePlan,
+        targetPlan,
+        equivalenciasMeta: eqMeta,
         progreso,
         materiasFiltradas,
         filtro,
@@ -162,13 +183,20 @@ export const useEquivalencias = () => {
         setBusqueda,
         comparativaHoras,
         stats: {
-            porcentajeViejo: comparativaHoras?.viejo.totales ? Math.round(((comparativaHoras.viejo.totales - comparativaHoras.viejo.restantes) * 100) / comparativaHoras.viejo.totales) : 0,
-            porcentajeNuevo: comparativaHoras?.nuevo.totales ? Math.round(((comparativaHoras.nuevo.totales - comparativaHoras.nuevo.restantes) * 100) / comparativaHoras.nuevo.totales) : 0,
+            porcentajeViejo: comparativaHoras?.viejo.totales
+                ? Math.round(((comparativaHoras.viejo.totales - comparativaHoras.viejo.restantes) * 100) / comparativaHoras.viejo.totales)
+                : 0,
+            porcentajeNuevo: comparativaHoras?.nuevo.totales
+                ? Math.round(((comparativaHoras.nuevo.totales - comparativaHoras.nuevo.restantes) * 100) / comparativaHoras.nuevo.totales)
+                : 0,
             totalNuevas: planNuevo?.materias.length || 0,
-            aprobadasNuevas: planNuevo?.materias.filter(m => {
-                const equivs = equivalenciasData[m.codigo];
-                return equivs ? equivs.every(c => progreso[c] === materiasUtils.estadosPosibles[2]) : progreso[m.codigo] === materiasUtils.estadosPosibles[2];
-            }).length
-        }
+            aprobadasNuevas:
+                planNuevo?.materias.filter((m) => {
+                    const equivs = equivalenciasData[m.codigo];
+                    return equivs
+                        ? equivs.every((c) => esAprobadaConFinal(progreso[c]))
+                        : esAprobadaConFinal(progreso[m.codigo]);
+                }).length || 0,
+        },
     };
 };

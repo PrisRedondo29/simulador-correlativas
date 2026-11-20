@@ -36,7 +36,11 @@ const Rutas = ({ plan, setPlan }) => {
         },
         {
             path: '/equivalencias',
-            element: <Equivalencias />,
+            element: (
+                <PlanFeatureRoute feature="equivalencias">
+                    <Equivalencias />
+                </PlanFeatureRoute>
+            ),
         },
         {
             path: '/cambio-plan',

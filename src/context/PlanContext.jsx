@@ -4,7 +4,11 @@ import {
     getPlanPolicy,
     canUseFeature,
     getPlanTransitionMeta,
+    getPlanEquivalenciasMeta,
+    getIntermediateTitleConfig,
+    getCareerMeta,
 } from '../config/planPolicies';
+import { getAvailableCareers, getAvailablePlans } from '../config/careersRegistry';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 
 const PlanContext = createContext(null);
@@ -27,13 +31,22 @@ export function PlanProvider({ children }) {
 
     const value = useMemo(() => {
         const policy = getPlanPolicy(plan);
+        const career = getCareerMeta(plan);
+        const availableCareers = getAvailableCareers();
+        const availablePlans = getAvailablePlans();
+
         return {
             plan,
             setPlan,
             policy,
+            career,
+            availableCareers,
+            availablePlans,
             can: (featureName) => canUseFeature(plan, featureName),
             canSimulateTransition: canUseFeature(plan, 'planTransition'),
             transitionInfo: getPlanTransitionMeta(plan),
+            equivalenciasInfo: getPlanEquivalenciasMeta(plan),
+            intermediateTitleInfo: getIntermediateTitleConfig(plan),
         };
     }, [plan, setPlan]);
 
@@ -58,8 +71,8 @@ export function useActivePlan() {
 }
 
 /**
- * Hook segregado de capacidades (ISP): expone únicamente permisos/metadatos
- * del plan activo sin acoplar componentes a localStorage ni reglas internas.
+ * Hook segregado de capacidades (ISP): expone únicamente permisos y metadatos
+ * del plan y carrera activos sin acoplar componentes a localStorage ni reglas internas.
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function usePlanCapabilities() {
@@ -70,8 +83,13 @@ export function usePlanCapabilities() {
     return {
         plan: ctx.plan,
         policy: ctx.policy,
+        career: ctx.career,
+        availableCareers: ctx.availableCareers,
+        availablePlans: ctx.availablePlans,
         can: ctx.can,
         canSimulateTransition: ctx.canSimulateTransition,
         transitionInfo: ctx.transitionInfo,
+        equivalenciasInfo: ctx.equivalenciasInfo,
+        intermediateTitleInfo: ctx.intermediateTitleInfo,
     };
 }

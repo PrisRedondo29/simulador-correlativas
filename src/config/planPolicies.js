@@ -1,91 +1,127 @@
 /**
  * Registro declarativo de políticas y capacidades por plan de estudios.
- * Sigue el Principio Abierto/Cerrado (OCP): para agregar o modificar reglas de un plan,
- * solo se actualiza este catálogo sin modificar páginas, navegación ni notificaciones.
+ * Delega el catálogo de carreras y planes en careersRegistry.js (Patrón Registry + OCP):
+ * para agregar o modificar reglas de una carrera o plan, basta actualizar careersRegistry.js
+ * sin modificar páginas, navegación ni notificaciones.
  */
 
-export const DEFAULT_PLAN = '17.14';
+import {
+    CAREERS_REGISTRY,
+    DEFAULT_CAREER_ID,
+    DEFAULT_PLAN,
+    getAvailableCareers,
+    getAvailablePlans,
+    getCareerById,
+    getCareerByPlan,
+    getPlanEntry,
+} from './careersRegistry';
 
-const DEFAULT_FALLBACK_POLICY = {
-    planNumero: null,
-    label: 'Sin plan',
-    statusLabel: 'Seleccionar plan',
-    carrera: 'Licenciatura en Sistemas de Información',
-    estimatedSubjects: 36,
-    features: {
-        planTransition: false,
-        equivalencias: true,
-        intermediateTitle: true,
-    },
-    transition: null,
-};
+export { DEFAULT_PLAN };
 
-export const PLAN_POLICIES = {
-    '17.13': {
-        planNumero: '17.13',
-        label: 'Plan 17.13',
-        statusLabel: 'Plan anterior',
-        carrera: 'Licenciatura en Sistemas de Información',
-        estimatedSubjects: 37,
-        features: {
-            planTransition: true,
-            equivalencias: true,
-            intermediateTitle: true,
-        },
-        transition: {
-            targetPlan: '17.14',
-            resolution: 'Res. HCS 89/2025',
-            shortBadge: 'Res. 89/25',
-            route: '/cambio-plan',
-        },
-    },
-    '17.14': {
-        planNumero: '17.14',
-        label: 'Plan 17.14',
-        statusLabel: 'Plan vigente',
-        carrera: 'Licenciatura en Sistemas de Información',
-        estimatedSubjects: 36,
+function buildUnselectedFallback(registry = CAREERS_REGISTRY) {
+    const defaultCareer =
+        getCareerById(DEFAULT_CAREER_ID, registry) ||
+        getAvailableCareers(registry)[0] ||
+        null;
+    const defaultPlan = defaultCareer?.defaultPlan
+        ? getPlanEntry(defaultCareer.defaultPlan, registry)
+        : null;
+
+    return {
+        planNumero: null,
+        label: 'Sin plan',
+        statusLabel: 'Seleccionar plan',
+        careerId: defaultCareer?.id || null,
+        carrera: defaultCareer?.name || 'Universidad Nacional de Luján',
+        careerShortName: defaultCareer?.shortName || 'UNLu',
+        planPrefix: defaultCareer?.planPrefix || null,
+        estimatedSubjects: defaultPlan?.estimatedSubjects || 36,
+        intermediateTitle: defaultPlan?.intermediateTitle || null,
         features: {
             planTransition: false,
-            equivalencias: true,
-            intermediateTitle: true,
+            equivalencias: Boolean(defaultPlan?.features?.equivalencias),
+            intermediateTitle: Boolean(defaultPlan?.features?.intermediateTitle),
         },
+        equivalencias: defaultPlan?.equivalencias || null,
         transition: null,
-    },
-};
-
-export function getPlanPolicy(plan) {
-    if (!plan) return DEFAULT_FALLBACK_POLICY;
-    return PLAN_POLICIES[plan] || {
-        ...DEFAULT_FALLBACK_POLICY,
-        planNumero: plan,
-        label: `Plan ${plan}`,
     };
 }
 
-export function canUseFeature(plan, featureName) {
-    const policy = getPlanPolicy(plan);
+export const PLAN_POLICIES = Object.fromEntries(
+    getAvailablePlans(CAREERS_REGISTRY).map((plan) => [plan.planNumero, plan]),
+);
+
+export function getPlanPolicy(plan, registry = CAREERS_REGISTRY) {
+    if (!plan) return buildUnselectedFallback(registry);
+
+    const entry = getPlanEntry(plan, registry);
+    if (entry) return entry;
+
+    const career = getCareerByPlan(plan, registry);
+    return {
+        planNumero: plan,
+        label: `Plan ${plan}`,
+        statusLabel: 'Plan personalizado',
+        careerId: career?.id || null,
+        carrera: career?.name || 'Universidad Nacional de Luján',
+        careerShortName: career?.shortName || 'UNLu',
+        planPrefix: career?.planPrefix || null,
+        estimatedSubjects: 36,
+        intermediateTitle: null,
+        features: {
+            planTransition: false,
+            equivalencias: false,
+            intermediateTitle: false,
+        },
+        equivalencias: null,
+        transition: null,
+    };
+}
+
+export function canUseFeature(plan, featureName, registry = CAREERS_REGISTRY) {
+    const policy = getPlanPolicy(plan, registry);
     return Boolean(policy.features?.[featureName]);
 }
 
-export function getPlanTransitionMeta(plan) {
-    const policy = getPlanPolicy(plan);
+export function getPlanTransitionMeta(plan, registry = CAREERS_REGISTRY) {
+    const policy = getPlanPolicy(plan, registry);
     return policy.features?.planTransition ? policy.transition : null;
+}
+
+export function getPlanEquivalenciasMeta(plan, registry = CAREERS_REGISTRY) {
+    const policy = getPlanPolicy(plan, registry);
+    return policy.features?.equivalencias ? policy.equivalencias : null;
+}
+
+export function getIntermediateTitleConfig(plan, registry = CAREERS_REGISTRY) {
+    const policy = getPlanPolicy(plan, registry);
+    return policy.features?.intermediateTitle ? policy.intermediateTitle : null;
+}
+
+export function getCareerMeta(plan, registry = CAREERS_REGISTRY) {
+    const matched = getCareerByPlan(plan, registry);
+    if (matched) return matched;
+
+    return (
+        getCareerById(DEFAULT_CAREER_ID, registry) ||
+        getAvailableCareers(registry)[0] ||
+        null
+    );
 }
 
 /**
  * Construye los ítems de navegación académica filtrados según capacidades del plan.
- * Evita que NavBar conozca reglas particulares de cada plan (ISP).
+ * Evita que NavBar conozca reglas particulares de cada carrera o plan (ISP).
  */
-export function getAcademicNavItems(plan) {
-    const transition = getPlanTransitionMeta(plan);
+export function getAcademicNavItems(plan, registry = CAREERS_REGISTRY) {
+    const transition = getPlanTransitionMeta(plan, registry);
     const items = [
         { name: 'Inicio', icon: 'fa-house', path: '/' },
         { name: 'Mi Progreso', icon: 'fa-graduation-cap', path: '/progreso' },
         { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador' },
     ];
 
-    if (canUseFeature(plan, 'equivalencias')) {
+    if (canUseFeature(plan, 'equivalencias', registry)) {
         items.push({ name: 'Equivalencias', icon: 'fa-right-left', path: '/equivalencias' });
     }
 

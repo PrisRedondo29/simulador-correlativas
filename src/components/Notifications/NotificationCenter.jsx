@@ -3,6 +3,7 @@ import { Button, Popover, PopoverTrigger, PopoverContent } from '@heroui/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePlanCapabilities } from '../../context/PlanContext';
+import { DEFAULT_PLAN } from '../../config/planPolicies';
 import planService from '../../services/planService';
 import storageRepository, { subscribeStorageChanges } from '../../services/storageRepository';
 import { buildNotifications } from '../../utils/Notifications/notificationStrategies';
@@ -15,14 +16,14 @@ import PropTypes from 'prop-types';
 export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
-    const { canSimulateTransition, transitionInfo } = usePlanCapabilities();
+    const { policy, canSimulateTransition, transitionInfo } = usePlanCapabilities();
     const [isOpen, setIsOpen] = useState(false);
     const [progreso, setProgreso] = useState({});
     const [progresoDetalles, setProgresoDetalles] = useState({});
     const [materiasPlan, setMateriasPlan] = useState([]);
     const [readIds, setReadIds] = useState(() => storageRepository.getNotificationReadIds());
 
-    const activePlan = plan || storageRepository.getPlanActivo() || '17.14';
+    const activePlan = plan || storageRepository.getPlanActivo() || DEFAULT_PLAN;
 
     useEffect(() => {
         const cargarDatos = () => {
@@ -45,6 +46,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     const notificaciones = useMemo(() => {
         return buildNotifications({
             activePlan,
+            careerShortName: policy?.careerShortName,
             materias: materiasPlan,
             progreso,
             progresoDetalles,
@@ -52,7 +54,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
             canSimulateTransition,
             transitionInfo,
         });
-    }, [activePlan, materiasPlan, progreso, progresoDetalles, isAuthenticated, canSimulateTransition, transitionInfo]);
+    }, [activePlan, policy?.careerShortName, materiasPlan, progreso, progresoDetalles, isAuthenticated, canSimulateTransition, transitionInfo]);
 
     const unreadCount = useMemo(
         () => notificaciones.filter(n => !readIds.includes(n.id)).length,

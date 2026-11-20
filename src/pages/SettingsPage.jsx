@@ -15,6 +15,7 @@ import {
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlanCapabilities } from '../context/PlanContext';
+import { DEFAULT_PLAN } from '../config/planPolicies';
 import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
 import { trackSeleccionCarrera } from '../services/analyticsService';
@@ -28,8 +29,16 @@ export default function SettingsPage({ plan, setPlan }) {
         refetchUserData,
         signIn,
     } = useAuth();
-    const { canSimulateTransition, transitionInfo } = usePlanCapabilities();
+    const {
+        career,
+        availableCareers,
+        canSimulateTransition,
+        transitionInfo,
+    } = usePlanCapabilities();
     const { theme, setTheme } = useTheme();
+    const activePlan = plan || career?.defaultPlan || DEFAULT_PLAN;
+    const activeCareer = career || availableCareers[0] || null;
+    const careerPlans = activeCareer?.plans || [];
 
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
@@ -72,8 +81,8 @@ export default function SettingsPage({ plan, setPlan }) {
     };
 
     const handleExport = () => {
-        const activePlan = plan || '17.14';
-        const rawProgreso = getProgresoLocal(activePlan);
+        const exportPlan = activePlan;
+        const rawProgreso = getProgresoLocal(exportPlan);
 
         const minifyProgreso = (prog) => Object.fromEntries(
             Object.entries(prog || {}).filter(([, state]) =>
@@ -82,7 +91,7 @@ export default function SettingsPage({ plan, setPlan }) {
         );
 
         const fullData = {
-            plan: activePlan,
+            plan: exportPlan,
             timestamp: new Date().toISOString(),
             progreso: minifyProgreso(rawProgreso),
         };
@@ -91,10 +100,10 @@ export default function SettingsPage({ plan, setPlan }) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `progreso_unlu_${activePlan}.json`;
+        a.download = `progreso_unlu_${exportPlan}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        addToast({ title: 'Exportado', description: `Se descargó el respaldo del Plan ${activePlan}.`, color: 'success' });
+        addToast({ title: 'Exportado', description: `Se descargó el respaldo del Plan ${exportPlan}.`, color: 'success' });
     };
 
     if (loading) return null;
@@ -231,6 +240,48 @@ export default function SettingsPage({ plan, setPlan }) {
                     </CardHeader>
                     <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
                     <CardBody className="px-5 pb-5 pt-2 flex flex-col gap-3.5">
+                        {availableCareers.length > 1 ? (
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-medium text-[#475569] dark:text-[#CBD5E1]">
+                                    Carrera
+                                </label>
+                                <div className="flex flex-wrap gap-2">
+                                    {availableCareers.map((item) => {
+                                        const isCurrent = item.id === activeCareer?.id;
+                                        return (
+                                            <button
+                                                key={item.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    const nextPlan = item.defaultPlan || item.plans?.[0]?.planNumero;
+                                                    if (nextPlan) {
+                                                        setPlan(nextPlan);
+                                                        trackSeleccionCarrera({ plan: nextPlan, origen_plan: 'settings_career' });
+                                                    }
+                                                }}
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                                                    isCurrent
+                                                        ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC]'
+                                                        : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1] hover:border-[#CBD5E1]'
+                                                }`}
+                                            >
+                                                {item.name}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : activeCareer ? (
+                            <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540]">
+                                <span className="text-xs font-medium text-[#475569] dark:text-[#CBD5E1] truncate">
+                                    {activeCareer.name}
+                                </span>
+                                <span className="text-[11px] font-semibold text-[#005A36] dark:text-[#6EE7B7] shrink-0">
+                                    UNLu
+                                </span>
+                            </div>
+                        ) : null}
+
                         <label className="text-xs font-medium text-[#475569] dark:text-[#CBD5E1]">
                             Plan de Estudios Activo
                         </label>
@@ -238,10 +289,11 @@ export default function SettingsPage({ plan, setPlan }) {
                             aria-label="Selección de Plan"
                             variant="bordered"
                             fullWidth
-                            selectedKey={plan || '17.14'}
+                            selectedKey={activePlan}
                             onSelectionChange={(key) => {
-                                setPlan(key);
-                                trackSeleccionCarrera({ plan: key, origen_plan: 'settings' });
+                                const nextKey = String(key);
+                                setPlan(nextKey);
+                                trackSeleccionCarrera({ plan: nextKey, origen_plan: 'settings' });
                             }}
                             classNames={{
                                 base: 'w-full',
@@ -251,16 +303,21 @@ export default function SettingsPage({ plan, setPlan }) {
                                 tabContent: 'text-[#475569] dark:text-[#94A3B8] group-data-[selected=true]:text-[#005A36] dark:group-data-[selected=true]:text-[#6EE7B7]',
                             }}
                         >
-                            <Tab
-                                key="17.14"
-                                title={
-                                    <div className="flex items-center gap-1.5">
-                                        <span className="text-xs sm:text-sm font-semibold">Plan 17.14</span>
-                                        <Chip size="sm" variant="flat" color="primary" className="h-5 px-1.5 text-[10px]">Vigente</Chip>
-                                    </div>
-                                }
-                            />
-                            <Tab key="17.13" title={<span className="text-xs sm:text-sm font-semibold">Plan 17.13</span>} />
+                            {careerPlans.map((planItem) => (
+                                <Tab
+                                    key={planItem.planNumero}
+                                    title={
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-xs sm:text-sm font-semibold">{planItem.label}</span>
+                                            {planItem.isDefault && planItem.statusLabel && (
+                                                <Chip size="sm" variant="flat" color="primary" className="h-5 px-1.5 text-[10px]">
+                                                    {planItem.statusLabel}
+                                                </Chip>
+                                            )}
+                                        </div>
+                                    }
+                                />
+                            ))}
                         </Tabs>
                         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
                             Cambiar el plan actualiza las materias mostradas en Mi Progreso y el Simulador.
@@ -332,7 +389,7 @@ export default function SettingsPage({ plan, setPlan }) {
                     <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
                     <CardBody className="px-5 pb-5 pt-2 flex flex-col justify-between gap-3">
                         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                            Exportá un archivo JSON con las materias aprobadas, regulares y en curso registradas en el Plan {plan || '17.14'}.
+                            Exportá un archivo JSON con las materias aprobadas, regulares y en curso registradas en el Plan {activePlan}.
                         </p>
                         <Button
                             size="sm"

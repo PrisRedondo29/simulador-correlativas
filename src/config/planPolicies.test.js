@@ -1,11 +1,46 @@
 import { describe, it, expect } from 'vitest';
 import {
     canUseFeature,
+    getPlanPolicy,
     getPlanTransitionMeta,
+    getPlanEquivalenciasMeta,
+    getIntermediateTitleConfig,
     getAcademicNavItems,
 } from './planPolicies';
+import { CAREERS_REGISTRY } from './careersRegistry';
 
-describe('planPolicies - Capacidades y navegación por plan', () => {
+const SECOND_CAREER_REGISTRY = [
+    ...CAREERS_REGISTRY,
+    {
+        id: 'industrial',
+        planPrefix: '25',
+        name: 'Ingeniería Industrial',
+        shortName: 'Ing. Industrial',
+        defaultPlan: '25.01',
+        available: true,
+        loadPlans: async () => ({ default: [] }),
+        plans: [
+            {
+                planNumero: '25.01',
+                label: 'Plan 25.01',
+                shortTitle: 'Plan Vigente',
+                statusLabel: 'Vigente',
+                estimatedSubjects: 40,
+                isDefault: true,
+                intermediateTitle: null,
+                features: {
+                    planTransition: false,
+                    equivalencias: false,
+                    intermediateTitle: false,
+                },
+                equivalencias: null,
+                transition: null,
+            },
+        ],
+    },
+];
+
+describe('planPolicies - Capacidades y navegación por plan y carrera', () => {
     it('habilita Cambio de Plan únicamente en el Plan 17.13', () => {
         expect(canUseFeature('17.13', 'planTransition')).toBe(true);
         expect(canUseFeature('17.14', 'planTransition')).toBe(false);
@@ -15,6 +50,7 @@ describe('planPolicies - Capacidades y navegación por plan', () => {
     it('retorna metadatos de transición solo para Plan 17.13', () => {
         const meta13 = getPlanTransitionMeta('17.13');
         expect(meta13).not.toBeNull();
+        expect(meta13.sourcePlan).toBe('17.13');
         expect(meta13.targetPlan).toBe('17.14');
         expect(meta13.route).toBe('/cambio-plan');
 
@@ -29,5 +65,26 @@ describe('planPolicies - Capacidades y navegación por plan', () => {
         expect(nav14).not.toContain('Cambio de Plan');
         expect(nav14).toContain('Mi Progreso');
         expect(nav14).toContain('Equivalencias');
+    });
+
+    it('adapta navegación, metadatos y capacidades automáticamente para una segunda carrera sin equivalencias ni título intermedio', () => {
+        const policy = getPlanPolicy('25.01', SECOND_CAREER_REGISTRY);
+        expect(policy.carrera).toBe('Ingeniería Industrial');
+        expect(policy.careerShortName).toBe('Ing. Industrial');
+
+        expect(canUseFeature('25.01', 'equivalencias', SECOND_CAREER_REGISTRY)).toBe(false);
+        expect(canUseFeature('25.01', 'planTransition', SECOND_CAREER_REGISTRY)).toBe(false);
+        expect(canUseFeature('25.01', 'intermediateTitle', SECOND_CAREER_REGISTRY)).toBe(false);
+        expect(getPlanEquivalenciasMeta('25.01', SECOND_CAREER_REGISTRY)).toBeNull();
+        expect(getIntermediateTitleConfig('25.01', SECOND_CAREER_REGISTRY)).toBeNull();
+
+        const navInd = getAcademicNavItems('25.01', SECOND_CAREER_REGISTRY).map((i) => i.name);
+        expect(navInd).toEqual(['Inicio', 'Mi Progreso', 'Simulador de Avance']);
+    });
+
+    it('deshabilita capacidades opcionales ante un plan desconocido', () => {
+        expect(canUseFeature('99.01', 'planTransition')).toBe(false);
+        expect(canUseFeature('99.01', 'equivalencias')).toBe(false);
+        expect(canUseFeature('99.01', 'intermediateTitle')).toBe(false);
     });
 });

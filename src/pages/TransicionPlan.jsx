@@ -22,7 +22,7 @@ import {
 import { useNavigate, Link } from 'react-router-dom';
 import planService from '../services/planService';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
-import equivalenciasData from '../data/equivalencias.json';
+import { usePlanCapabilities } from '../context/PlanContext';
 import {
     OFERTA_RESOLUCION_89_2025,
     obtenerResumenPaso1,
@@ -31,40 +31,58 @@ import {
 
 function TransicionPlan() {
     const navigate = useNavigate();
+    const { plan, transitionInfo } = usePlanCapabilities();
+    const sourcePlan = transitionInfo?.sourcePlan || plan;
+    const targetPlan = transitionInfo?.targetPlan || null;
+    const resolution = transitionInfo?.resolution || 'Resolución vigente';
+    const savedHours = transitionInfo?.savedHours ?? null;
+    const closingYear = transitionInfo?.closingYear ?? null;
+
     const anioActual = useMemo(() => new Date().getFullYear(), []);
     const [evaluado, setEvaluado] = useState(false);
 
-    const [progreso, setProgreso] = useState(() => storageRepository.getProgreso('17.13', {}));
+    const [progreso, setProgreso] = useState(() =>
+        sourcePlan ? storageRepository.getProgreso(sourcePlan, {}) : {},
+    );
 
     useEffect(() => {
+        if (!sourcePlan) return undefined;
         const handleStorage = () => {
-            setProgreso(storageRepository.getProgreso('17.13', {}));
+            setProgreso(storageRepository.getProgreso(sourcePlan, {}));
         };
+        handleStorage();
         return subscribeStorageChanges(handleStorage);
-    }, []);
+    }, [sourcePlan]);
 
-    const [plan1713, setPlan1713] = useState(null);
-    const [plan1714, setPlan1714] = useState(null);
+    const [planOrigen, setPlanOrigen] = useState(null);
+    const [planDestino, setPlanDestino] = useState(null);
+    const [equivalenciasData, setEquivalenciasData] = useState(null);
 
     useEffect(() => {
+        if (!sourcePlan || !targetPlan) return undefined;
+
         let active = true;
         Promise.all([
-            planService.getPlanByNumber('17.13'),
-            planService.getPlanByNumber('17.14'),
-        ]).then(([p13, p14]) => {
+            planService.getPlanByNumber(sourcePlan),
+            planService.getPlanByNumber(targetPlan),
+            planService.getEquivalenciasByPlan(sourcePlan),
+        ]).then(([origen, destino, eqMap]) => {
             if (!active) return;
-            setPlan1713(p13);
-            setPlan1714(p14);
+            setPlanOrigen(origen);
+            setPlanDestino(destino);
+            setEquivalenciasData(eqMap || {});
         });
-        return () => { active = false; };
-    }, []);
+        return () => {
+            active = false;
+        };
+    }, [sourcePlan, targetPlan]);
 
-    const materias1713 = useMemo(() => plan1713?.materias || [], [plan1713]);
-    const materias1714 = useMemo(() => plan1714?.materias || [], [plan1714]);
+    const materiasOrigen = useMemo(() => planOrigen?.materias || [], [planOrigen]);
+    const materiasDestino = useMemo(() => planDestino?.materias || [], [planDestino]);
 
     const resumenPaso1 = useMemo(() => {
-        return obtenerResumenPaso1(progreso, materias1713);
-    }, [progreso, materias1713]);
+        return obtenerResumenPaso1(progreso, materiasOrigen);
+    }, [progreso, materiasOrigen]);
 
     const tieneProgresoCargado =
         resumenPaso1.cantidadAprobadas > 0 || resumenPaso1.cantidadFuera > 0;
@@ -72,12 +90,14 @@ function TransicionPlan() {
     const elegibilidad = useMemo(() => {
         return evaluarElegibilidadActual({
             progreso,
-            materias1713,
-            materias1714,
-            equivalenciasData,
+            materias1713: materiasOrigen,
+            materias1714: materiasDestino,
+            equivalenciasData: equivalenciasData || {},
             anioActual,
+            sourcePlan,
+            targetPlan,
         });
-    }, [progreso, materias1713, materias1714, anioActual]);
+    }, [progreso, materiasOrigen, materiasDestino, equivalenciasData, anioActual, sourcePlan, targetPlan]);
 
     const {
         anioEvaluado,
@@ -90,7 +110,7 @@ function TransicionPlan() {
         recomendacionCorta,
     } = elegibilidad;
 
-    if (!plan1713 || !plan1714) {
+    if (!planOrigen || !planDestino || !equivalenciasData) {
         return (
             <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1419] flex items-center justify-center">
                 <Spinner color="success" size="lg" />
@@ -106,10 +126,10 @@ function TransicionPlan() {
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#2D2210] text-[#92400E] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]">
-                                Res. HCS 89/2025
+                                {resolution}
                             </span>
                             <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-                                Plan 17.13 → Plan 17.14
+                                Plan {sourcePlan} → Plan {targetPlan}
                             </span>
                         </div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">
@@ -120,7 +140,7 @@ function TransicionPlan() {
                             <Link to="/progreso" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
                                 Mi Progreso
                             </Link>{' '}
-                            ya te corresponde pasarte al Plan 17.14.
+                            ya te corresponde pasarte al Plan {targetPlan}.
                         </p>
                     </div>
 
@@ -154,7 +174,7 @@ function TransicionPlan() {
                             <AlertTriangle size={20} className="text-[#92400E] dark:text-[#FCD34D] shrink-0 mt-0.5" />
                             <div className="space-y-1">
                                 <h2 className="font-semibold text-sm sm:text-base text-[#1E293B] dark:text-[#F1F5F9]">
-                                    Todavía no cargaste materias del Plan 17.13
+                                    Todavía no cargaste materias del Plan {sourcePlan}
                                 </h2>
                                 <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#CBD5E1]">
                                     Cargá primero tus materias aprobadas en Mi Progreso para poder evaluar si ya te corresponde cambiarte de plan.
@@ -177,7 +197,7 @@ function TransicionPlan() {
                         </div>
                         <div className="space-y-1.5 max-w-lg mx-auto">
                             <h2 className="text-lg sm:text-xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
-                                ¿Querés saber si ya podés pasarte al Plan 17.14?
+                                ¿Querés saber si ya podés pasarte al Plan {targetPlan}?
                             </h2>
                             <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
                                 Analizamos tus {resumenPaso1.cantidadAprobadas} materias aprobadas con final según la oferta oficial {anioEvaluado}.
@@ -263,21 +283,23 @@ function TransicionPlan() {
                                         <h3 className="font-semibold text-sm text-[#1E293B] dark:text-[#F1F5F9]">
                                             Comparativa de Avance
                                         </h3>
-                                        <Chip size="sm" variant="flat" color="primary" className="font-semibold text-xs">
-                                            -202 hs cursada
-                                        </Chip>
+                                        {savedHours > 0 && (
+                                            <Chip size="sm" variant="flat" color="primary" className="font-semibold text-xs">
+                                                -{savedHours} hs cursada
+                                            </Chip>
+                                        )}
                                     </div>
 
                                     <div className="space-y-3.5">
                                         <div>
                                             <div className="flex justify-between text-xs font-medium text-[#475569] dark:text-[#CBD5E1] mb-1 tabular-nums">
-                                                <span>Plan 17.13 (actual)</span>
+                                                <span>Plan {sourcePlan} (actual)</span>
                                                 <span className="font-semibold">
                                                     {resultadoHoy.avance1713.porcentaje}% ({resultadoHoy.avance1713.aprobadas}/{resultadoHoy.avance1713.totales})
                                                 </span>
                                             </div>
                                             <Progress
-                                                aria-label="Avance plan 17.13"
+                                                aria-label={`Avance plan ${sourcePlan}`}
                                                 value={resultadoHoy.avance1713.porcentaje}
                                                 size="sm"
                                                 classNames={{
@@ -289,13 +311,13 @@ function TransicionPlan() {
 
                                         <div>
                                             <div className="flex justify-between text-xs font-medium text-[#005A36] dark:text-[#86EFAC] mb-1 tabular-nums">
-                                                <span>Plan 17.14 (por equivalencias)</span>
+                                                <span>Plan {targetPlan} (por equivalencias)</span>
                                                 <span className="font-semibold">
                                                     {resultadoHoy.avance1714.porcentaje}% ({resultadoHoy.avance1714.aprobadas}/{resultadoHoy.avance1714.totales})
                                                 </span>
                                             </div>
                                             <Progress
-                                                aria-label="Avance plan 17.14"
+                                                aria-label={`Avance plan ${targetPlan}`}
                                                 value={resultadoHoy.avance1714.porcentaje}
                                                 size="sm"
                                                 classNames={{
@@ -331,10 +353,10 @@ function TransicionPlan() {
                                         {puedeCambiarseHoy ? (
                                             <div>
                                                 <p className="text-xs text-[#166534] dark:text-[#86EFAC] font-semibold mb-2">
-                                                    Podés cursar de inmediato en Plan 17.14:
+                                                    Podés cursar de inmediato en Plan {targetPlan}:
                                                 </p>
                                                 <div className="flex flex-wrap gap-1.5">
-                                                    {resultadoHoy.avance1714.materiasCursables.map(m => (
+                                                    {resultadoHoy.avance1714.materiasCursables.map((m) => (
                                                         <Chip key={m.codigo} size="sm" variant="flat" color="success" className="font-medium text-xs">
                                                             {m.codigo} · {m.nombre}
                                                         </Chip>
@@ -379,7 +401,7 @@ function TransicionPlan() {
                         </div>
                         <div>
                             <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8]">
-                                Resolución HCS 89/2025
+                                {resolution}
                             </span>
                             <h3 className="text-base sm:text-lg font-bold text-[#1E293B] dark:text-[#F1F5F9]">
                                 Preguntas frecuentes sobre la transición
@@ -396,7 +418,7 @@ function TransicionPlan() {
                             className="border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730]"
                         >
                             <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pb-2">
-                                Según la reglamentación oficial (Res. HCS 89/2025), las materias con cursada regular y final pendiente <strong>no otorgan equivalencia automática directa</strong> en el Plan 17.14. Se recomienda rendir el examen final en el Plan 17.13 para obtener el reconocimiento automático.
+                                Según la reglamentación oficial ({resolution}), las materias con cursada regular y final pendiente <strong>no otorgan equivalencia automática directa</strong> en el Plan {targetPlan}. Se recomienda rendir el examen final en el Plan {sourcePlan} para obtener el reconocimiento automático.
                             </p>
                         </AccordionItem>
 
@@ -412,17 +434,19 @@ function TransicionPlan() {
                             </p>
                         </AccordionItem>
 
-                        <AccordionItem
-                            key="3"
-                            aria-label="¿Por qué el Plan 17.14 tiene menos horas totales?"
-                            title={<span className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]">¿Por qué el Plan 17.14 tiene 202 horas menos de cursada?</span>}
-                            startContent={<TrendingDown className="text-[#005A36] dark:text-[#6EE7B7] shrink-0" size={17} />}
-                            className="border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730]"
-                        >
-                            <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pb-2">
-                                El Plan 17.14 optimiza los contenidos curriculares y actualiza la carga horaria adaptándose a estándares CIN/CONFEDI, logrando una cursada más ágil sin perder calidad académica.
-                            </p>
-                        </AccordionItem>
+                        {savedHours > 0 && (
+                            <AccordionItem
+                                key="3"
+                                aria-label={`¿Por qué el Plan ${targetPlan} tiene menos horas totales?`}
+                                title={<span className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]">¿Por qué el Plan {targetPlan} tiene {savedHours} horas menos de cursada?</span>}
+                                startContent={<TrendingDown className="text-[#005A36] dark:text-[#6EE7B7] shrink-0" size={17} />}
+                                className="border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730]"
+                            >
+                                <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pb-2">
+                                    El Plan {targetPlan} optimiza los contenidos curriculares y actualiza la carga horaria adaptándose a estándares CIN/CONFEDI, logrando una cursada más ágil sin perder calidad académica.
+                                </p>
+                            </AccordionItem>
+                        )}
 
                         <AccordionItem
                             key="4"
@@ -432,7 +456,8 @@ function TransicionPlan() {
                             className="border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730]"
                         >
                             <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pb-2">
-                                Sí. Una vez formalizado el pase ante la Universidad, tu historia académica pasa a regirse por el Plan 17.14. Dado que el Plan 17.13 cierra progresivamente sus cohortes hasta 2029, conviene verificar tu viabilidad antes de iniciar el trámite.
+                                Sí. Una vez formalizado el pase ante la Universidad, tu historia académica pasa a regirse por el Plan {targetPlan}.
+                                {closingYear ? ` Dado que el Plan ${sourcePlan} cierra progresivamente sus cohortes hasta ${closingYear}, conviene verificar tu viabilidad antes de iniciar el trámite.` : ''}
                             </p>
                         </AccordionItem>
                     </Accordion>

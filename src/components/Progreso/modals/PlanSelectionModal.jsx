@@ -1,33 +1,41 @@
-import React from 'react';
-import { 
-    Modal, 
-    ModalContent, 
-    ModalHeader, 
-    ModalBody, 
-    ModalFooter, 
-    Button,
+import React, { useState } from 'react';
+import {
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
     Card,
-    CardBody
+    CardBody,
+    Chip,
 } from '@heroui/react';
+import PropTypes from 'prop-types';
+import { getAvailableCareers } from '../../../config/careersRegistry';
 import { trackSeleccionCarrera } from '../../../services/analyticsService';
 
 export default function PlanSelectionModal({ isOpen, onSelect }) {
-    const handleSelect = (plan) => {
-        onSelect(plan);
-        trackSeleccionCarrera({ plan, origen_plan: 'welcome_modal' });
+    const availableCareers = getAvailableCareers();
+    const [selectedCareerId, setSelectedCareerId] = useState(() => availableCareers[0]?.id || null);
+
+    const activeCareer =
+        availableCareers.find((c) => c.id === selectedCareerId) || availableCareers[0] || null;
+    const plans = activeCareer?.plans || [];
+
+    const handleSelect = (planNumero) => {
+        onSelect(planNumero);
+        trackSeleccionCarrera({ plan: planNumero, origen_plan: 'welcome_modal' });
     };
 
     return (
-        <Modal 
-            isOpen={isOpen} 
-            hideCloseButton 
+        <Modal
+            isOpen={isOpen}
+            hideCloseButton
             isDismissable={false}
             backdrop="opaque"
             placement="center"
             size="2xl"
             className="m-4"
             classNames={{
-                backdrop: "bg-black/50"
+                backdrop: 'bg-black/50',
             }}
         >
             <ModalContent>
@@ -37,53 +45,69 @@ export default function PlanSelectionModal({ isOpen, onSelect }) {
                     </div>
                     <h2 className="text-2xl font-black text-center">¡Bienvenido al Simulador!</h2>
                     <p className="text-sm font-normal text-foreground/60 text-center px-4">
-                        Para comenzar, necesitamos saber qué plan de estudios estás cursando.
+                        {availableCareers.length > 1
+                            ? 'Elegí tu carrera y el plan de estudios que estás cursando.'
+                            : `Para comenzar, elegí tu plan de estudios de ${activeCareer?.name || 'tu carrera'}.`}
                     </p>
                 </ModalHeader>
                 <ModalBody className="pb-8 px-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                        <Card 
-                            isPressable 
-                            className="border-2 border-transparent hover:border-primary transition-all shadow-sm"
-                            onPress={() => handleSelect('17.14')}
-                        >
-                            <CardBody className="p-6 flex flex-col items-center text-center gap-3">
-                                <div className="p-3 rounded-xl bg-default-100">
-                                    <span className="font-black text-xl">17.14</span>
-                                </div>
-                                <div>
-                                    <p className="font-bold">Plan Nuevo</p>
-                                    <p className="text-xs text-foreground/50 leading-relaxed">
-                                        Recomendado para ingresantes recientes y quienes migraron al nuevo diseño curricular.
-                                    </p>
-                                </div>
-                            </CardBody>
-                        </Card>
+                    {availableCareers.length > 1 && (
+                        <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
+                            {availableCareers.map((career) => {
+                                const isSelected = career.id === activeCareer?.id;
+                                return (
+                                    <button
+                                        key={career.id}
+                                        type="button"
+                                        onClick={() => setSelectedCareerId(career.id)}
+                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                                            isSelected
+                                                ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC]'
+                                                : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1]'
+                                        }`}
+                                    >
+                                        {career.name}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
 
-                        <Card 
-                            isPressable 
-                            className="border-2 border-transparent hover:border-primary transition-all shadow-sm"
-                            onPress={() => handleSelect('17.13')}
-                        >
-                            <CardBody className="p-6 flex flex-col items-center text-center gap-3">
-                                <div className="p-3 rounded-xl bg-default-100">
-                                    <span className="font-black text-xl">17.13</span>
-                                </div>
-                                <div>
-                                    <p className="font-bold">Plan Anterior</p>
-                                    <p className="text-xs text-foreground/50 leading-relaxed">
-                                        Plan de estudios histórico para estudiantes que mantienen su regularidad en el diseño anterior.
-                                    </p>
-                                </div>
-                            </CardBody>
-                        </Card>
+                    <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2' : ''} gap-4 mt-2`}>
+                        {plans.map((planItem) => (
+                            <Card
+                                key={planItem.planNumero}
+                                isPressable
+                                className="border-2 border-transparent hover:border-primary transition-all shadow-sm"
+                                onPress={() => handleSelect(planItem.planNumero)}
+                            >
+                                <CardBody className="p-6 flex flex-col items-center text-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="px-3.5 py-2 rounded-xl bg-default-100">
+                                            <span className="font-black text-xl">{planItem.planNumero}</span>
+                                        </div>
+                                        {planItem.isDefault && planItem.statusLabel && (
+                                            <Chip size="sm" variant="flat" color="primary" className="text-[10px] font-semibold">
+                                                {planItem.statusLabel}
+                                            </Chip>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold">{planItem.shortTitle || planItem.label}</p>
+                                        <p className="text-xs text-foreground/50 leading-relaxed mt-1">
+                                            {planItem.description}
+                                        </p>
+                                    </div>
+                                </CardBody>
+                            </Card>
+                        ))}
                     </div>
-                    
+
                     <div className="mt-8 p-4 bg-default-50 rounded-2xl border border-default-200 flex items-start gap-3">
                         <i className="fa-solid fa-circle-info text-primary mt-1" />
                         <p className="text-xs text-foreground/70 leading-relaxed">
                             <span className="font-bold block mb-1 text-foreground">¿No estás seguro?</span>
-                            No te preocupes, podés cambiar tu plan en cualquier momento desde la sección de 
+                            No te preocupes, podés cambiar tu plan en cualquier momento desde la sección de
                             <span className="font-bold text-primary"> Configuración</span> en el menú lateral.
                         </p>
                     </div>
@@ -92,3 +116,8 @@ export default function PlanSelectionModal({ isOpen, onSelect }) {
         </Modal>
     );
 }
+
+PlanSelectionModal.propTypes = {
+    isOpen: PropTypes.bool.isRequired,
+    onSelect: PropTypes.func.isRequired,
+};

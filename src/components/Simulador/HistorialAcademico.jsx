@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button, Accordion, AccordionItem, Card, CardBody, Chip } from '@heroui/react'
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
+import { getPlanPolicy } from '../../config/planPolicies'
 
 /**
  * Muestra el historial de semestres completados como una línea de tiempo con acordeones.
@@ -8,6 +9,7 @@ import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
 function HistorialAcademico({ historialSemestres, openedAccordions, setOpenedAccordions, descargandoPDF, plan, materias }) {
     if (historialSemestres.length === 0) return null
 
+    const planPolicy = getPlanPolicy(plan);
     const tituloIntermedioNombre = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
     const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
 
@@ -42,7 +44,7 @@ function HistorialAcademico({ historialSemestres, openedAccordions, setOpenedAcc
                 <div className="w-full text-center py-6 mb-4 border-b-2 border-[#005A36]/20">
                     <h1 className="text-3xl font-bold text-[#1E293B] tracking-tight">Registro de Avance Universitario</h1>
                     <h2 className="text-base font-medium text-[#005A36] mt-1 uppercase tracking-wider">
-                        Licenciatura en Sistemas — Plan {plan}
+                        {planPolicy.carrera} — Plan {plan}
                     </h2>
                 </div>
             )}

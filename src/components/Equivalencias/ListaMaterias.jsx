@@ -3,7 +3,9 @@ import { Accordion, AccordionItem, Chip } from '@heroui/react';
 import { ArrowRight, Info, Repeat } from 'lucide-react';
 import MateriaCard from '../Equivalencias/MateriaCard';
 
-function ListaMaterias({ materiasFiltradas, progreso }) {
+function ListaMaterias({ sourcePlan, targetPlan, materiasFiltradas, progreso }) {
+    const origenLabel = sourcePlan ? `Plan ${sourcePlan}` : 'Plan origen';
+    const destinoLabel = targetPlan ? `Plan ${targetPlan}` : 'Plan destino';
     const materiasPorAnio = useMemo(() => {
         const grupos = {};
         materiasFiltradas.forEach(grupo => {
@@ -30,13 +32,13 @@ function ListaMaterias({ materiasFiltradas, progreso }) {
             <div className="grid grid-cols-[1fr_20px_1fr] sm:grid-cols-11 gap-1.5 sm:gap-4 px-3 sm:px-5 py-2 items-center bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
                 <div className="sm:col-span-5 text-[11px] sm:text-xs font-semibold text-[#475569] dark:text-[#CBD5E1] text-center flex items-center justify-center gap-1.5 truncate">
                     <Repeat size={12} className="shrink-0" />
-                    <span className="truncate">Plan 17.13 <span className="hidden sm:inline">(Origen)</span></span>
+                    <span className="truncate">{origenLabel} <span className="hidden sm:inline">(Origen)</span></span>
                 </div>
                 <div className="sm:col-span-1 flex justify-center">
                     <ArrowRight size={14} className="text-[#64748B]" />
                 </div>
                 <div className="sm:col-span-5 text-[11px] sm:text-xs font-semibold text-[#005A36] dark:text-[#86EFAC] text-center flex items-center justify-center gap-1.5 truncate">
-                    <span className="truncate">Plan 17.14 <span className="hidden sm:inline">(Destino)</span></span>
+                    <span className="truncate">{destinoLabel} <span className="hidden sm:inline">(Destino)</span></span>
                 </div>
             </div>
 
@@ -96,7 +98,9 @@ function ListaMaterias({ materiasFiltradas, progreso }) {
                                         <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                             {gruposCuatri.map((grupo) => {
                                                 const todasAprobadas = grupo.materiasViejas.length > 0 &&
-                                                    grupo.materiasViejas.every(m => progreso[m.codigo] === 'Aprobado');
+                                                    grupo.materiasViejas.every(
+                                                        (m) => progreso[m.codigo] === 'Aprobado' || progreso[m.codigo] === 'Promocionado',
+                                                    );
 
                                                 const estadoNuevo = grupo.esEquivalente
                                                     ? (todasAprobadas ? 'Aprobado' : 'Disponible')

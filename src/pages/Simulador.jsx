@@ -21,9 +21,10 @@ import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
 import { trackCambioVista } from '../services/analyticsService';
 import storageRepository, { STORAGE_KEYS } from '../services/storageRepository';
+import { DEFAULT_PLAN } from '../config/planPolicies';
 
 function Simulador({ plan: initialPlan }) {
-    const [plan, setPlan] = useState(() => initialPlan || storageRepository.getPlanActivo() || '17.14');
+    const [plan, setPlan] = useState(() => initialPlan || storageRepository.getPlanActivo() || DEFAULT_PLAN);
     const [anioInicio, setAnioInicio] = useState('2026');
     const [cuatriInicio, setCuatriInicio] = useState('1');
 
@@ -278,7 +279,7 @@ function Simulador({ plan: initialPlan }) {
                             size="md"
                             className="font-medium rounded-xl px-8 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540]"
                             onPress={() => {
-                                setPlan(initialPlan || '17.14');
+                                setPlan(initialPlan || DEFAULT_PLAN);
                                 setTimeout(handleImportarProgreso, 500);
                             }}
                             startContent={<CloudDownload size={17} />}

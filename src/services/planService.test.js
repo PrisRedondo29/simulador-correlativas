@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import planService from './planService';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import planService, { createPlanService } from './planService';
 
-describe('planService - Carga dinámica y caché en memoria', () => {
+describe('planService - Carga dinámica multi-carrera y caché en memoria', () => {
     beforeEach(() => {
         planService.clearCache();
     });
@@ -27,5 +27,47 @@ describe('planService - Carga dinámica y caché en memoria', () => {
 
         expect(await planService.getPlanByNumber('99.99')).toBeNull();
         await expect(planService.getMateriasByPlan('99.99')).rejects.toThrow(/no existe/);
+    });
+
+    it('carga y cachea equivalencias de forma dinámica según configuración del plan', async () => {
+        const eq1 = await planService.getEquivalenciasByPlan('17.13');
+        const eq2 = await planService.getEquivalenciasByPlan('17.14');
+
+        expect(Object.keys(eq1).length).toBeGreaterThan(0);
+        // Ambos comparten el mismo par 17.13->17.14 y se sirven desde caché
+        expect(eq2).toBe(eq1);
+        expect(await planService.getEquivalenciasByPlan('99.99')).toEqual({});
+    });
+
+    it('soporta inyectar un registro multi-carrera sin modificar el servicio', async () => {
+        const loadIndustrial = vi.fn(async () => ({
+            default: [
+                {
+                    plan_numero: '25.01',
+                    materias: [{ codigo: 'IND101', nombre: 'Introducción a la Ingeniería Industrial' }],
+                },
+            ],
+        }));
+
+        const customService = createPlanService([
+            {
+                id: 'industrial',
+                planPrefix: '25',
+                name: 'Ingeniería Industrial',
+                shortName: 'Ing. Industrial',
+                available: true,
+                loadPlans: loadIndustrial,
+                plans: [{ planNumero: '25.01', features: { equivalencias: false } }],
+            },
+        ]);
+
+        const plan = await customService.getPlanByNumber('25.01');
+        const planAgain = await customService.getPlanByNumber('25.01');
+
+        expect(plan?.carrera).toBe('Ingeniería Industrial');
+        expect(plan?.materias).toHaveLength(1);
+        expect(planAgain).toBe(plan);
+        expect(loadIndustrial).toHaveBeenCalledTimes(1);
+        expect(await customService.getEquivalenciasByPlan('25.01')).toEqual({});
     });
 });

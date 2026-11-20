@@ -9,7 +9,7 @@ import storageRepository, { subscribeStorageChanges } from '../services/storageR
 function Inicio() {
     const navigate = useNavigate();
     const { user, userData } = useAuth();
-    const { plan, policy, canSimulateTransition, transitionInfo } = usePlanCapabilities();
+    const { plan, policy, can, canSimulateTransition, transitionInfo, equivalenciasInfo } = usePlanCapabilities();
     const [progresoGlobal, setProgresoGlobal] = useState({});
     const planActivo = plan || DEFAULT_PLAN;
 
@@ -58,14 +58,17 @@ function Inicio() {
                 icon: 'fa-solid fa-route',
                 path: '/simulador',
             },
-            {
+        ];
+
+        if (can('equivalencias') && equivalenciasInfo) {
+            base.push({
                 title: 'Equivalencias',
-                subtitle: 'Compará materias y carga horaria entre los planes 17.13 y 17.14',
+                subtitle: `Compará materias y carga horaria entre los planes ${equivalenciasInfo.sourcePlan} y ${equivalenciasInfo.targetPlan}`,
                 tag: 'Planes',
                 icon: 'fa-solid fa-right-left',
                 path: '/equivalencias',
-            },
-        ];
+            });
+        }
 
         if (canSimulateTransition && transitionInfo) {
             base.push({
@@ -79,7 +82,7 @@ function Inicio() {
         }
 
         return base;
-    }, [canSimulateTransition, transitionInfo]);
+    }, [can, equivalenciasInfo, canSimulateTransition, transitionInfo]);
 
     const quickResources = [
         {
@@ -112,7 +115,7 @@ function Inicio() {
                 <div className="space-y-1.5">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#005A36] dark:text-[#86EFAC]">
                         <i className="fa-solid fa-building-columns text-[11px]" aria-hidden="true" />
-                        Licenciatura en Sistemas de Información · UNLu
+                        {policy.carrera} · UNLu
                     </span>
                     <h1 className="text-2xl sm:text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">
                         {nombreUsuario ? `Hola, ${nombreUsuario}` : 'Portal Estudiantil'}
@@ -209,7 +212,13 @@ function Inicio() {
                     </span>
                 </div>
 
-                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${mainTools.length === 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+                <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${
+                    mainTools.length >= 4
+                        ? 'lg:grid-cols-4'
+                        : mainTools.length === 3
+                            ? 'lg:grid-cols-3'
+                            : 'lg:grid-cols-2'
+                }`}>
                     {mainTools.map((tool) => (
                         <button
                             key={tool.path}

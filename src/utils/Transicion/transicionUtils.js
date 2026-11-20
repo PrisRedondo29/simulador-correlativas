@@ -117,9 +117,12 @@ export const evaluarTransicionCompleta = ({
     materias1713 = [],
     materias1714 = [],
     equivalenciasData = {},
-    anioAnalisis = 2025
+    anioAnalisis = 2025,
+    sourcePlan = '17.13',
+    targetPlan = '17.14',
+    ofertaPorAnio = OFERTA_RESOLUCION_89_2025,
 }) => {
-    const ofertaAnio = OFERTA_RESOLUCION_89_2025[anioAnalisis] || OFERTA_RESOLUCION_89_2025[2025];
+    const ofertaAnio = ofertaPorAnio[anioAnalisis] || ofertaPorAnio[2025];
 
     // 1. Materias con final en 17.13 (las únicas que otorgan equivalencia)
     const codigosFinales1713 = new Set(
@@ -235,28 +238,28 @@ export const evaluarTransicionCompleta = ({
     const anioOferta1714 = Math.ceil(maxCuatriDictado1714 / 2);
 
     if (anioOferta1714 > 0) {
-        motivosBache.push(`La oferta del Plan 17.14 para el año ${anioAnalisis} comprende materias hasta ${anioOferta1714}° año (${ofertaAnio.plan1714.descripcion}).`);
+        motivosBache.push(`La oferta del Plan ${targetPlan} para el año ${anioAnalisis} comprende materias hasta ${anioOferta1714}° año (${ofertaAnio.plan1714.descripcion}).`);
     } else {
-        motivosBache.push(`El Plan 17.14 aún no cuenta con dictado regular de materias troncales en ${anioAnalisis}.`);
+        motivosBache.push(`El Plan ${targetPlan} aún no cuenta con dictado regular de materias troncales en ${anioAnalisis}.`);
     }
 
     if (materiasEnBache1714.length > 0) {
         const nombresBache = materiasEnBache1714.slice(0, 3).map(m => `"${m.nombre}"`).join(', ');
         const extraBache = materiasEnBache1714.length > 3 ? ` y ${materiasEnBache1714.length - 3} más` : '';
-        motivosBache.push(`Materias que ya tendrías habilitadas pero NO se dictan aún en 17.14: ${nombresBache}${extraBache}.`);
+        motivosBache.push(`Materias que ya tendrías habilitadas pero NO se dictan aún en ${targetPlan}: ${nombresBache}${extraBache}.`);
     }
 
     if (materiasCursables1713.length > 0) {
         const nombres1713 = materiasCursables1713.slice(0, 3).map(m => `"${m.nombre}"`).join(', ');
         const extra1713 = materiasCursables1713.length > 3 ? ` y ${materiasCursables1713.length - 3} más` : '';
-        motivosBache.push(`En el Plan 17.13 actual podés continuar cursando de inmediato: ${nombres1713}${extra1713}.`);
+        motivosBache.push(`En el Plan ${sourcePlan} actual podés continuar cursando de inmediato: ${nombres1713}${extra1713}.`);
     }
 
     if (materiasCursables1714.length === 0) {
         motivosBache.push(`Pasarte hoy te dejaría sin materias con dictado activo para cursar durante este ciclo lectivo.`);
     }
 
-    motivosBache.push(`Se recomienda permanecer en Plan 17.13 y consultar con la Coordinación de Carrera antes de realizar el trámite.`);
+    motivosBache.push(`Se recomienda permanecer en Plan ${sourcePlan} y consultar con la Coordinación de Carrera antes de realizar el trámite.`);
 
     return {
         anioAnalisis,
@@ -297,7 +300,10 @@ export const calcularProyeccionMultianual = ({
     materias1713 = [],
     materias1714 = [],
     equivalenciasData = {},
-    anioActual = 2026
+    anioActual = 2026,
+    sourcePlan = '17.13',
+    targetPlan = '17.14',
+    ofertaPorAnio = OFERTA_RESOLUCION_89_2025,
 }) => {
     const aniosDisponibles = [2025, 2026, 2027, 2028, 2029];
     const proyeccion = aniosDisponibles.map(anio => {
@@ -306,13 +312,16 @@ export const calcularProyeccionMultianual = ({
             materias1713,
             materias1714,
             equivalenciasData,
-            anioAnalisis: anio
+            anioAnalisis: anio,
+            sourcePlan,
+            targetPlan,
+            ofertaPorAnio,
         });
         return {
             anio,
             esViable: res.escenarioReal === 'A',
             resultado: res,
-            oferta: OFERTA_RESOLUCION_89_2025[anio]
+            oferta: ofertaPorAnio[anio]
         };
     });
 
@@ -331,7 +340,7 @@ export const calcularProyeccionMultianual = ({
         recomendacionCorta = `Tenés ${resultadoActual.resultado.avance1714.materiasCursables.length} materias activas para cursar de inmediato y reducís la carga horaria en ${Math.abs(resultadoActual.resultado.diferenciaHoras) || 202} hs.`;
     } else if (primerAnioViable && primerAnioViable > anioActual) {
         mensajePrincipal = `Por ahora te conviene esperar. Tu año óptimo es ${primerAnioViable}.`;
-        recomendacionCorta = `En ${anioActual} habría baches por falta de materias intermedias en 17.14. En ${primerAnioViable} abrirá el dictado correspondiente a tu nivel sin demoras.`;
+        recomendacionCorta = `En ${anioActual} habría baches por falta de materias intermedias en ${targetPlan}. En ${primerAnioViable} abrirá el dictado correspondiente a tu nivel sin demoras.`;
     } else {
         mensajePrincipal = `Te recomendamos consultar con Coordinación de Carrera.`;
         recomendacionCorta = `Tu avance requiere una evaluación personalizada del plan de transición.`;
@@ -360,7 +369,10 @@ export const evaluarElegibilidadActual = ({
     materias1714 = [],
     equivalenciasData = {},
     anioActual = new Date().getFullYear(),
-    cuatrimestreActual = (new Date().getMonth() + 1) <= 6 ? 1 : 2
+    cuatrimestreActual = (new Date().getMonth() + 1) <= 6 ? 1 : 2,
+    sourcePlan = '17.13',
+    targetPlan = '17.14',
+    ofertaPorAnio = OFERTA_RESOLUCION_89_2025,
 }) => {
     const anioEvaluado = Math.min(Math.max(anioActual, 2025), 2029);
     const proyeccion = calcularProyeccionMultianual({
@@ -368,7 +380,10 @@ export const evaluarElegibilidadActual = ({
         materias1713,
         materias1714,
         equivalenciasData,
-        anioActual: anioEvaluado
+        anioActual: anioEvaluado,
+        sourcePlan,
+        targetPlan,
+        ofertaPorAnio,
     });
 
     const toCuatriAnual = (m) => (Number(m?.cuatrimestre) % 2 === 0 ? 2 : 1);
@@ -404,14 +419,14 @@ export const evaluarElegibilidadActual = ({
     const periodoHabilitado = `${cuatrimestreHabilitado}° Cuatrimestre de ${anioHabilitado}`;
 
     const mensajePrincipal = puedeCambiarseHoy
-        ? `Ya te corresponde cambiarte al Plan 17.14 (${periodoHabilitado})`
+        ? `Ya te corresponde cambiarte al Plan ${targetPlan} (${periodoHabilitado})`
         : `Todavía no te corresponde cambiarte. Vas a poder en el ${periodoHabilitado}.`;
 
     const recomendacionCorta = puedeCambiarseHoy
         ? (cursablesHoy.length > 0
             ? `Con tu avance actual ya tenés ${cursablesHoy.length} ${cursablesHoy.length === 1 ? 'materia habilitada' : 'materias habilitadas'} para cursar en el ${periodoHabilitado} sin demoras por oferta.`
             : `Tu avance actual cumple con las condiciones para realizar el cambio en el ${periodoHabilitado}.`)
-        : `Este año (${anioEvaluado}) todavía faltan materias intermedias con dictado activo en el Plan 17.14 para tu nivel. En el ${periodoHabilitado} se habilita la oferta correspondiente.`;
+        : `Este año (${anioEvaluado}) todavía faltan materias intermedias con dictado activo en el Plan ${targetPlan} para tu nivel. En el ${periodoHabilitado} se habilita la oferta correspondiente.`;
 
     return {
         anioEvaluado,
