@@ -646,6 +646,7 @@ export type SyncAction =
           type: 'CONFLICT_RESOLVED_LOCAL';
           localHash: string;
           baseRevision?: number | null;
+          currentUid?: string | null;
       }
     | {
           type: 'SIGNED_OUT';

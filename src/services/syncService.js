@@ -18,11 +18,104 @@ import {
 } from '../utils/Sync/syncStateMachine';
 
 /** @typedef {import('../types/domain').AcademicSyncBundle} AcademicSyncBundle */
+/** @typedef {import('../types/domain').ApplyRemoteBundleResult} ApplyRemoteBundleResult */
 /** @typedef {import('../types/domain').FetchCloudBundleResult} FetchCloudBundleResult */
 /** @typedef {import('../types/domain').UploadAcademicSnapshotResult} UploadAcademicSnapshotResult */
+/** @typedef {import('../types/domain').SyncMeta} SyncMeta */
 /** @typedef {import('../types/domain').SyncUnitId} SyncUnitId */
+/** @typedef {import('../types/domain').UserCloudConfig} UserCloudConfig */
 
 export { normalizeNestedPlanMap, extractAcademicBundleFromCloudDoc };
+
+/**
+ * Adopta de forma segura una instantánea remota en almacenamiento local:
+ *  1. Respalda el estado local no vacío antes de sobrescribir (abortando si falla el backup).
+ *  2. Solo si la escritura local fue exitosa, actualiza `SyncMeta` con `uid`, `remoteRevision` y `remoteHash`.
+ *
+ * @param {string} uid
+ * @param {{
+ *   remoteBundle: Partial<AcademicSyncBundle>,
+ *   remoteRevision: number,
+ *   config?: UserCloudConfig | null,
+ *   reason?: string,
+ *   previousUid?: string | null,
+ *   silent?: boolean,
+ *   syncedAt?: string,
+ *   syncUnit?: SyncUnitId,
+ *   storage?: typeof storageRepository,
+ * }} options
+ * @returns {ApplyRemoteBundleResult & { meta?: SyncMeta }}
+ */
+export const adoptRemoteSnapshot = (
+    uid,
+    {
+        remoteBundle,
+        remoteRevision,
+        config = null,
+        reason = 'adopt_remote',
+        previousUid = null,
+        silent = false,
+        syncedAt = new Date().toISOString(),
+        syncUnit = SYNC_UNITS.ACADEMIC,
+        storage = storageRepository,
+    },
+) => {
+    const applyResult = storage.applyRemoteBundleSafely(remoteBundle, {
+        reason,
+        sourceUid: previousUid ?? uid,
+        config,
+        silent,
+    });
+
+    if (!applyResult.ok || !applyResult.hash) {
+        return applyResult;
+    }
+
+    /** @type {SyncMeta} */
+    const meta = {
+        syncRevision: remoteRevision,
+        lastSyncedHash: applyResult.hash,
+        lastSyncedUid: uid,
+        lastSyncedAt: syncedAt,
+        unit: syncUnit,
+    };
+    storage.setSyncMeta(meta, { silent: true });
+
+    return {
+        ...applyResult,
+        meta,
+    };
+};
+
+/**
+ * Registra en `SyncMeta` la decisión explícita del usuario de conservar los datos locales
+ * frente a un `conflict` o `account_mismatch`, reasignando la propiedad al `uid` actual
+ * y fijando `baseRevision` con la revisión remota conocida (sin marcarlo como sincronizado).
+ * Evita que una recarga previa a la subida vuelva a disparar `account_mismatch`.
+ *
+ * @param {string} uid
+ * @param {{
+ *   baseRevision: number | null,
+ *   syncUnit?: SyncUnitId,
+ *   storage?: typeof storageRepository,
+ * }} options
+ * @returns {SyncMeta}
+ */
+export const claimLocalSnapshotForAccount = (
+    uid,
+    { baseRevision, syncUnit = SYNC_UNITS.ACADEMIC, storage = storageRepository },
+) => {
+    /** @type {SyncMeta} */
+    const meta = {
+        syncRevision: baseRevision,
+        lastSyncedHash: null,
+        lastSyncedUid: uid,
+        lastSyncedAt: null,
+        unit: syncUnit,
+    };
+    storage.setSyncMeta(meta, { silent: true });
+    return meta;
+};
 
 /**
  * Lee el documento remoto del usuario y devuelve su bloque académico normalizado

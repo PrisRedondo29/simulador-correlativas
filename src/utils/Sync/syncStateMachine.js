@@ -165,38 +165,49 @@ export function getSafeSyncRevision(cloudDoc) {
 /**
  * Extrae y normaliza el bloque académico desde un documento Firestore (soportando
  * mapas modernos, mapas anidados legacy `{ "17": { "14": ... } }` y claves literales `"progreso.17.14"`).
- * Los campos canónicos siempre prevalecen sobre claves legacy con punto literal.
+ *
+ * Regla anti-resurrección:
+ *  - Si el documento todavía es legacy (`syncRevision === 0`), se incorporan como respaldo
+ *    las claves literales en raíz (`"progreso.17.14"`, etc.) para migrarlas sin pérdida.
+ *  - Una vez que el documento fue guardado con el esquema transaccional (`syncRevision >= 1`),
+ *    los mapas canónicos (`progreso`, `progresoDetalles`, `cursada`, `simulaciones`) son la
+ *    única fuente de verdad y las claves legacy residuales en raíz se ignoran para evitar que
+ *    planes o datos borrados resuciten.
+ *
  * @param {Record<string, any> | null | undefined} cloudData
  * @returns {AcademicSyncBundle}
  */
 export function extractAcademicBundleFromCloudDoc(cloudData) {
     if (!isPlainObject(cloudData)) return createEmptyAcademicBundle();
 
+    const syncRevision = getSafeSyncRevision(cloudData);
     const progreso = normalizeNestedPlanMap(cloudData.progreso || {});
     const progresoDetalles = normalizeNestedPlanMap(cloudData.progresoDetalles || {});
     const simulaciones = normalizeNestedPlanMap(cloudData.simulaciones || {});
     const cursada = normalizeNestedPlanMap(cloudData.cursada || {});
 
-    for (const key of Object.keys(cloudData)) {
-        if (key.startsWith('progreso.')) {
-            const plan = key.substring('progreso.'.length);
-            if (plan && !progreso[plan] && isPlainObject(cloudData[key])) {
-                progreso[plan] = cloudData[key];
-            }
-        } else if (key.startsWith('progresoDetalles.')) {
-            const plan = key.substring('progresoDetalles.'.length);
-            if (plan && !progresoDetalles[plan] && isPlainObject(cloudData[key])) {
-                progresoDetalles[plan] = cloudData[key];
-            }
-        } else if (key.startsWith('simulaciones.')) {
-            const plan = key.substring('simulaciones.'.length);
-            if (plan && !simulaciones[plan] && cloudData[key] != null) {
-                simulaciones[plan] = cloudData[key];
-            }
-        } else if (key.startsWith('cursada.')) {
-            const plan = key.substring('cursada.'.length);
-            if (plan && !cursada[plan] && isPlainObject(cloudData[key])) {
-                cursada[plan] = cloudData[key];
+    if (syncRevision === 0) {
+        for (const key of Object.keys(cloudData)) {
+            if (key.startsWith('progreso.')) {
+                const plan = key.substring('progreso.'.length);
+                if (plan && !progreso[plan] && isPlainObject(cloudData[key])) {
+                    progreso[plan] = cloudData[key];
+                }
+            } else if (key.startsWith('progresoDetalles.')) {
+                const plan = key.substring('progresoDetalles.'.length);
+                if (plan && !progresoDetalles[plan] && isPlainObject(cloudData[key])) {
+                    progresoDetalles[plan] = cloudData[key];
+                }
+            } else if (key.startsWith('simulaciones.')) {
+                const plan = key.substring('simulaciones.'.length);
+                if (plan && !simulaciones[plan] && cloudData[key] != null) {
+                    simulaciones[plan] = cloudData[key];
+                }
+            } else if (key.startsWith('cursada.')) {
+                const plan = key.substring('cursada.'.length);
+                if (plan && !cursada[plan] && isPlainObject(cloudData[key])) {
+                    cursada[plan] = cloudData[key];
+                }
             }
         }
     }
@@ -968,6 +979,9 @@ export function transitionSyncState(state, action) {
                 status: SYNC_STATUS.PENDING,
                 syncRevision:
                     action.baseRevision !== undefined ? action.baseRevision : state.syncRevision,
+                lastSyncedHash: null,
+                lastSyncedUid:
+                    action.currentUid !== undefined ? action.currentUid : state.lastSyncedUid,
                 pendingUploadHash: null,
                 errorCode: null,
                 errorMessage: null,
