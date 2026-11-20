@@ -5,9 +5,11 @@ import {
     getCareerPrefix,
     getAvailableCareers,
     getAvailablePlans,
+    getCatalogCareers,
     getCareerByPlan,
     getPlanEntry,
     getPlansSupportingFeature,
+    mergeDynamicCatalogCareers,
 } from './careersRegistry';
 
 const MULTI_CAREER_MOCK = [
@@ -90,5 +92,31 @@ describe('careersRegistry - Registro declarativo multi-carrera', () => {
             registry: MULTI_CAREER_MOCK,
         });
         expect(eqPlans.map((p) => p.planNumero)).toEqual(['17.14', '17.13']);
+    });
+
+    it('mergeDynamicCatalogCareers habilita carreras catalogadas ("Próximamente") o incorpora nuevas carreras desde catalog_meta/index sin recompilar', () => {
+        expect(getCatalogCareers().map((c) => c.id)).toEqual(['sistemas', 'civil']);
+
+        const merged = mergeDynamicCatalogCareers({
+            '20.08': {
+                version: 1,
+                carrera: 'Ingeniería Civil',
+                careerId: 'civil',
+                careerShortName: 'Ing. Civil',
+                estimatedSubjects: 42,
+            },
+            '30.01': {
+                version: 1,
+                carrera: 'Licenciatura en Administración',
+                careerId: 'administracion',
+                careerShortName: 'Lic. Admin',
+                estimatedSubjects: 34,
+            },
+        });
+
+        const available = getAvailableCareers(merged);
+        expect(available.map((c) => c.id)).toEqual(['sistemas', 'civil', 'administracion']);
+        expect(getPlanEntry('20.08', merged)?.carrera).toBe('Ingeniería Civil');
+        expect(getPlanEntry('30.01', merged)?.careerShortName).toBe('Lic. Admin');
     });
 });

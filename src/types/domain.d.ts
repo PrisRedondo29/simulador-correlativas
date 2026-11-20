@@ -167,6 +167,12 @@ export interface CatalogMetaEntry {
     version: number;
     updatedAt?: string | null;
     changelogMessage?: string | null;
+    carrera?: string | null;
+    careerId?: string | null;
+    careerShortName?: string | null;
+    label?: string | null;
+    shortTitle?: string | null;
+    estimatedSubjects?: number | null;
 }
 
 export interface CatalogMetaCache {
@@ -343,6 +349,39 @@ export interface CareerConfig {
     available: boolean;
     loadPlans?: () => Promise<{ default?: PlanData[] } | PlanData[]>;
     plans: PlanConfig[];
+}
+
+export interface AcademicRulesConfig {
+    cuatrimestresRegularidad: number;
+    intentosFinal: number;
+    ausenteDescuentaIntento: boolean;
+    notaMinimaAprobacion: number;
+    notaMinimaPromocion: number;
+    instanciasFinal: string[];
+}
+
+export interface TenantCommunityLink {
+    name: string;
+    description?: string;
+    imgIcon?: string;
+    icon?: string;
+    url: string;
+}
+
+export interface TenantOperationModes {
+    identityMode: 'none' | 'student_oauth' | 'institutional_sso';
+    storageMode: 'local_only' | 'local_and_cloud';
+}
+
+export interface TenantConfig {
+    id: string;
+    name: string;
+    shortName: string;
+    portalTitle: string;
+    themeColor: string;
+    academicRules: AcademicRulesConfig;
+    communityLink?: TenantCommunityLink | null;
+    operationModes: TenantOperationModes;
 }
 
 export interface UniversidadConfig {

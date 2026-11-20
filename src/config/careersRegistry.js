@@ -9,6 +9,7 @@
 /** @typedef {import('../types/domain').PlanConfig} PlanConfig */
 /** @typedef {import('../types/domain').EnrichedPlanConfig} EnrichedPlanConfig */
 /** @typedef {import('../types/domain').PlanFeatureFlags} PlanFeatureFlags */
+/** @typedef {import('../types/domain').CatalogMetaEntry} CatalogMetaEntry */
 
 export const DEFAULT_CAREER_ID = 'sistemas';
 export const DEFAULT_PLAN = '17.14';
@@ -135,6 +136,97 @@ function enrichPlan(career, plan) {
         careerShortName: career.shortName,
         planPrefix: career.planPrefix,
     };
+}
+
+/**
+ * Devuelve todas las carreras del registro (tanto las activas como las catalogadas
+ * "Próximamente"), útil para selectores institucionales de Carrera -> Plan.
+ * @param {CareerConfig[]} [registry]
+ * @returns {CareerConfig[]}
+ */
+export function getCatalogCareers(registry = CAREERS_REGISTRY) {
+    return [...registry];
+}
+
+/**
+ * Fusiona dinámicamente planes o carreras nuevos publicados desde el Panel Admin
+ * en `catalog_meta/index` sobre el registro estático base, sin requerir recompilar el frontend.
+ *
+ * @param {Record<string, CatalogMetaEntry> | null | undefined} remotePlansMeta
+ * @param {CareerConfig[]} [baseRegistry]
+ * @returns {CareerConfig[]}
+ */
+export function mergeDynamicCatalogCareers(remotePlansMeta, baseRegistry = CAREERS_REGISTRY) {
+    if (!remotePlansMeta || typeof remotePlansMeta !== 'object') {
+        return baseRegistry;
+    }
+
+    /** @type {CareerConfig[]} */
+    const cloned = baseRegistry.map((c) => ({
+        ...c,
+        plans: Array.isArray(c.plans) ? [...c.plans] : [],
+    }));
+
+    Object.entries(remotePlansMeta).forEach(([rawPlanNum, meta]) => {
+        const planNumero = normalizePlanNumber(rawPlanNum);
+        if (!planNumero || !meta || typeof meta !== 'object') return;
+
+        const alreadyExists = cloned.some((c) =>
+            c.plans.some((p) => p.planNumero === planNumero),
+        );
+        if (alreadyExists) return;
+
+        const prefix = getCareerPrefix(planNumero) || planNumero;
+        let targetCareer =
+            (meta.careerId && cloned.find((c) => c.id === meta.careerId)) ||
+            cloned.find((c) => c.planPrefix === prefix) ||
+            null;
+
+        const newPlanEntry = {
+            planNumero,
+            label: meta.label || `Plan ${planNumero}`,
+            shortTitle: meta.shortTitle || 'Plan Vigente',
+            statusLabel: 'Publicado',
+            description: 'Plan de estudios publicado desde el catálogo institucional.',
+            estimatedSubjects: Number(meta.estimatedSubjects) || 36,
+            isDefault: true,
+            intermediateTitle: null,
+            features: {
+                planTransition: false,
+                equivalencias: false,
+                intermediateTitle: false,
+            },
+            equivalencias: null,
+            transition: null,
+        };
+
+        if (targetCareer) {
+            targetCareer.available = true;
+            if (!targetCareer.defaultPlan) {
+                targetCareer.defaultPlan = planNumero;
+            }
+            if (meta.carrera) {
+                targetCareer.name = meta.carrera;
+            }
+            if (meta.careerShortName) {
+                targetCareer.shortName = meta.careerShortName;
+            }
+            targetCareer.plans.push(newPlanEntry);
+        } else {
+            const newCareerId = meta.careerId || `career-${prefix}`;
+            cloned.push({
+                id: newCareerId,
+                planPrefix: prefix,
+                name: meta.carrera || `Carrera (${planNumero})`,
+                shortName: meta.careerShortName || `Plan ${planNumero}`,
+                defaultPlan: planNumero,
+                available: true,
+                plans: [newPlanEntry],
+            });
+        }
+    });
+
+    return cloned;
 }
 
 /**

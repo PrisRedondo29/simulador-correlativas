@@ -1,4 +1,4 @@
-import reglas from './reglas_universidad.json';
+import { DEFAULT_UNLU_ACADEMIC_RULES, getActiveTenantConfig } from '../../config/tenantConfig';
 
 /** @typedef {import('../../types/domain').EstadoMateria} EstadoMateria */
 /** @typedef {import('../../types/domain').FechaRegularidad} FechaRegularidad */
@@ -7,6 +7,37 @@ import reglas from './reglas_universidad.json';
 /** @typedef {import('../../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
 /** @typedef {import('../../types/domain').PlanificacionRegularidad} PlanificacionRegularidad */
 /** @typedef {import('../../types/domain').ResumenPromedio} ResumenPromedio */
+/** @typedef {import('../../types/domain').AcademicRulesConfig} AcademicRulesConfig */
+
+/**
+ * Resuelve las reglas académicas efectivas (permitiendo inyectar reglas de otra institución).
+ * @param {Partial<AcademicRulesConfig> | null | undefined} [rulesOverride]
+ * @returns {AcademicRulesConfig}
+ */
+function resolveAcademicRules(rulesOverride) {
+    const base = getActiveTenantConfig()?.academicRules || DEFAULT_UNLU_ACADEMIC_RULES;
+    if (!rulesOverride) return base;
+    return {
+        ...base,
+        ...rulesOverride,
+    };
+}
+
+/**
+ * Cuenta cuántos llamados de final consumieron intento según la política institucional
+ * (`ausenteDescuentaIntento: false` en UNLu vs `true` en otras universidades).
+ * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @param {AcademicRulesConfig} rules
+ * @returns {number}
+ */
+function contarIntentosConsumidos(intentosFinal, rules) {
+    if (!intentosFinal || !Array.isArray(intentosFinal)) return 0;
+    return intentosFinal.filter((i) => {
+        if (i.estado === 'reprobado') return true;
+        if (rules.ausenteDescuentaIntento && i.estado === 'ausente') return true;
+        return false;
+    }).length;
+}
 
 /**
  * Convierte {anio, cuatrimestre} a número de cuatrimestres desde el inicio de los tiempos.
@@ -49,26 +80,29 @@ function getCuatrimestresTranscurridos(fechaRegularidad) {
 }
 
 /**
- * Verifica si la regularidad venció por tiempo (> 5 cuatrimestres).
+ * Verifica si la regularidad venció por tiempo (> cuatrimestresRegularidad).
  * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @param {Partial<AcademicRulesConfig> | null} [rulesOverride]
  * @returns {boolean}
  */
-export function verificarVencimientoTiempo(fechaRegularidad) {
+export function verificarVencimientoTiempo(fechaRegularidad, rulesOverride = null) {
     if (!fechaRegularidad) return false;
+    const rules = resolveAcademicRules(rulesOverride);
     const transcurridos = getCuatrimestresTranscurridos(fechaRegularidad);
-    return transcurridos > reglas.limites.cuatrimestres_regularidad;
+    return transcurridos > rules.cuatrimestresRegularidad;
 }
 
 /**
- * Verifica si la regularidad venció por exceso de desaprobaciones (Art. 32 RGE UNLu).
- * Los ausentes no descuentan intentos.
+ * Verifica si la regularidad venció por exceso de desaprobaciones (o ausentes si la institución los descuenta).
  * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @param {Partial<AcademicRulesConfig> | null} [rulesOverride]
  * @returns {boolean}
  */
-export function verificarVencimientoIntentos(intentosFinal) {
+export function verificarVencimientoIntentos(intentosFinal, rulesOverride = null) {
     if (!intentosFinal || !Array.isArray(intentosFinal)) return false;
-    const desaprobados = intentosFinal.filter((i) => i.estado === 'reprobado').length;
-    return desaprobados >= reglas.limites.intentos_final;
+    const rules = resolveAcademicRules(rulesOverride);
+    const consumidos = contarIntentosConsumidos(intentosFinal, rules);
+    return consumidos >= rules.intentosFinal;
 }
 
 /**
@@ -76,12 +110,21 @@ export function verificarVencimientoIntentos(intentosFinal) {
  * @param {EstadoMateria} actualEstado
  * @param {FechaRegularidad | null | undefined} fechaRegularidad
  * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @param {Partial<AcademicRulesConfig> | null} [rulesOverride]
  * @returns {EstadoMateria}
  */
-export function calcularEstadoConsolidado(actualEstado, fechaRegularidad, intentosFinal) {
+export function calcularEstadoConsolidado(
+    actualEstado,
+    fechaRegularidad,
+    intentosFinal,
+    rulesOverride = null,
+) {
     if (actualEstado !== 'Regular' && actualEstado !== 'Libre') return actualEstado;
 
-    if (verificarVencimientoTiempo(fechaRegularidad) || verificarVencimientoIntentos(intentosFinal)) {
+    if (
+        verificarVencimientoTiempo(fechaRegularidad, rulesOverride) ||
+        verificarVencimientoIntentos(intentosFinal, rulesOverride)
+    ) {
         return 'Libre';
     }
     return 'Regular';
@@ -91,21 +134,27 @@ export function calcularEstadoConsolidado(actualEstado, fechaRegularidad, intent
  * Retorna cuántos cuatrimestres e intentos le quedan al alumno.
  * @param {FechaRegularidad | null | undefined} fechaRegularidad
  * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @param {Partial<AcademicRulesConfig> | null} [rulesOverride]
  * @returns {PlanificacionRegularidad}
  */
-export function obtenerPlanificacionInstancias(fechaRegularidad, intentosFinal) {
-    const desaprobados = intentosFinal ? intentosFinal.filter((i) => i.estado === 'reprobado').length : 0;
-    const intentosRestantes = Math.max(0, reglas.limites.intentos_final - desaprobados);
+export function obtenerPlanificacionInstancias(
+    fechaRegularidad,
+    intentosFinal,
+    rulesOverride = null,
+) {
+    const rules = resolveAcademicRules(rulesOverride);
+    const consumidos = contarIntentosConsumidos(intentosFinal, rules);
+    const intentosRestantes = Math.max(0, rules.intentosFinal - consumidos);
 
     if (!fechaRegularidad) {
         return {
-            cuatrimestresRestantes: reglas.limites.cuatrimestres_regularidad,
+            cuatrimestresRestantes: rules.cuatrimestresRegularidad,
             intentosRestantes,
         };
     }
 
     const transcurridos = getCuatrimestresTranscurridos(fechaRegularidad);
-    const cuatrimestresRestantes = Math.max(0, reglas.limites.cuatrimestres_regularidad - transcurridos);
+    const cuatrimestresRestantes = Math.max(0, rules.cuatrimestresRegularidad - transcurridos);
 
     return { cuatrimestresRestantes, intentosRestantes };
 }
@@ -190,10 +239,12 @@ export function calcularPromedioGeneral(progresoDetalles, progreso) {
 /**
  * Calcula la fecha de vencimiento legible basada en el año y cuatrimestre de regularización.
  * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @param {Partial<AcademicRulesConfig> | null} [rulesOverride]
  * @returns {string | null}
  */
-export function obtenerFechaVencimientoLabel(fechaRegularidad) {
+export function obtenerFechaVencimientoLabel(fechaRegularidad, rulesOverride = null) {
     if (!fechaRegularidad) return null;
+    const rules = resolveAcademicRules(rulesOverride);
 
     let anioReg;
     let cuatriReg;
@@ -206,7 +257,7 @@ export function obtenerFechaVencimientoLabel(fechaRegularidad) {
         cuatriReg = fechaRegularidad.cuatrimestre;
     }
 
-    const totalCuatris = cuatriReg + reglas.limites.cuatrimestres_regularidad;
+    const totalCuatris = cuatriReg + rules.cuatrimestresRegularidad;
     const anioVenc = anioReg + Math.floor((totalCuatris - 1) / 2);
     const cuatriVenc = ((totalCuatris - 1) % 2) + 1;
 

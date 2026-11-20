@@ -344,8 +344,8 @@ SidebarFooter.propTypes = {
 export function TopUtilityBar({ plan }) {
     const location = useLocation();
     const navigate = useNavigate();
-    const { policy } = usePlanCapabilities();
-    const pageTitle = ROUTE_TITLES[location.pathname] || 'Portal Estudiantil';
+    const { policy, tenant } = usePlanCapabilities();
+    const pageTitle = ROUTE_TITLES[location.pathname] || tenant?.portalTitle || 'Portal Estudiantil';
     const activePlan = plan || DEFAULT_PLAN;
 
     return (
@@ -356,7 +356,7 @@ export function TopUtilityBar({ plan }) {
                 </span>
                 <span className="text-[#CBD5E1] dark:text-[#3B4958]" aria-hidden="true">/</span>
                 <span className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] truncate">
-                    {policy.carrera} · UNLu
+                    {policy.carrera} · {tenant?.shortName || 'UNLu'}
                 </span>
             </div>
 
@@ -364,11 +364,11 @@ export function TopUtilityBar({ plan }) {
                 <button
                     type="button"
                     onClick={() => navigate('/config')}
-                    title="Cambiar plan de estudios en Configuración"
+                    title="Cambiar carrera o plan de estudios en Configuración"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-xs font-medium text-[#334155] dark:text-[#E2E8F0] hover:border-[#005A36]/40 dark:hover:border-[#4A9D68]/50 transition-colors cursor-pointer"
                 >
                     <i className="fa-solid fa-scroll text-[11px] text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
-                    <span>Plan {activePlan}</span>
+                    <span>{policy.careerShortName ? `${policy.careerShortName} · ` : ''}Plan {activePlan}</span>
                 </button>
                 <SyncStatusMenu plan={activePlan} variant="light-bar" />
                 <NotificationCenter plan={activePlan} variant="light-bar" />

@@ -8,16 +8,26 @@ import {
     getIntermediateTitleConfig,
     getCareerMeta,
 } from '../config/planPolicies';
-import { getAvailableCareers, getAvailablePlans } from '../config/careersRegistry';
+import {
+    getAvailableCareers,
+    getAvailablePlans,
+    getCatalogCareers,
+    mergeDynamicCatalogCareers,
+} from '../config/careersRegistry';
+import { getActiveTenantConfig } from '../config/tenantConfig';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { PlanContext } from './planContextInstance';
 
 export function PlanProvider({ children }) {
     const [plan, setPlanState] = useState(() => storageRepository.getPlanActivo());
+    const [catalogMeta, setCatalogMeta] = useState(() =>
+        storageRepository.getCatalogMetaCache(),
+    );
 
     useEffect(() => {
         const syncPlan = () => {
             setPlanState(storageRepository.getPlanActivo());
+            setCatalogMeta(storageRepository.getCatalogMetaCache());
         };
 
         return subscribeStorageChanges(syncPlan);
@@ -29,25 +39,30 @@ export function PlanProvider({ children }) {
     }, []);
 
     const value = useMemo(() => {
-        const policy = getPlanPolicy(plan);
-        const career = getCareerMeta(plan);
-        const availableCareers = getAvailableCareers();
-        const availablePlans = getAvailablePlans();
+        const effectiveRegistry = mergeDynamicCatalogCareers(catalogMeta?.plans);
+        const tenant = getActiveTenantConfig();
+        const policy = getPlanPolicy(plan, effectiveRegistry);
+        const career = getCareerMeta(plan, effectiveRegistry);
+        const availableCareers = getAvailableCareers(effectiveRegistry);
+        const catalogCareers = getCatalogCareers(effectiveRegistry);
+        const availablePlans = getAvailablePlans(effectiveRegistry);
 
         return {
             plan,
             setPlan,
+            tenant,
             policy,
             career,
             availableCareers,
+            catalogCareers,
             availablePlans,
-            can: (featureName) => canUseFeature(plan, featureName),
-            canSimulateTransition: canUseFeature(plan, 'planTransition'),
-            transitionInfo: getPlanTransitionMeta(plan),
-            equivalenciasInfo: getPlanEquivalenciasMeta(plan),
-            intermediateTitleInfo: getIntermediateTitleConfig(plan),
+            can: (featureName) => canUseFeature(plan, featureName, effectiveRegistry),
+            canSimulateTransition: canUseFeature(plan, 'planTransition', effectiveRegistry),
+            transitionInfo: getPlanTransitionMeta(plan, effectiveRegistry),
+            equivalenciasInfo: getPlanEquivalenciasMeta(plan, effectiveRegistry),
+            intermediateTitleInfo: getIntermediateTitleConfig(plan, effectiveRegistry),
         };
-    }, [plan, setPlan]);
+    }, [plan, setPlan, catalogMeta]);
 
     return (
         <PlanContext.Provider value={value}>
@@ -81,9 +96,11 @@ export function usePlanCapabilities() {
     }
     return {
         plan: ctx.plan,
+        tenant: ctx.tenant,
         policy: ctx.policy,
         career: ctx.career,
         availableCareers: ctx.availableCareers,
+        catalogCareers: ctx.catalogCareers,
         availablePlans: ctx.availablePlans,
         can: ctx.can,
         canSimulateTransition: ctx.canSimulateTransition,

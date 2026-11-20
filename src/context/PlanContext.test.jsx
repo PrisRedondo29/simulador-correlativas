@@ -48,6 +48,30 @@ describe('PlanContext - Plan activo, capacidades por carrera y sincronización c
             window.dispatchEvent(new Event('progress-hydrated'));
         });
         expect(result.current.active.plan).toBe('17.14');
+        expect(result.current.caps.tenant?.shortName).toBe('UNLu');
+
+        // Publicación remota en catalog_meta incorpora dinámicamente una segunda carrera sin recompilar
+        act(() => {
+            storageRepository.setCatalogMetaCache(
+                {
+                    checkedAt: Date.now(),
+                    plans: {
+                        '20.08': {
+                            version: 1,
+                            carrera: 'Ingeniería Civil',
+                            careerId: 'civil',
+                            careerShortName: 'Ing. Civil',
+                        },
+                    },
+                },
+                { silent: false },
+            );
+            result.current.active.setPlan('20.08');
+        });
+
+        expect(result.current.caps.career?.id).toBe('civil');
+        expect(result.current.caps.policy.carrera).toBe('Ingeniería Civil');
+        expect(result.current.caps.availableCareers.map((c) => c.id)).toContain('civil');
     });
 
     it('lanza error claro si useActivePlan o usePlanCapabilities se usan fuera de <PlanProvider>', () => {

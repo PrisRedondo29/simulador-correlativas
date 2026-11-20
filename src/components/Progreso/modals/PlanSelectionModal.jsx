@@ -9,11 +9,12 @@ import {
     Chip,
 } from '@heroui/react';
 import PropTypes from 'prop-types';
-import { getAvailableCareers } from '../../../config/careersRegistry';
+import { getAvailableCareers, getCatalogCareers } from '../../../config/careersRegistry';
 import { trackSeleccionCarrera } from '../../../services/analyticsService';
 
 export default function PlanSelectionModal({ isOpen, onSelect }) {
     const availableCareers = getAvailableCareers();
+    const catalogCareers = getCatalogCareers();
     const [selectedCareerId, setSelectedCareerId] = useState(() => availableCareers[0]?.id || null);
 
     const activeCareer =
@@ -51,25 +52,44 @@ export default function PlanSelectionModal({ isOpen, onSelect }) {
                     </p>
                 </ModalHeader>
                 <ModalBody className="pb-8 px-6">
-                    {availableCareers.length > 1 && (
-                        <div className="flex flex-wrap items-center justify-center gap-2 mb-2">
-                            {availableCareers.map((career) => {
-                                const isSelected = career.id === activeCareer?.id;
-                                return (
-                                    <button
-                                        key={career.id}
-                                        type="button"
-                                        onClick={() => setSelectedCareerId(career.id)}
-                                        className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
-                                            isSelected
-                                                ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC]'
-                                                : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1]'
-                                        }`}
-                                    >
-                                        {career.name}
-                                    </button>
-                                );
-                            })}
+                    {catalogCareers.length > 1 && (
+                        <div className="space-y-1.5 mb-2">
+                            <span className="text-[11px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] block text-center">
+                                1. Carrera
+                            </span>
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                {catalogCareers.map((career) => {
+                                    const isAvailable =
+                                        career.available &&
+                                        Array.isArray(career.plans) &&
+                                        career.plans.length > 0;
+                                    const isSelected = career.id === activeCareer?.id;
+                                    return (
+                                        <button
+                                            key={career.id}
+                                            type="button"
+                                            disabled={!isAvailable}
+                                            onClick={() => {
+                                                if (isAvailable) setSelectedCareerId(career.id);
+                                            }}
+                                            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-colors inline-flex items-center gap-1.5 ${
+                                                isSelected
+                                                    ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] cursor-pointer'
+                                                    : isAvailable
+                                                        ? 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1] cursor-pointer'
+                                                        : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC]/60 dark:bg-[#1E2730]/40 text-[#94A3B8] dark:text-[#64748B] cursor-not-allowed'
+                                            }`}
+                                        >
+                                            <span>{career.name}</span>
+                                            {!isAvailable && (
+                                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#E2E8F0]/70 dark:bg-[#24303C] text-[#64748B] dark:text-[#94A3B8]">
+                                                    Próximamente
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
 

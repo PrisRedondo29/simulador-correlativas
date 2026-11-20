@@ -9,7 +9,7 @@ import storageRepository, { subscribeStorageChanges } from '../services/storageR
 function Inicio() {
     const navigate = useNavigate();
     const { user, userData } = useAuth();
-    const { plan, policy, can, canSimulateTransition, transitionInfo, equivalenciasInfo } = usePlanCapabilities();
+    const { plan, tenant, policy, can, canSimulateTransition, transitionInfo, equivalenciasInfo } = usePlanCapabilities();
     const [progresoGlobal, setProgresoGlobal] = useState({});
     const planActivo = plan || DEFAULT_PLAN;
 
@@ -122,10 +122,10 @@ function Inicio() {
                 <div className="space-y-1.5">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#005A36] dark:text-[#86EFAC]">
                         <i className="fa-solid fa-building-columns text-[11px]" aria-hidden="true" />
-                        {policy.carrera} · UNLu
+                        {policy.carrera} · {tenant?.shortName || 'UNLu'}
                     </span>
                     <h1 className="text-2xl sm:text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">
-                        {nombreUsuario ? `Hola, ${nombreUsuario}` : 'Portal Estudiantil'}
+                        {nombreUsuario ? `Hola, ${nombreUsuario}` : (tenant?.portalTitle || 'Portal Estudiantil')}
                     </h1>
                     <p className="text-[#64748B] dark:text-[#94A3B8] text-sm max-w-xl leading-relaxed">
                         Organizá tu recorrido académico, controlá correlatividades y simulá tus próximos cuatrimestres en un entorno claro.

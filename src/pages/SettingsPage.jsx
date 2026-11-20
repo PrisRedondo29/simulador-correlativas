@@ -34,8 +34,10 @@ export default function SettingsPage({ plan, setPlan }) {
         importBackupJson,
     } = useAuth();
     const {
+        tenant,
         career,
         availableCareers,
+        catalogCareers,
         canSimulateTransition,
         transitionInfo,
     } = usePlanCapabilities();
@@ -43,6 +45,10 @@ export default function SettingsPage({ plan, setPlan }) {
     const activePlan = plan || career?.defaultPlan || DEFAULT_PLAN;
     const activeCareer = career || availableCareers[0] || null;
     const careerPlans = activeCareer?.plans || [];
+    const displayCareers =
+        Array.isArray(catalogCareers) && catalogCareers.length > 0
+            ? catalogCareers
+            : availableCareers;
 
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
@@ -281,32 +287,45 @@ export default function SettingsPage({ plan, setPlan }) {
                     </CardHeader>
                     <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
                     <CardBody className="px-5 pb-5 pt-2 flex flex-col gap-3.5">
-                        {availableCareers.length > 1 ? (
+                        {displayCareers.length > 1 ? (
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-medium text-[#475569] dark:text-[#CBD5E1]">
-                                    Carrera
+                                    Carrera ({tenant?.shortName || 'UNLu'})
                                 </label>
                                 <div className="flex flex-wrap gap-2">
-                                    {availableCareers.map((item) => {
+                                    {displayCareers.map((item) => {
+                                        const isAvailable =
+                                            item.available &&
+                                            Array.isArray(item.plans) &&
+                                            item.plans.length > 0;
                                         const isCurrent = item.id === activeCareer?.id;
                                         return (
                                             <button
                                                 key={item.id}
                                                 type="button"
+                                                disabled={!isAvailable}
                                                 onClick={() => {
+                                                    if (!isAvailable) return;
                                                     const nextPlan = item.defaultPlan || item.plans?.[0]?.planNumero;
                                                     if (nextPlan) {
                                                         setPlan(nextPlan);
                                                         trackSeleccionCarrera({ plan: nextPlan, origen_plan: 'settings_career' });
                                                     }
                                                 }}
-                                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors inline-flex items-center gap-1.5 ${
                                                     isCurrent
-                                                        ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC]'
-                                                        : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1] hover:border-[#CBD5E1]'
+                                                        ? 'border-[#005A36] dark:border-[#4A9D68] bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] cursor-pointer'
+                                                        : isAvailable
+                                                            ? 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC] dark:bg-[#1E2730] text-[#475569] dark:text-[#CBD5E1] hover:border-[#CBD5E1] cursor-pointer'
+                                                            : 'border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC]/60 dark:bg-[#1E2730]/40 text-[#94A3B8] dark:text-[#64748B] cursor-not-allowed'
                                                 }`}
                                             >
-                                                {item.name}
+                                                <span>{item.name}</span>
+                                                {!isAvailable && (
+                                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#E2E8F0]/70 dark:bg-[#24303C] text-[#64748B] dark:text-[#94A3B8]">
+                                                        Próximamente
+                                                    </span>
+                                                )}
                                             </button>
                                         );
                                     })}
@@ -318,7 +337,7 @@ export default function SettingsPage({ plan, setPlan }) {
                                     {activeCareer.name}
                                 </span>
                                 <span className="text-[11px] font-semibold text-[#005A36] dark:text-[#6EE7B7] shrink-0">
-                                    UNLu
+                                    {tenant?.shortName || 'UNLu'}
                                 </span>
                             </div>
                         ) : null}
