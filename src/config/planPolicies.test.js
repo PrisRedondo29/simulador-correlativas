@@ -57,15 +57,22 @@ describe('planPolicies - Capacidades y navegación por plan y carrera', () => {
         expect(getPlanTransitionMeta('17.14')).toBeNull();
     });
 
-    it('oculta el ítem "Cambio de Plan" del menú en Plan 17.14', () => {
-        const nav13 = getAcademicNavItems('17.13').map((i) => i.name);
-        const nav14 = getAcademicNavItems('17.14').map((i) => i.name);
+    it('oculta el ítem "Cambio de Plan" del menú en Plan 17.14 y usa rutas semánticas', () => {
+        const nav13 = getAcademicNavItems('17.13');
+        const nav14 = getAcademicNavItems('17.14');
 
-        expect(nav13).toContain('Cambio de Plan');
-        expect(nav14).not.toContain('Cambio de Plan');
-        expect(nav14).toContain('Mis Materias');
-        expect(nav14).toContain('Mi Agenda');
-        expect(nav14).toContain('Equivalencias');
+        expect(nav13.map((i) => i.name)).toContain('Cambio de Plan');
+        expect(nav14.map((i) => i.name)).not.toContain('Cambio de Plan');
+        expect(nav14.map((i) => i.name)).toContain('Mis Materias');
+        expect(nav14.map((i) => i.name)).toContain('Mi Agenda');
+        expect(nav14.map((i) => i.name)).toContain('Equivalencias');
+        expect(nav14.map((i) => i.path)).toEqual([
+            '/',
+            '/mis-materias',
+            '/mi-agenda',
+            '/simulador',
+            '/equivalencias',
+        ]);
     });
 
     it('adapta navegación, metadatos y capacidades automáticamente para una segunda carrera sin equivalencias ni título intermedio', () => {

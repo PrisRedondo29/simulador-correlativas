@@ -14,8 +14,8 @@ vi.mock('./modals/ConsejoMateria', () => ({
 }));
 
 vi.mock('@heroui/react', () => ({
-    Button: ({ children, onPress, ...rest }) => (
-        <button type="button" onClick={onPress} {...rest}>
+    Button: ({ children, onPress, 'aria-label': ariaLabel }) => (
+        <button type="button" onClick={onPress} aria-label={ariaLabel}>
             {children}
         </button>
     ),
@@ -172,5 +172,64 @@ describe('MateriaContextContent - Reglas v2 en UI e intercepción de cascada al 
                 onConfirmAction: expect.any(Function),
             }),
         );
+    });
+
+    it('muestra aviso inline "Falta info" en materias incompletas y permite cargar Nota final en Promocionado', () => {
+        const { rerender } = render(
+            <MateriaContextContent
+                materia={MATERIAS_V2[0]}
+                materias={MATERIAS_V2}
+                progreso={{ C1: 'Regular' }}
+                progresoDetalles={{}}
+                setProgresoDetalles={vi.fn()}
+                plan="17.14"
+                cambioDeEstado={vi.fn()}
+                onChangeEstado={vi.fn()}
+                onSelectMateria={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.getByText(/Falta info: completá abajo el año y la nota de cursada/i),
+        ).toBeTruthy();
+
+        const setProgresoDetalles = vi.fn();
+        rerender(
+            <MateriaContextContent
+                materia={MATERIAS_V2[0]}
+                materias={MATERIAS_V2}
+                progreso={{ C1: 'Promocionado' }}
+                progresoDetalles={{}}
+                setProgresoDetalles={setProgresoDetalles}
+                plan="17.14"
+                cambioDeEstado={vi.fn()}
+                onChangeEstado={vi.fn()}
+                onSelectMateria={vi.fn()}
+            />,
+        );
+
+        expect(
+            screen.getByText(/Falta info: completá la nota final de promoción/i),
+        ).toBeTruthy();
+        const inputPromo = screen.getByLabelText(/Nota final \(promoción\)/i);
+        fireEvent.change(inputPromo, { target: { value: '9' } });
+        expect(setProgresoDetalles).toHaveBeenCalled();
+
+        // Al completar notaFinal desaparece el aviso inline
+        rerender(
+            <MateriaContextContent
+                materia={MATERIAS_V2[0]}
+                materias={MATERIAS_V2}
+                progreso={{ C1: 'Promocionado' }}
+                progresoDetalles={{ C1: { notaFinal: 9 } }}
+                setProgresoDetalles={setProgresoDetalles}
+                plan="17.14"
+                cambioDeEstado={vi.fn()}
+                onChangeEstado={vi.fn()}
+                onSelectMateria={vi.fn()}
+            />,
+        );
+
+        expect(screen.queryByText(/Falta info:/i)).toBeNull();
     });
 });

@@ -16,6 +16,8 @@ vi.mock('../../services/analyticsService', () => ({
     trackSearch: vi.fn(),
     trackCambioVista: vi.fn(),
     trackProgreso: vi.fn(),
+    trackCambioMateria: vi.fn(),
+    trackRecursada: vi.fn(),
 }));
 
 vi.mock('@heroui/react', () => {
@@ -146,11 +148,12 @@ describe('useProgresoDashboard + ConfirmarCambioModal - Confirmación de cascada
         expect(storageRepository.getMostrarConfirmacionCascada()).toBe(false);
         expect(result.current.mostrarConfirmacionCascada).toBe(false);
 
-        // Se abrió el modal de captura para M2 (porque confirmarCascada avanzó a procesarTransicion)
-        expect(result.current.isCapturaOpen).toBe(true);
+        // Ya sin modal intermedio, aplica la aprobación en cascada directamente
+        rerender();
+        expect(currentProgreso.M1).toBe('Aprobado');
+        expect(currentProgreso.M2).toBe('Aprobado');
 
         // En una siguiente acción con cascada, ya NO vuelve a abrir el modal de confirmación de cascada
-        rerender();
         act(() => {
             result.current.onConfirmationClose();
         });
@@ -164,5 +167,54 @@ describe('useProgresoDashboard + ConfirmarCambioModal - Confirmación de cascada
             expect(intercepted).toBe(false);
         });
         expect(actionSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('al recursar una materia (Regular -> Cursando) archiva la cursada anterior en historial y registra fechaInicioCursada', () => {
+        let currentProgreso = {
+            M1: 'Regular',
+            M2: 'Bloqueado',
+        };
+        let currentDetalles = {
+            M1: {
+                fechaRegularidad: { anio: 2024, cuatrimestre: 1 },
+                notaRegularizacion: 6,
+                intentosFinal: [{ nota: 2, estado: 'reprobado', fecha: '2025-02-10' }],
+            },
+        };
+        const setProgreso = vi.fn((next) => {
+            currentProgreso = typeof next === 'function' ? next(currentProgreso) : next;
+        });
+        const setProgresoDetalles = vi.fn((next) => {
+            currentDetalles = typeof next === 'function' ? next(currentDetalles) : next;
+        });
+
+        const { result } = renderHook(() =>
+            useProgresoDashboard({
+                plan: '17.14',
+                materias: MATERIAS_MOCK,
+                progreso: currentProgreso,
+                setProgreso,
+                progresoDetalles: currentDetalles,
+                setProgresoDetalles,
+            }),
+        );
+
+        act(() => {
+            result.current.handleCambioDeEstado('M1', 'Cursando');
+        });
+
+        expect(currentProgreso.M1).toBe('Cursando');
+        expect(currentDetalles.M1.intentosFinal).toEqual([]);
+        expect(currentDetalles.M1.fechaRegularidad).toBeNull();
+        expect(currentDetalles.M1.fechaInicioCursada).toMatchObject({
+            anio: new Date().getFullYear(),
+            cuatrimestre: 1,
+        });
+        expect(currentDetalles.M1.historial).toHaveLength(1);
+        expect(currentDetalles.M1.historial[0]).toMatchObject({
+            estadoFinal: 'Regular',
+            notaRegularizacion: 6,
+            fechaRegularidad: { anio: 2024, cuatrimestre: 1 },
+        });
     });
 });

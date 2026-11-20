@@ -49,14 +49,14 @@ function Inicio() {
                 subtitle: 'Registrá materias aprobadas, finales, intentos y correlativas',
                 tag: 'Núcleo',
                 icon: 'fa-solid fa-graduation-cap',
-                path: '/progreso',
+                path: '/mis-materias',
             },
             {
                 title: 'Mi Agenda',
                 subtitle: 'Organizá fechas de parciales, horarios semanales y apuntes de clases',
                 tag: 'Agenda',
                 icon: 'fa-solid fa-calendar-days',
-                path: '/cursada',
+                path: '/mi-agenda',
             },
             {
                 title: 'Simulador de Avance',
@@ -91,29 +91,37 @@ function Inicio() {
         return base;
     }, [can, equivalenciasInfo, canSimulateTransition, transitionInfo]);
 
-    const quickResources = [
-        {
-            title: 'Guía y Tutoriales',
-            desc: 'Cómo usar el simulador paso a paso',
-            icon: 'fa-solid fa-circle-question',
-            path: '/como-usar',
-            isExternal: false,
-        },
-        {
-            title: 'Centro de Estudiantes (CODES)',
-            desc: 'Comunidad, consultas y acompañamiento',
-            icon: 'fa-solid fa-users',
-            path: 'https://www.codesunlu.tech/',
-            isExternal: true,
-        },
-        {
+    const quickResources = useMemo(() => {
+        const list = [
+            {
+                title: 'Guía y Tutoriales',
+                desc: 'Cómo usar el simulador paso a paso',
+                icon: 'fa-solid fa-circle-question',
+                path: '/como-usar',
+                isExternal: false,
+            },
+        ];
+
+        if (tenant?.communityLink) {
+            list.push({
+                title: tenant.communityLink.name,
+                desc: tenant.communityLink.description || 'Comunidad, consultas y acompañamiento',
+                icon: tenant.communityLink.icon || 'fa-solid fa-users',
+                path: tenant.communityLink.url,
+                isExternal: true,
+            });
+        }
+
+        list.push({
             title: 'Configuración y Respaldos',
             desc: 'Plan de estudios, tema y sincronización',
             icon: 'fa-solid fa-gear',
-            path: '/config',
+            path: '/configuracion',
             isExternal: false,
-        },
-    ];
+        });
+
+        return list;
+    }, [tenant]);
 
     return (
         <div className="flex flex-col gap-6 py-6 sm:py-8 px-4 sm:px-6 md:px-10 max-w-6xl mx-auto animate-in fade-in duration-300">
@@ -135,7 +143,7 @@ function Inicio() {
                 {stats.tieneProgreso ? (
                     <button
                         type="button"
-                        onClick={() => navigate('/progreso')}
+                        onClick={() => navigate('/mis-materias')}
                         className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] hover:border-[#478559] dark:hover:border-[#4A9D68] rounded-2xl p-4 shadow-2xs transition-colors cursor-pointer flex items-center gap-4 shrink-0 group text-left w-full md:w-auto md:min-w-[290px]"
                     >
                         <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#478559] dark:text-[#86EFAC] flex items-center justify-center shrink-0 border border-[#A7F3D0] dark:border-[#1E4D38]">
@@ -165,7 +173,7 @@ function Inicio() {
                 ) : (
                     <Button
                         size="md"
-                        onPress={() => navigate('/progreso')}
+                        onPress={() => navigate('/mis-materias')}
                         className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white font-semibold text-sm self-start md:self-center shrink-0 rounded-xl px-5"
                         startContent={<i className="fa-solid fa-list-check text-xs" />}
                     >

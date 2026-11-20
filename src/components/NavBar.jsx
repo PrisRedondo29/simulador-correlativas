@@ -15,18 +15,22 @@ import ThemeSwitcher from './Shared/ThemeSwitcher';
 import LoginModal from './Auth/LoginModal';
 import NotificationCenter from './Notifications/NotificationCenter';
 import SyncStatusMenu from './Sync/SyncStatusMenu';
+import { GoogleIcon } from './Shared/BrandIcons';
 import { DEFAULT_PLAN, getAcademicNavItems } from '../config/planPolicies';
 import { useActivePlan, usePlanCapabilities } from '../context/PlanContext';
 
 const ROUTE_TITLES = {
     '/': 'Inicio',
+    '/mis-materias': 'Mis Materias',
     '/progreso': 'Mis Materias',
+    '/mi-agenda': 'Mi Agenda',
     '/cursada': 'Mi Agenda',
     '/simulador': 'Simulador de Avance',
     '/equivalencias': 'Equivalencias',
     '/cambio-plan': 'Cambio de Plan',
     '/transicion': 'Cambio de Plan',
     '/como-usar': 'Cómo usar',
+    '/configuracion': 'Configuración',
     '/config': 'Configuración',
     '/contacto': 'Contacto',
 };
@@ -62,7 +66,7 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
                             aria-label="Iniciar Sesión"
                             className="min-w-0 bg-white/15 text-white hover:bg-white/25"
                         >
-                            <i className="fa-brands fa-google" />
+                            <GoogleIcon className="w-4 h-4" />
                         </Button>
                     </Tooltip>
                 ) : (
@@ -71,7 +75,7 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
                         variant="flat"
                         size="sm"
                         className="w-full font-semibold bg-white text-[#005A36] hover:bg-[#F8FAFC] h-9 rounded-xl"
-                        startContent={<i className="fa-brands fa-google text-xs" />}
+                        startContent={<GoogleIcon className="w-3.5 h-3.5" />}
                         onPress={onSignInPress}
                     >
                         Iniciar Sesión
@@ -84,7 +88,7 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
                             isIconOnly
                             variant="light"
                             aria-label="Configuración"
-                            onPress={() => navigate('/config')}
+                            onPress={() => navigate('/configuracion')}
                             className="min-w-0 text-white/80 hover:text-white hover:bg-white/10"
                         >
                             <i className="fa-solid fa-gear" />
@@ -97,7 +101,7 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
                         size="sm"
                         className="w-full font-medium text-xs text-white/85 hover:text-white hover:bg-white/10 h-8 rounded-xl"
                         startContent={<i className="fa-solid fa-gear text-xs" />}
-                        onPress={() => navigate('/config')}
+                        onPress={() => navigate('/configuracion')}
                     >
                         Configuración
                     </Button>
@@ -131,7 +135,7 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
             {isCollapsed ? (
                 <>
                     <Tooltip content="Configuración" placement="right">
-                        <Button isIconOnly variant="light" aria-label="Configuración" onPress={() => navigate('/config')} className="min-w-0 text-white/80 hover:text-white hover:bg-white/10">
+                        <Button isIconOnly variant="light" aria-label="Configuración" onPress={() => navigate('/configuracion')} className="min-w-0 text-white/80 hover:text-white hover:bg-white/10">
                             <i className="fa-solid fa-gear" />
                         </Button>
                     </Tooltip>
@@ -158,7 +162,7 @@ const UserPanel = ({ onSignInPress, isCollapsed }) => {
                         size="sm"
                         className="w-full justify-start font-medium text-xs text-white/85 hover:text-white hover:bg-white/10 h-8 rounded-xl"
                         startContent={<i className="fa-solid fa-gear text-xs" />}
-                        onPress={() => navigate('/config')}
+                        onPress={() => navigate('/configuracion')}
                     >
                         Configuración
                     </Button>
@@ -192,18 +196,31 @@ const NavLinks = ({ onItemClick, isCollapsed }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const { plan } = useActivePlan();
+    const { tenant, careersRegistry } = usePlanCapabilities();
+
+    const communityItems = tenant?.communityLink
+        ? [
+              {
+                  name: tenant.communityLink.name,
+                  icon: (tenant.communityLink.icon || 'fa-users').replace(/^fa-(?:solid|regular|brands)\s+/, ''),
+                  imgIcon: tenant.communityLink.imgIcon,
+                  path: tenant.communityLink.url,
+                  isExternal: true,
+              },
+          ]
+        : [];
 
     const menuGroups = [
         {
             title: 'Académico',
-            items: getAcademicNavItems(plan),
+            items: getAcademicNavItems(plan, careersRegistry),
         },
         {
             title: 'Ayuda y Comunidad',
             items: [
                 { name: 'Cómo usar', icon: 'fa-circle-question', path: '/como-usar', id: 'btn-como-usar' },
                 { name: 'Reportar error', icon: 'fa-bug', path: '/contacto' },
-                { name: 'CODES UNLu', imgIcon: '/imgs/logo-codes.png', path: 'https://www.codesunlu.tech/', isExternal: true },
+                ...communityItems,
             ],
         },
     ];
@@ -363,7 +380,7 @@ export function TopUtilityBar({ plan }) {
             <div className="flex items-center gap-2 shrink-0">
                 <button
                     type="button"
-                    onClick={() => navigate('/config')}
+                    onClick={() => navigate('/configuracion')}
                     title="Cambiar carrera o plan de estudios en Configuración"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-xs font-medium text-[#334155] dark:text-[#E2E8F0] hover:border-[#005A36]/40 dark:hover:border-[#4A9D68]/50 transition-colors cursor-pointer"
                 >
@@ -386,7 +403,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
     const { isOpen: isDrawerOpen, onOpen: onDrawerOpen, onOpenChange: onDrawerOpenChange } = useDisclosure();
     const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
     const { signIn, firestoreWarning, clearFirestoreWarning } = useAuth();
-    const { policy } = usePlanCapabilities();
+    const { policy, tenant } = usePlanCapabilities();
     const navigate = useNavigate();
     const location = useLocation();
     const pageTitle = ROUTE_TITLES[location.pathname] || 'Portal Estudiantil';
@@ -442,7 +459,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                                 {pageTitle}
                             </span>
                             <span className="text-[10px] text-white/75 truncate leading-tight">
-                                UNLu · {policy.careerShortName}
+                                {tenant?.shortName || 'UNLu'} · {policy.careerShortName}
                             </span>
                         </div>
                     </button>
@@ -451,7 +468,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                 <div className="flex items-center gap-1.5 shrink-0">
                     <button
                         type="button"
-                        onClick={() => navigate('/config')}
+                        onClick={() => navigate('/configuracion')}
                         className="px-2 py-1 rounded-lg bg-white/15 text-[11px] font-medium text-white border border-white/20 cursor-pointer"
                         aria-label={`Plan activo ${activePlan}`}
                     >
@@ -490,8 +507,8 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
 
                     {!isCollapsed && (
                         <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-white text-base tracking-tight leading-none">UNLu</span>
-                            <span className="text-white/75 font-medium text-[11px] tracking-wider uppercase mt-0.5">Portal Estudiantil</span>
+                            <span className="font-bold text-white text-base tracking-tight leading-none">{tenant?.shortName || 'UNLu'}</span>
+                            <span className="text-white/75 font-medium text-[11px] tracking-wider uppercase mt-0.5">{tenant?.portalTitle || 'Portal Estudiantil'}</span>
                         </div>
                     )}
                 </div>
@@ -535,8 +552,8 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                                         <i className="fa-solid fa-graduation-cap text-white" />
                                     </button>
                                     <div className="flex flex-col">
-                                        <span className="font-bold text-white text-base leading-none">UNLu</span>
-                                        <span className="text-white/75 text-[11px] font-medium uppercase tracking-wider mt-0.5">Portal Estudiantil</span>
+                                        <span className="font-bold text-white text-base leading-none">{tenant?.shortName || 'UNLu'}</span>
+                                        <span className="text-white/75 text-[11px] font-medium uppercase tracking-wider mt-0.5">{tenant?.portalTitle || 'Portal Estudiantil'}</span>
                                     </div>
                                 </div>
                             </DrawerHeader>

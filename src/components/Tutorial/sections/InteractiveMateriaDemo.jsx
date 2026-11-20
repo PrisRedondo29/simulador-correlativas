@@ -1,13 +1,30 @@
-import React, { useState } from 'react';
-import { Chip, Button } from '@heroui/react';
+import React, { useState, useSyncExternalStore } from 'react';
+import { Chip, Button, Drawer, DrawerBody, DrawerContent, DrawerHeader } from '@heroui/react';
 import MateriaCard from '../../Progreso/MateriaCard';
-import DetalleMateriaModal from '../../Progreso/modals/DetalleMateriaModal';
+import { MateriaContextContent } from '../../Progreso/MateriaContextPanel';
 import { esMateriaIncompleta } from '../../../utils/Progreso/materiasUtils';
+
+function subscribeCompactViewport(callback) {
+    if (typeof window === 'undefined') return () => {};
+    const mql = window.matchMedia('(max-width: 1023px)');
+    mql.addEventListener('change', callback);
+    return () => mql.removeEventListener('change', callback);
+}
+
+function getCompactViewportSnapshot() {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 1023px)').matches;
+}
 
 export default function InteractiveMateriaDemo() {
     const [estado, setEstado] = useState('Disponible');
     const [detalles, setDetalles] = useState({});
     const [isDetailOpen, setIsDetailOpen] = useState(false);
+    const isCompactViewport = useSyncExternalStore(
+        subscribeCompactViewport,
+        getCompactViewportSnapshot,
+        () => false,
+    );
 
     const materiaDemo = {
         codigo: '99001',
@@ -30,20 +47,22 @@ export default function InteractiveMateriaDemo() {
         '11071': 'Aprobado',
     };
 
-    const handleCambioEstado = (target) => {
+    const handleCambioEstado = (codigoOrTarget, maybeTarget) => {
+        const target = maybeTarget ?? codigoOrTarget;
         if (target === 'Reiniciar') {
             setEstado('Disponible');
             setDetalles({});
         } else {
             setEstado(target);
-            if (target === 'Aprobado' || target === 'Promocionado') {
-                setDetalles(prev => ({ ...prev, fechaRegularidad: { anio: 2024, cuatrimestre: 1 }, notaFinal: 9 }));
-            }
         }
     };
 
-    const handleUpdateDetalles = (nuevosDetalles) => {
-        setDetalles(nuevosDetalles[materiaDemo.codigo]);
+    const handleUpdateDetalles = (updater) => {
+        setDetalles((prevDetalles) => {
+            const mapPrev = { [materiaDemo.codigo]: prevDetalles };
+            const nextMap = typeof updater === 'function' ? updater(mapPrev) : updater;
+            return nextMap?.[materiaDemo.codigo] || {};
+        });
     };
 
     return (
@@ -181,17 +200,33 @@ export default function InteractiveMateriaDemo() {
                 </div>
             </div>
 
-            <DetalleMateriaModal
+            <Drawer
                 isOpen={isDetailOpen}
                 onOpenChange={setIsDetailOpen}
-                infoMateria={materiaDemo}
-                materias={mockMaterias}
-                progreso={mockProgreso}
-                progresoDetalles={{ '99001': detalles }}
-                setProgresoDetalles={handleUpdateDetalles}
-                plan="DEMO"
-                cambioDeEstado={handleCambioEstado}
-            />
+                placement={isCompactViewport ? 'bottom' : 'right'}
+                size={isCompactViewport ? 'lg' : 'md'}
+                hideCloseButton
+            >
+                <DrawerContent className="bg-[#FFFFFF] dark:bg-[#161D24] border-[#E2E8F0] dark:border-[#24303C] max-h-[88vh] lg:max-h-screen">
+                    <DrawerHeader className="sr-only">
+                        Detalle de {materiaDemo.nombre}
+                    </DrawerHeader>
+                    <DrawerBody className="p-4 sm:p-5 overflow-y-auto">
+                        <MateriaContextContent
+                            key={materiaDemo.codigo}
+                            materia={materiaDemo}
+                            materias={mockMaterias}
+                            progreso={mockProgreso}
+                            progresoDetalles={{ '99001': detalles }}
+                            setProgresoDetalles={handleUpdateDetalles}
+                            plan="DEMO"
+                            cambioDeEstado={handleCambioEstado}
+                            onChangeEstado={handleCambioEstado}
+                            onClose={() => setIsDetailOpen(false)}
+                        />
+                    </DrawerBody>
+                </DrawerContent>
+            </Drawer>
         </div>
     );
 }

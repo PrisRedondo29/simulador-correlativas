@@ -10,7 +10,7 @@ import LeyendaEstados from "../components/Progreso/LeyendaEstados";
 import PlanSelectionModal from "../components/Progreso/modals/PlanSelectionModal";
 
 /**
- * Pantalla principal "Mi Progreso Académico".
+ * Pantalla principal "Mis Materias".
  * Estructura: Cabecera + KPIs jerarquizados -> Barra única de búsqueda/filtros ->
  * Master-Detail (acordeones por año + panel contextual con divulgación progresiva) -> Leyenda.
  */
@@ -117,10 +117,6 @@ export default function Progreso() {
             pendingBlockedTransition={dashboard.pendingBlockedTransition}
             confirmarCascada={dashboard.confirmarCascada}
             setMostrarConfirmacionCascada={dashboard.setMostrarConfirmacionCascada}
-            isCapturaOpen={dashboard.isCapturaOpen}
-            onCapturaOpenChange={dashboard.onCapturaOpenChange}
-            capturaConfig={dashboard.capturaConfig}
-            handleCapturaConfirm={dashboard.handleCapturaConfirm}
           />
         </div>
 

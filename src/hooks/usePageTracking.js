@@ -8,13 +8,15 @@ import { trackPageView } from '../services/analyticsService';
 
 // Mapeo de rutas a títulos legibles para GA4
 const PAGE_TITLES = {
-    '/':            'Inicio',
-    '/progreso':    'Progreso Académico',
-    '/simulador':   'Simulador de Avance',
+    '/':              'Inicio',
+    '/mis-materias':  'Mis Materias',
+    '/mi-agenda':     'Mi Agenda',
+    '/simulador':     'Simulador de Avance',
     '/equivalencias': 'Equivalencias entre Planes',
-    '/cambio-plan': 'Cambio de Plan',
-    '/como-usar':   'Cómo Usar',
-    '/config':      'Configuración',
+    '/cambio-plan':   'Cambio de Plan',
+    '/como-usar':     'Cómo Usar',
+    '/configuracion': 'Configuración',
+    '/contacto':      'Contacto',
 };
 
 export function usePageTracking() {

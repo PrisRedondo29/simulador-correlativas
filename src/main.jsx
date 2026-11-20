@@ -3,7 +3,9 @@ import { HeroUIProvider, ToastProvider } from '@heroui/react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import App from './App.jsx'
 import './main.css'
-import '@fortawesome/fontawesome-free/css/all.min.css'
+import '@fortawesome/fontawesome-free/css/fontawesome.min.css'
+import '@fortawesome/fontawesome-free/css/solid.min.css'
+import '@fortawesome/fontawesome-free/css/regular.min.css'
 
 // Silenciar logs y warnings en producción para una consola limpia y profesional
 if (import.meta.env.PROD) {

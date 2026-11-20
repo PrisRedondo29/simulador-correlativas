@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from '@heroui/react';
 import { Link, useLocation } from 'react-router-dom';
 import { usePlanCapabilities } from '../context/PlanContext';
+import { LinkedInIcon } from './Shared/BrandIcons';
 
 function Footer() {
     const location = useLocation();
@@ -77,7 +78,7 @@ function Footer() {
                                 size="sm"
                                 variant="flat"
                                 className="bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0] font-medium text-xs rounded-xl px-3.5 border border-[#E2E8F0] dark:border-[#2A3540]"
-                                startContent={<i className="fa-brands fa-linkedin text-xs" />}
+                                startContent={<LinkedInIcon className="w-3.5 h-3.5" />}
                             >
                                 LinkedIn
                             </Button>

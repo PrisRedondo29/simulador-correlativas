@@ -137,8 +137,8 @@ function TransicionPlan() {
                         </h1>
                         <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
                             Verificá si con tus materias aprobadas en{' '}
-                            <Link to="/progreso" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
-                                Mi Progreso
+                            <Link to="/mis-materias" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
+                                Mis Materias
                             </Link>{' '}
                             ya te corresponde pasarte al Plan {targetPlan}.
                         </p>
@@ -158,7 +158,7 @@ function TransicionPlan() {
                             <Button
                                 size="sm"
                                 variant="light"
-                                onPress={() => navigate('/progreso')}
+                                onPress={() => navigate('/mis-materias')}
                                 className="text-[#005A36] dark:text-[#6EE7B7] text-xs font-semibold h-6 px-2 min-w-0"
                             >
                                 Editar
@@ -177,16 +177,16 @@ function TransicionPlan() {
                                     Todavía no cargaste materias del Plan {sourcePlan}
                                 </h2>
                                 <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#CBD5E1]">
-                                    Cargá primero tus materias aprobadas en Mi Progreso para poder evaluar si ya te corresponde cambiarte de plan.
+                                    Cargá primero tus materias aprobadas en Mis Materias para poder evaluar si ya te corresponde cambiarte de plan.
                                 </p>
                             </div>
                         </div>
                         <Button
                             size="sm"
-                            onPress={() => navigate('/progreso')}
+                            onPress={() => navigate('/mis-materias')}
                             className="bg-[#005A36] hover:bg-[#00472B] text-white font-semibold text-xs px-4 h-10 shrink-0 rounded-xl"
                         >
-                            Cargar mi progreso
+                            Cargar mis materias
                         </Button>
                     </section>
                 ) : !evaluado ? (

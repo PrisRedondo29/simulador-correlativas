@@ -1,9 +1,14 @@
 // @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import storageRepository from '../../services/storageRepository';
+
+vi.mock('../../pages/Progreso', () => ({ default: () => <div>Página Mis Materias</div> }));
+vi.mock('../../pages/Cursada', () => ({ default: () => <div>Página Mi Agenda</div> }));
+vi.mock('../../pages/TransicionPlan', () => ({ default: () => <div>Página Cambio de Plan</div> }));
+vi.mock('../../pages/SettingsPage', () => ({ default: () => <div>Página Configuración</div> }));
 
 vi.mock('@heroui/react', () => ({
     Spinner: ({ label }) => <div role="status">{label}</div>,
@@ -17,7 +22,13 @@ vi.mock('@heroui/react', () => ({
 }));
 
 import PlanFeatureRoute from './PlanFeatureRoute';
+import Rutas from '../../routes/Rutas';
 import { PlanProvider } from '../../context/PlanContext';
+
+function LocationSpy() {
+    const { pathname } = useLocation();
+    return <span data-testid="location-path">{pathname}</span>;
+}
 
 describe('PlanFeatureRoute - Guardas declarativas por capacidades del plan', () => {
     beforeEach(() => {
@@ -59,10 +70,34 @@ describe('PlanFeatureRoute - Guardas declarativas por capacidades del plan', () 
 
         expect(screen.queryByText('Simulador de Transición')).toBeNull();
         expect(screen.getByText(/Herramienta disponible para el Plan 17\.13/i)).toBeTruthy();
+        expect(screen.getByRole('button', { name: /Ir a Mis Materias/i })).toBeTruthy();
 
         fireEvent.click(screen.getByRole('button', { name: /Cambiar a Plan 17\.13/i }));
 
         expect(storageRepository.getPlanActivo()).toBe('17.13');
         expect(screen.getByText('Simulador de Transición')).toBeTruthy();
+    });
+
+    it.each([
+        ['/progreso', '/mis-materias', 'Página Mis Materias'],
+        ['/cursada', '/mi-agenda', 'Página Mi Agenda'],
+        ['/transicion', '/cambio-plan', 'Página Cambio de Plan'],
+        ['/config', '/configuracion', 'Página Configuración'],
+    ])('redirige ruta legacy %s hacia la ruta canónica %s', async (legacyPath, canonicalPath, expectedPageText) => {
+        storageRepository.setPlanActivo('17.13', { silent: true });
+
+        render(
+            <MemoryRouter initialEntries={[legacyPath]}>
+                <PlanProvider>
+                    <LocationSpy />
+                    <Rutas plan="17.13" setPlan={vi.fn()} />
+                </PlanProvider>
+            </MemoryRouter>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId('location-path').textContent).toBe(canonicalPath);
+            expect(screen.getByText(expectedPageText)).toBeTruthy();
+        });
     });
 });

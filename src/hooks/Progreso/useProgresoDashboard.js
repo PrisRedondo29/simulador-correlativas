@@ -14,7 +14,7 @@ import storageRepository, { STORAGE_KEYS } from '../../services/storageRepositor
 
 /**
  * Centraliza el estado de tablero, filtros, KPIs, acordeones por año,
- * panel contextual y transiciones con cascada para Mi Progreso.
+ * panel contextual y transiciones con cascada para Mis Materias.
  */
 export default function useProgresoDashboard({
     plan,
@@ -46,7 +46,6 @@ export default function useProgresoDashboard({
     // Modales de flujo de estado
     const { isOpen: isResetOpen, onOpen: onResetOpen, onOpenChange: onResetOpenChange, onClose: onResetClose } = useDisclosure();
     const { isOpen: isConfirmationOpen, onOpen: onConfirmationOpen, onOpenChange: onConfirmationOpenChange, onClose: onConfirmationClose } = useDisclosure();
-    const { isOpen: isCapturaOpen, onOpen: onCapturaOpen, onOpenChange: onCapturaOpenChange, onClose: onCapturaClose } = useDisclosure();
     const { isOpen: isAprobarAnioOpen, onOpen: onAprobarAnioOpen, onOpenChange: onAprobarAnioOpenChange, onClose: onAprobarAnioClose } = useDisclosure();
 
     const [mostrarConfirmacionCascada, setMostrarConfirmacionCascadaState] = useState(() =>
@@ -58,8 +57,6 @@ export default function useProgresoDashboard({
         storageRepository.setMostrarConfirmacionCascada(nextVal);
     }, []);
     const [pendingBlockedTransition, setPendingBlockedTransition] = useState(null);
-    const [capturaConfig, setCapturaConfig] = useState({ tipo: null, materia: null, pendingState: null });
-    const [codigoMateriaCaptura, setCodigoMateriaCaptura] = useState(null);
     const [grupoAAprobar, setGrupoAAprobar] = useState(null);
 
     // Verificar vencimientos pasivos de regularidad al cargar
@@ -264,20 +261,31 @@ export default function useProgresoDashboard({
         };
     }, [materias, progreso, progresoDetalles, plan]);
 
-    // Transiciones de estado (unificadas para cards, panel contextual y modal de captura)
-    const ejecutarCambioConDatos = useCallback((codigo, config, payload) => {
-        if (payload && codigo) {
+    // Transiciones de estado (unificadas para tarjetas y panel contextual sin modal intermedio)
+    const procesarTransicion = useCallback((codigo, mappedState) => {
+        const materia = materias.find(m => m.codigo === codigo);
+        const estadoActual = progreso[codigo];
+
+        if (mappedState === 'Reiniciar') {
+            const baseState = calcularEstadoBaseMateria(progreso, materia, materias);
+            cambioDeEstado(codigo, baseState);
+            return;
+        }
+
+        if (mappedState === 'Cursando') {
+            const viniendoDeEstadoAvanzado = ['Regular', 'Libre', 'Aprobado', 'Promocionado'].includes(estadoActual);
+            const cuatrimestreAuto = materia?.cuatrimestre
+                ? (Number(materia.cuatrimestre) % 2 === 0 ? 2 : 1)
+                : 1;
+            const fechaInicioCursada = {
+                anio: new Date().getFullYear(),
+                cuatrimestre: cuatrimestreAuto,
+            };
+
             const detallesActuales = progresoDetalles?.[codigo] || {};
-            const estadoActual = progreso[codigo];
-
-            const viniendoDeEstadoAvanzado = ['Regular', 'Libre', 'Aprobado', 'Promocionado', 'Cursando'].includes(estadoActual);
-            const yendoAEstadoActivo = ['Cursando', 'Regular', 'Aprobado', 'Promocionado'].includes(config.pendingState);
-            const esRecursada = (viniendoDeEstadoAvanzado && config.pendingState === 'Cursando') ||
-                (['Libre', 'Aprobado', 'Promocionado'].includes(estadoActual) && yendoAEstadoActivo);
-
             let nuevosDetallesBase = { ...detallesActuales };
 
-            if (esRecursada) {
+            if (viniendoDeEstadoAvanzado) {
                 const { historial, ...datosAArchivar } = detallesActuales;
                 if ((datosAArchivar.intentosFinal && datosAArchivar.intentosFinal.length > 0) || datosAArchivar.fechaRegularidad) {
                     nuevosDetallesBase = {
@@ -292,106 +300,41 @@ export default function useProgresoDashboard({
                         intentosFinal: [],
                         fechaRegularidad: null,
                         notaRegularizacion: null,
-                        fechaInicioCursada: null,
                         notaFinal: null,
                     };
                 }
             }
 
-            const nuevosDetalles = {
-                ...nuevosDetallesBase,
-                ...(payload.fechaRegularidad !== undefined && { fechaRegularidad: payload.fechaRegularidad }),
-                ...(payload.fechaInicioCursada !== undefined && { fechaInicioCursada: payload.fechaInicioCursada }),
-                ...(payload.notaFinal !== undefined && { notaFinal: payload.notaFinal }),
-                ...(payload.notaRegularizacion !== undefined && { notaRegularizacion: payload.notaRegularizacion }),
-                ...(payload.rendidaLibre !== undefined && { rendidaLibre: payload.rendidaLibre }),
-                ...(payload.esEquivalencia !== undefined && { esEquivalencia: payload.esEquivalencia }),
-            };
-
-            if (config.tipo === 'desde_cursando_hacia_reg' && !nuevosDetalles.fechaRegularidad && nuevosDetallesBase.fechaInicioCursada) {
-                nuevosDetalles.fechaRegularidad = nuevosDetallesBase.fechaInicioCursada;
-            }
-
-            if (payload.notaFinal != null && (config.pendingState === 'Aprobado' || config.pendingState === 'Promocionado')) {
-                const fechaExamen = payload.anioExamen
-                    ? new Date(payload.anioExamen, 11, 31).toISOString()
-                    : new Date().toISOString();
-
-                const nuevoIntento = {
-                    nota: payload.notaFinal,
-                    estado: payload.notaFinal >= 4 ? 'aprobado' : 'reprobado',
-                    fecha: payload.fechaFinal || fechaExamen.split('T')[0],
-                };
-                nuevosDetalles.intentosFinal = [
-                    ...(nuevosDetallesBase.intentosFinal || []),
-                    nuevoIntento,
-                ];
-            }
-
-            const updatedDetalles = { ...progresoDetalles, [codigo]: nuevosDetalles };
-            if (setProgresoDetalles) setProgresoDetalles(updatedDetalles);
-            updateAuthProgreso(plan, progreso, updatedDetalles);
-        }
-
-        if (config.pendingState) {
-            cambioDeEstado(codigo, config.pendingState);
-        }
-    }, [progresoDetalles, progreso, setProgresoDetalles, updateAuthProgreso, plan, cambioDeEstado]);
-
-    const procesarTransicion = useCallback((codigo, mappedState) => {
-        const materia = materias.find(m => m.codigo === codigo);
-        const estadoActual = progreso[codigo];
-
-        if (mappedState === 'Reiniciar') {
-            const baseState = calcularEstadoBaseMateria(progreso, materia, materias);
-            cambioDeEstado(codigo, baseState);
-            return;
-        }
-
-        if (mappedState === 'Cursando') {
-            const viniendoDeEstadoAvanzado = ['Regular', 'Libre', 'Aprobado', 'Promocionado'].includes(estadoActual);
-            if (viniendoDeEstadoAvanzado) {
-                setCapturaConfig({ tipo: 'hacia_cursando', materia, pendingState: mappedState });
-                setCodigoMateriaCaptura(codigo);
-                onCapturaOpen();
-                return;
-            }
-
-            const cuatrimestreAuto = materia?.cuatrimestre
-                ? (Number(materia.cuatrimestre) % 2 === 0 ? 2 : 1)
-                : 1;
-
-            const payload = {
-                fechaInicioCursada: {
-                    anio: new Date().getFullYear(),
-                    cuatrimestre: cuatrimestreAuto,
+            const updatedDetalles = {
+                ...progresoDetalles,
+                [codigo]: {
+                    ...nuevosDetallesBase,
+                    fechaInicioCursada,
                 },
             };
-
-            ejecutarCambioConDatos(codigo, { tipo: 'hacia_cursando', materia, pendingState: mappedState }, payload);
+            if (setProgresoDetalles) setProgresoDetalles(updatedDetalles);
+            updateAuthProgreso(plan, progreso, updatedDetalles);
+            cambioDeEstado(codigo, 'Cursando');
             return;
         }
 
-        let tipoCaptura = null;
-        if (mappedState === 'Regular') {
-            tipoCaptura = estadoActual === 'Cursando' ? 'desde_cursando_hacia_reg' : 'hacia_regular';
-        } else if (mappedState === 'Aprobado' || mappedState === 'Promocionado') {
-            if (estadoActual === 'Regular' || estadoActual === 'Cursando') {
-                tipoCaptura = 'hacia_aprobado_desde_reg';
-            } else {
-                tipoCaptura = 'hacia_aprobado_directo';
+        if (estadoActual === 'Cursando' && mappedState === 'Regular') {
+            const detallesActuales = progresoDetalles?.[codigo];
+            if (detallesActuales?.fechaInicioCursada && !detallesActuales.fechaRegularidad) {
+                const updatedDetalles = {
+                    ...progresoDetalles,
+                    [codigo]: {
+                        ...detallesActuales,
+                        fechaRegularidad: detallesActuales.fechaInicioCursada,
+                    },
+                };
+                if (setProgresoDetalles) setProgresoDetalles(updatedDetalles);
+                updateAuthProgreso(plan, progreso, updatedDetalles);
             }
-        }
-
-        if (tipoCaptura) {
-            setCapturaConfig({ tipo: tipoCaptura, materia, pendingState: mappedState, estadoAnterior: estadoActual });
-            setCodigoMateriaCaptura(codigo);
-            onCapturaOpen();
-            return;
         }
 
         cambioDeEstado(codigo, mappedState);
-    }, [materias, progreso, cambioDeEstado, onCapturaOpen, ejecutarCambioConDatos]);
+    }, [materias, progreso, progresoDetalles, setProgresoDetalles, updateAuthProgreso, plan, cambioDeEstado]);
 
     const handleCambioDeEstado = useCallback((codigo, targetState) => {
         const estadoActual = progreso[codigo];
@@ -453,26 +396,6 @@ export default function useProgresoDashboard({
         onConfirmAction();
         return false;
     }, [progreso, materias, mostrarConfirmacionCascada, onConfirmationOpen]);
-
-    const handleCapturaConfirm = useCallback((payload) => {
-        if (payload?._sugerirLibre) {
-            if (codigoMateriaCaptura) {
-                const detallesActuales = progresoDetalles?.[codigoMateriaCaptura] || {};
-                const updatedDetalles = {
-                    ...progresoDetalles,
-                    [codigoMateriaCaptura]: { ...detallesActuales, notaRegularizacion: payload.notaRegularizacion },
-                };
-                if (setProgresoDetalles) setProgresoDetalles(updatedDetalles);
-                updateAuthProgreso(plan, progreso, updatedDetalles);
-            }
-            onCapturaClose();
-            cambioDeEstado(codigoMateriaCaptura, 'Libre');
-            return;
-        }
-
-        ejecutarCambioConDatos(codigoMateriaCaptura, capturaConfig, payload);
-        onCapturaClose();
-    }, [codigoMateriaCaptura, progresoDetalles, setProgresoDetalles, updateAuthProgreso, plan, progreso, onCapturaClose, cambioDeEstado, ejecutarCambioConDatos, capturaConfig]);
 
     const reestablecerProgreso = useCallback(() => {
         const progresoInicial = {};
@@ -541,10 +464,6 @@ export default function useProgresoDashboard({
         // Acciones de estado y modales
         cambioDeEstado,
         handleCambioDeEstado,
-        capturaConfig,
-        handleCapturaConfirm,
-        isCapturaOpen,
-        onCapturaOpenChange,
 
         // Cascada
         isConfirmationOpen,

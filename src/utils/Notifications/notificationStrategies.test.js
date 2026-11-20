@@ -79,6 +79,7 @@ describe('notificationStrategies - Patrón Strategy de alertas académicas', () 
         });
 
         expect(alerta).not.toBeNull();
+        expect(alerta.path).toBe('/mis-materias');
         expect(alerta.description).toContain('Bases de Datos I');
         expect(alerta.description).not.toContain('Redes');
     });
@@ -159,7 +160,7 @@ describe('notificationStrategies - Patrón Strategy de alertas académicas', () 
         });
         expect(inminente).not.toBeNull();
         expect(inminente.tone).toBe('danger');
-        expect(inminente.path).toBe('/cursada');
+        expect(inminente.path).toBe('/mi-agenda');
         expect(inminente.description).toContain('Bases de Datos I');
         expect(inminente.description).toContain('Mañana');
 

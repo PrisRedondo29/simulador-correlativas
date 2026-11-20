@@ -10,6 +10,7 @@ import {
 import PropTypes from 'prop-types';
 import { useAuth } from '../../context/AuthContext';
 import { SYNC_STATUS } from '../../utils/Sync/syncStateMachine';
+import { GoogleIcon } from '../Shared/BrandIcons';
 
 function formatSyncTimestamp(iso) {
     if (!iso) return null;
@@ -151,7 +152,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                 : 'text-[#475569] dark:text-[#CBD5E1] hover:text-[#1E293B] dark:hover:text-white hover:bg-[#F1F5F9] dark:hover:bg-[#1E2730]',
             statusTitle: 'Tus datos están sincronizados',
             statusDetail:
-                'Progreso, notas, Mi Cursada y simulaciones coinciden con tu última copia en la nube.',
+                'Tus materias, notas, Mi Agenda y simulaciones coinciden con tu última copia en la nube.',
         };
     };
 
@@ -166,7 +167,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                 title: res.hasConcurrentLocalEdits ? 'Subido (con cambios nuevos)' : 'Guardado en la nube',
                 description: res.hasConcurrentLocalEdits
                     ? 'Se guardó tu versión anterior, pero detectamos ediciones nuevas pendientes.'
-                    : 'Tu progreso, cursada y simulaciones quedaron respaldados.',
+                    : 'Tus materias, Mi Agenda y simulaciones quedaron respaldados.',
                 color: res.hasConcurrentLocalEdits ? 'warning' : 'success',
             });
             if (!res.hasConcurrentLocalEdits) setIsOpen(false);
@@ -376,7 +377,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                             size="sm"
                             color="primary"
                             onPress={handleSignInAction}
-                            startContent={<i className="fa-brands fa-google text-xs" aria-hidden="true" />}
+                            startContent={<GoogleIcon className="w-3.5 h-3.5" />}
                             className="w-full font-semibold text-xs h-9 rounded-xl bg-[#005A36] dark:bg-[#2E8B63] text-white"
                         >
                             Iniciar sesión para respaldar

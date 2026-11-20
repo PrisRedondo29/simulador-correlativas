@@ -8,7 +8,7 @@ const steps = [
         icon: 'fa-graduation-cap',
         title: 'Marcá tus materias',
         description: 'Registrá qué materias aprobaste, regularizaste o estás cursando. El sistema calcula tus promedios y vencimientos.',
-        path: '/progreso',
+        path: '/mis-materias',
         cta: 'Ir a Mis Materias',
     },
     {
@@ -16,7 +16,7 @@ const steps = [
         icon: 'fa-calendar-days',
         title: 'Armá tu agenda',
         description: 'Anotá tus fechas de parciales, finales, horarios semanales de cursada y apuntes de cada clase.',
-        path: '/cursada',
+        path: '/mi-agenda',
         cta: 'Ir a Mi Agenda',
     },
     {

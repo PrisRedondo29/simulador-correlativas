@@ -13,6 +13,7 @@ import {
   Switch,
 } from "@heroui/react";
 import {
+  AlertCircle,
   BookOpen,
   Calendar,
   Check,
@@ -31,7 +32,7 @@ import {
   evaluarElegibilidadMateria,
   obtenerCodigosCorrelativasMateria,
 } from "../../utils/Progreso/materiaStateMachine";
-import materiasUtils from "../../utils/Progreso/materiasUtils";
+import materiasUtils, { esMateriaIncompleta } from "../../utils/Progreso/materiasUtils";
 import regularidadUtils from "../../utils/Progreso/regularidadUtils";
 import reglas from "../../utils/Progreso/reglas_universidad.json";
 import ConsejoMateria from "./modals/ConsejoMateria";
@@ -332,6 +333,7 @@ export function MateriaContextContent({
   ).length;
   const tieneIntentoAprobado = intentosFinal.some((i) => i.estado === "aprobado");
   const isTesinaBloqueada = Boolean(materia.tesis) && estadoActual === "Bloqueado";
+  const faltaInfo = esMateriaIncompleta(materia, estadoActual, detalles);
 
   const handleConfirmarNuevoIntento = () => {
     const notaNum = Number(notaVal);
@@ -592,6 +594,24 @@ export function MateriaContextContent({
             )}
           </div>
 
+          {faltaInfo && (
+            <div
+              role="status"
+              className="p-2.5 rounded-lg bg-[#FFFBEB] dark:bg-[#2D2210] border border-[#FDE68A] dark:border-[#5C4318] text-xs text-[#92400E] dark:text-[#FCD34D] flex items-start gap-2"
+            >
+              <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" aria-hidden="true" />
+              <span>
+                {estadoActual === "Regular"
+                  ? "Falta info: completá abajo el año y la nota de cursada para calcular tu promedio y vencimiento de regularidad."
+                  : estadoActual === "Promocionado"
+                    ? "Falta info: completá la nota final de promoción para incluir esta materia en tu promedio general."
+                    : esEquivalencia
+                      ? "Falta info: completá la nota en «Opciones avanzadas» para incluir esta equivalencia en tu promedio."
+                      : "Falta info: registrá tu examen final aprobado abajo para incluir la nota en tu promedio general."}
+              </span>
+            </div>
+          )}
+
           {!esRendidaLibre && !esEquivalencia && (
             <div className="grid grid-cols-2 gap-2.5">
               <Select
@@ -623,6 +643,20 @@ export function MateriaContextContent({
                 onValueChange={handleCambioNotaCursada}
               />
             </div>
+          )}
+
+          {estadoActual === "Promocionado" && !esEquivalencia && (
+            <Input
+              size="sm"
+              type="number"
+              min={4}
+              max={10}
+              label="Nota final (promoción)"
+              placeholder="7 a 10"
+              variant="bordered"
+              value={detalles.notaFinal != null ? String(detalles.notaFinal) : ""}
+              onValueChange={handleCambioNotaEquivalencia}
+            />
           )}
 
           {!esEquivalencia && (

@@ -41,9 +41,9 @@ export default function useDetalleMateria(infoMateria, progresoDetalles, setProg
         });
     };
 
-    // Sincronización con el servidor cuando cambian los detalles locales
+    // Sincronización con el servidor cuando cambian los detalles locales (aislado en modo DEMO)
     useEffect(() => {
-        if (infoMateria) {
+        if (infoMateria && plan && plan !== 'DEMO') {
             updateAuthProgreso(plan, progreso, progresoDetalles);
         }
     }, [progresoDetalles, plan, progreso]);

@@ -68,9 +68,9 @@ export default function PlanFeatureRoute({ feature, children }) {
                         <Button
                             size="sm"
                             className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold rounded-xl px-5 h-9"
-                            onPress={() => navigate('/progreso')}
+                            onPress={() => navigate('/mis-materias')}
                         >
-                            Ir a Mi Progreso
+                            Ir a Mis Materias
                         </Button>
                         {suggestedPlan ? (
                             <Button
@@ -86,7 +86,7 @@ export default function PlanFeatureRoute({ feature, children }) {
                                 size="sm"
                                 variant="flat"
                                 className="bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0] border border-[#E2E8F0] dark:border-[#2A3540] font-medium rounded-xl px-4 h-9"
-                                onPress={() => navigate('/config')}
+                                onPress={() => navigate('/configuracion')}
                             >
                                 Ir a Configuración
                             </Button>

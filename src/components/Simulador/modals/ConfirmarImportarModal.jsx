@@ -52,7 +52,7 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                         <ModalBody>
                             <div className="space-y-4">
                                 <p className="text-sm text-foreground/80">
-                                    Se reconstruirá tu historial basándonos en tus fechas de aprobación y regularización registradas en <strong>Mi Progreso</strong>.
+                                    Se reconstruirá tu historial basándonos en tus fechas de aprobación y regularización registradas en <strong>Mis Materias</strong>.
                                 </p>
 
                                 {/* Indicador de completitud de datos */}
@@ -89,7 +89,7 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                                         {completitudBaja && (
                                             <div className="pt-1 border-t border-warning-200/50 dark:border-warning-500/10">
                                                 <p className="text-[11px] text-warning-700 dark:text-warning-300 leading-relaxed">
-                                                    <strong>💡 Consejo:</strong> Cuantas más fechas cargues en <Link to="/progreso" className="underline font-bold hover:text-warning-600" onClick={onClose}>Mi Progreso</Link>, más precisa será la reconstrucción de tu historial.
+                                                    <strong>💡 Consejo:</strong> Cuantas más fechas cargues en <Link to="/mis-materias" className="underline font-bold hover:text-warning-600" onClick={onClose}>Mis Materias</Link>, más precisa será la reconstrucción de tu historial.
                                                 </p>
                                             </div>
                                         )}

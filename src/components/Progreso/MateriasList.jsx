@@ -11,7 +11,6 @@ import {
 import { CheckCheck, CheckCircle2, RotateCcw, SearchX } from "lucide-react";
 import MateriaCard from "./MateriaCard";
 import ConfirmarCambioModal from "./modals/ConfirmarCambioModal";
-import CapturaTransicionModal from "./modals/CapturaTransicionModal";
 import { esMateriaIncompleta } from "../../utils/Progreso/materiasUtils";
 
 function YearProgressBadge({ completedCount, totalCount }) {
@@ -74,10 +73,6 @@ export default function MateriasList({
   pendingBlockedTransition,
   confirmarCascada,
   setMostrarConfirmacionCascada,
-  isCapturaOpen,
-  onCapturaOpenChange,
-  capturaConfig,
-  handleCapturaConfirm,
 }) {
   const renderCard = (materia) => {
     const estado = progreso[materia.codigo] || "Disponible";
@@ -362,16 +357,6 @@ export default function MateriasList({
         targetState={pendingBlockedTransition?.targetState}
         nombreMateria={pendingBlockedTransition?.nombreMateria}
         materiasAfectadas={pendingBlockedTransition?.materiasAfectadas}
-      />
-
-      {/* Modal de captura de notas / fechas en transiciones */}
-      <CapturaTransicionModal
-        isOpen={isCapturaOpen}
-        onOpenChange={onCapturaOpenChange}
-        tipo={capturaConfig.tipo}
-        materia={capturaConfig.materia}
-        config={capturaConfig}
-        onConfirm={handleCapturaConfirm}
       />
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { useRoutes } from 'react-router-dom';
+import { Navigate, useRoutes } from 'react-router-dom';
 import { Spinner } from '@heroui/react';
 import PlanFeatureRoute from '../components/Auth/PlanFeatureRoute';
 
@@ -26,12 +26,20 @@ const Rutas = ({ plan, setPlan }) => {
             element: <Inicio />,
         },
         {
-            path: '/progreso',
+            path: '/mis-materias',
             element: <Progreso plan={plan} setPlan={setPlan} />,
         },
         {
-            path: '/cursada',
+            path: '/progreso',
+            element: <Navigate to="/mis-materias" replace />,
+        },
+        {
+            path: '/mi-agenda',
             element: <Cursada plan={plan} />,
+        },
+        {
+            path: '/cursada',
+            element: <Navigate to="/mi-agenda" replace />,
         },
         {
             path: '/simulador',
@@ -55,19 +63,19 @@ const Rutas = ({ plan, setPlan }) => {
         },
         {
             path: '/transicion',
-            element: (
-                <PlanFeatureRoute feature="planTransition">
-                    <TransicionPlan plan={plan} setPlan={setPlan} />
-                </PlanFeatureRoute>
-            ),
+            element: <Navigate to="/cambio-plan" replace />,
         },
         {
             path: '/como-usar',
             element: <ComoUsar />,
         },
         {
-            path: '/config',
+            path: '/configuracion',
             element: <SettingsPage plan={plan} setPlan={setPlan} />,
+        },
+        {
+            path: '/config',
+            element: <Navigate to="/configuracion" replace />,
         },
         {
             path: '/contacto',

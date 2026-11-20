@@ -73,7 +73,7 @@ export default function Cursada({ plan }) {
                             <>
                                 {' '}
                                 <Link
-                                    to="/progreso"
+                                    to="/mis-materias"
                                     className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline"
                                 >
                                     Marcá tus materias en curso en Mis Materias →

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Spinner, useDisclosure, Card, CardBody, Modal, ModalContent, ModalBody } from '@heroui/react';
+import { addToast, Button, Spinner, useDisclosure, Card, CardBody, Modal, ModalContent, ModalBody } from '@heroui/react';
 
 import HeaderSimulador from '../components/Simulador/HeaderSimulador';
 import MateriasSimulador from '../components/Simulador/MateriasSimulador';
@@ -96,7 +96,11 @@ function Simulador({ plan: initialPlan }) {
 
     const handleImportarProgreso = () => {
         if (!progresoReal || Object.keys(progresoReal).length === 0) {
-            alert('No se encontró progreso guardado para este plan.');
+            addToast({
+                title: 'Sin materias guardadas',
+                description: 'No se encontró progreso guardado para este plan en Mis Materias.',
+                color: 'warning',
+            });
             return;
         }
         onConfirmImportOpen();
@@ -111,7 +115,11 @@ function Simulador({ plan: initialPlan }) {
                 setOpenedAccordions(new Set([ultimoIdx]));
             }
         } else {
-            alert('No hay materias aprobadas o regulares para importar.');
+            addToast({
+                title: 'Sin materias para importar',
+                description: 'No hay materias aprobadas o regulares cargadas en Mis Materias para importar.',
+                color: 'warning',
+            });
         }
     };
 
@@ -284,7 +292,7 @@ function Simulador({ plan: initialPlan }) {
                             }}
                             startContent={<CloudDownload size={17} />}
                         >
-                            Importar Mi Progreso
+                            Importar Mis Materias
                         </Button>
                     </div>
                 </div>

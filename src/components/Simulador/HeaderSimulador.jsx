@@ -41,8 +41,8 @@ function HeaderSimulador({
                     </div>
                     <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
                         Modo simulación: probá escenarios libremente sin modificar{' '}
-                        <Link to="/progreso" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
-                            Mi Progreso
+                        <Link to="/mis-materias" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
+                            Mis Materias
                         </Link>.
                     </p>
                 </div>

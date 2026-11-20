@@ -70,7 +70,7 @@ export function estrategiaActualizacionPlan({ activePlan, planUpdateNotice }) {
         tone: 'info',
         title: `Plan ${activePlan} actualizado (v${planUpdateNotice.version})`,
         description: detalle,
-        path: '/progreso',
+        path: '/mis-materias',
         time: `Versión ${planUpdateNotice.version}`,
     };
 }
@@ -109,7 +109,7 @@ export function estrategiaEventosProximos({ activePlan, cursada, materias = [] }
         tone: esUrgente ? 'danger' : 'warning',
         title: esUrgente ? 'Evaluación o entrega inminente' : 'Próximas fechas de cursada',
         description: `${resumen}${suffix}.`,
-        path: '/cursada',
+        path: '/mi-agenda',
         time: esUrgente ? 'Próximas 24h' : 'Próximos 7 días',
     };
 }
@@ -139,7 +139,7 @@ export function estrategiaVencimientoRegularidad({ activePlan, materias = [], pr
         tone: 'warning',
         title: 'Regularidades próximas a vencer',
         description: `Con 1 cuatrimestre o menos de vigencia: ${formatearNombres(enRiesgo)}.`,
-        path: '/progreso',
+        path: '/mis-materias',
         time: 'Urgente',
     };
 }
@@ -166,7 +166,7 @@ export function estrategiaUltimoIntentoFinal({ activePlan, materias = [], progre
         tone: 'danger',
         title: 'Última oportunidad de final',
         description: `Te queda 1 oportunidad antes de perder la regularidad en: ${formatearNombres(enUltimaOportunidad)}.`,
-        path: '/progreso',
+        path: '/mis-materias',
         time: 'RGE Art. 32°',
     };
 }
@@ -210,7 +210,7 @@ export function estrategiaTituloIntermedio({ activePlan, materias = [], progreso
             tone: 'brand',
             title: '¡Completaste el Título Intermedio!',
             description: `Aprobaste las ${totales} materias requeridas para ${nombre}.`,
-            path: '/progreso',
+            path: '/mis-materias',
             time: 'Logro',
         };
     }
@@ -222,7 +222,7 @@ export function estrategiaTituloIntermedio({ activePlan, materias = [], progreso
             tone: 'brand',
             title: 'Muy cerca del Título Intermedio',
             description: `Te ${faltantes === 1 ? 'falta solo 1 materia' : `faltan solo ${faltantes} materias`} para completar ${nombre}.`,
-            path: '/progreso',
+            path: '/mis-materias',
             time: 'Avance',
         };
     }
@@ -247,7 +247,7 @@ export function estrategiaDatosIncompletos({ activePlan, materias = [], progreso
         tone: 'warning',
         title: 'Datos pendientes de carga',
         description: `Hay ${incompletas} ${incompletas === 1 ? 'materia' : 'materias'} sin nota final o fecha de regularidad para calcular tu promedio.`,
-        path: '/progreso',
+        path: '/mis-materias',
         time: 'Historial',
     };
 }
@@ -266,7 +266,7 @@ export function estrategiaMateriasDisponibles({ activePlan, materias = [], progr
         tone: 'info',
         title: 'Correlativas habilitadas',
         description: `Tenés ${disponibles} ${disponibles === 1 ? 'materia disponible' : 'materias disponibles'} para cursar en el Plan ${activePlan}.`,
-        path: '/progreso',
+        path: '/mis-materias',
         time: 'Plan de estudios',
     };
 }
@@ -284,7 +284,7 @@ export function estrategiaRespaldoCuenta({ isAuthenticated }) {
         tone: 'neutral',
         title: 'Respaldo de progreso',
         description: 'Iniciá sesión con Google desde Configuración o el menú para sincronizar tus avances en otros dispositivos.',
-        path: '/config',
+        path: '/configuracion',
         time: 'Cuenta',
     };
 }

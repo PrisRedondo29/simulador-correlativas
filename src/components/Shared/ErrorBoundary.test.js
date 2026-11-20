@@ -14,7 +14,7 @@ describe('ErrorBoundary - Captura segura de errores de render (DEV vs PROD)', ()
     });
 
     it('inicializa sin errores y resetea estado cuando cambia resetKey', () => {
-        const instance = new ErrorBoundary({ resetKey: '/progreso', children: null });
+        const instance = new ErrorBoundary({ resetKey: '/mis-materias', children: null });
         expect(instance.state).toEqual({ hasError: false, error: null, reportSent: false });
 
         let nextState = null;
@@ -24,7 +24,7 @@ describe('ErrorBoundary - Captura segura de errores de render (DEV vs PROD)', ()
             nextState = s;
         };
 
-        instance.componentDidUpdate({ resetKey: '/progreso' });
+        instance.componentDidUpdate({ resetKey: '/mis-materias' });
         expect(nextState).toEqual({ hasError: false, error: null, reportSent: false });
     });
 

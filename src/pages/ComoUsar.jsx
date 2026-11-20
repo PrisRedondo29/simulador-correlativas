@@ -50,7 +50,7 @@ export default function ComoUsar() {
                             subtitle="Tu listado de materias, notas y correlativas"
                             accentColor="emerald"
                             defaultOpen={true}
-                            navigateTo="/progreso"
+                            navigateTo="/mis-materias"
                             ctaLabel="Ir a Mis Materias"
                             features={[
                                 'Cambiá el estado de cada materia entre Libre, Regular, Aprobado o Promocionado con un clic.',
@@ -90,7 +90,7 @@ export default function ComoUsar() {
                             title="Mi Agenda"
                             subtitle="Calendario de parciales, horarios semanales y apuntes de clase"
                             accentColor="emerald"
-                            navigateTo="/cursada"
+                            navigateTo="/mi-agenda"
                             ctaLabel="Ir a Mi Agenda"
                             features={[
                                 'Agendá fechas de parciales, recuperatorios, entregas de TP y exámenes finales.',
@@ -194,7 +194,7 @@ export default function ComoUsar() {
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                             <Button
                                 size="md"
-                                onPress={() => navigate('/progreso')}
+                                onPress={() => navigate('/mis-materias')}
                                 className="bg-white text-[#005A36] hover:bg-[#F8FAFC] font-semibold px-6 rounded-xl"
                             >
                                 Ir a Mis Materias
