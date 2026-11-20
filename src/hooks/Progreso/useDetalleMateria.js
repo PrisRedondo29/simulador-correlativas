@@ -152,7 +152,9 @@ export default function useDetalleMateria(infoMateria, progresoDetalles, setProg
 
         updateDetalles(currentData => {
             const intentosActuales = currentData.intentosFinal || [];
-            if (intentosActuales.length >= reglas.limites.intentos_final) return currentData;
+            const desaprobadosActuales = intentosActuales.filter(i => i.estado === 'reprobado').length;
+            const yaAprobado = intentosActuales.some(i => i.estado === 'aprobado');
+            if (desaprobadosActuales >= reglas.limites.intentos_final || yaAprobado) return currentData;
 
             const newIntentos = [...intentosActuales, {
                 nota: notaParsed,

@@ -178,4 +178,30 @@ describe('materiaStateMachine - Transiciones, correlativas y Tesina', () => {
         expect(esTransicionRecursada(ESTADOS_MATERIA.LIBRE, ESTADOS_MATERIA.APROBADO)).toBe(true);
         expect(esTransicionRecursada(ESTADOS_MATERIA.DISPONIBLE, ESTADOS_MATERIA.CURSANDO)).toBe(false);
     });
+
+    it('regla UNLu al quedar Libre: conserva Regular/Cursando/Aprobado en dependientes y solo bloquea Disponible', () => {
+        const materiasConDosDependientes = [
+            ...MATERIAS_MOCK,
+            { codigo: 'M5', nombre: 'Paradigmas', anio: '2', correlativas: ['M1'] },
+        ];
+        const progreso = {
+            ...PROGRESO_INICIAL,
+            M1: ESTADOS_MATERIA.REGULAR,
+            M3: ESTADOS_MATERIA.REGULAR,    // ya regularizó M3 dependiendo de M1
+            M5: ESTADOS_MATERIA.DISPONIBLE, // todavía no cursó M5
+        };
+
+        const { nuevoProgreso } = aplicarCambioEstado(
+            progreso,
+            materiasConDosDependientes,
+            'M1',
+            ESTADOS_MATERIA.LIBRE,
+        );
+
+        expect(nuevoProgreso.M1).toBe(ESTADOS_MATERIA.LIBRE);
+        // M3 conserva su regularidad aunque M1 haya quedado Libre (regla UNLu)
+        expect(nuevoProgreso.M3).toBe(ESTADOS_MATERIA.REGULAR);
+        // M5, al estar solo Disponible (sin cursar), vuelve a Bloqueado
+        expect(nuevoProgreso.M5).toBe(ESTADOS_MATERIA.BLOQUEADO);
+    });
 });

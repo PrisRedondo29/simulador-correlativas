@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import reglas from '../../../utils/Progreso/reglas_universidad.json';
 
 const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria }) => {
     if (!infoMateria || !estadoActual) return null;
@@ -21,7 +22,7 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
                 icono = "📝";
                 mensaje = "Acordate de cargar la nota con la que regularizaste para poder darte estadísticas más precisas sobre tu desempeño.";
             } else {
-                mensaje = "Recordá rendir el examen final antes de que se venza la regularidad (tenés 5 cuatrimestres o 5 llamados desde que aprobaste la cursada).";
+                mensaje = `Recordá rendir el examen final antes de que se venza la regularidad (tenés ${reglas.limites.cuatrimestres_regularidad} cuatrimestres y hasta ${reglas.limites.intentos_final} desaprobaciones desde que aprobaste la cursada; los ausentes no descuentan).`;
             }
             break;
 
@@ -41,7 +42,7 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
             mensaje = "¡Felicidades por finalizar la materia con una nota destacada! Promocionar es un gran logro.";
             break;
 
-        case 'Disponible':
+        case 'Disponible': {
             colorClass = "bg-[#F0F9FF] dark:bg-[#0F2636]/70 border-[#BAE6FD] dark:border-[#1E4E6E] text-[#075985] dark:text-[#BAE6FD]";
             icono = "📅";
             const cuatrimestreNum = Number(infoMateria.cuatrimestre) % 2 === 0 ? 2 : 1;
@@ -52,6 +53,7 @@ const ConsejoMateria = ({ estadoActual, statusPlan, detallesLocales, infoMateria
                 mensaje = baseDisponible + "Esta materia suele dictarse en el segundo cuatrimestre. ¡Tenela en el radar para la segunda mitad del año!";
             }
             break;
+        }
 
         case 'Bloqueado':
             colorClass = "bg-[#F1F5F9] dark:bg-[#1A2129] border-[#E2E8F0] dark:border-[#2D3743] text-[#475569] dark:text-[#94A3B8]";

@@ -29,6 +29,7 @@ import useDetalleMateria from "../../hooks/Progreso/useDetalleMateria";
 import estadoUtils from "../../utils/Progreso/estadoUtils";
 import materiasUtils from "../../utils/Progreso/materiasUtils";
 import regularidadUtils from "../../utils/Progreso/regularidadUtils";
+import reglas from "../../utils/Progreso/reglas_universidad.json";
 import ConsejoMateria from "./modals/ConsejoMateria";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -310,9 +311,11 @@ export function MateriaContextContent({
   const intentosFinal = Array.isArray(detalles.intentosFinal)
     ? detalles.intentosFinal
     : [];
-  const fallidosCount = intentosFinal.filter(
-    (i) => i.estado === "reprobado" || i.estado === "ausente",
+  const maxDesaprobaciones = reglas.limites.intentos_final;
+  const desaprobadosCount = intentosFinal.filter(
+    (i) => i.estado === "reprobado",
   ).length;
+  const tieneIntentoAprobado = intentosFinal.some((i) => i.estado === "aprobado");
   const isTesinaBloqueada = Boolean(materia.tesis) && estadoActual === "Bloqueado";
 
   return (
@@ -532,14 +535,16 @@ export function MateriaContextContent({
                     Intentos de examen final
                   </p>
                   <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
-                    {fallidosCount} de 5 agotados
+                    {desaprobadosCount} de {maxDesaprobaciones} desaprobaciones
                     {estadoActual === "Regular"
                       ? ` · ${statusPlan.cuatrimestresRestantes} cuatris restantes`
                       : ""}
                   </p>
                 </div>
 
-                {intentosFinal.length < 5 && estadoActual !== "Promocionado" && (
+                {desaprobadosCount < maxDesaprobaciones &&
+                  !tieneIntentoAprobado &&
+                  estadoActual !== "Promocionado" && (
                   <Button
                     size="sm"
                     variant="flat"
@@ -554,13 +559,13 @@ export function MateriaContextContent({
 
               <Progress
                 size="sm"
-                aria-label="Intentos de final utilizados"
-                value={(fallidosCount / 5) * 100}
+                aria-label="Desaprobaciones de final acumuladas"
+                value={(desaprobadosCount / maxDesaprobaciones) * 100}
                 classNames={{
                   indicator:
-                    fallidosCount >= 4
+                    desaprobadosCount >= maxDesaprobaciones
                       ? "bg-[#DC2626]"
-                      : fallidosCount >= 2
+                      : desaprobadosCount >= Math.ceil(maxDesaprobaciones / 2)
                         ? "bg-[#D97706]"
                         : "bg-[#478559]",
                   track: "bg-[#E2E8F0] dark:bg-[#24303C]",

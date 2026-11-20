@@ -45,12 +45,13 @@ export function verificarVencimientoTiempo(fechaRegularidad) {
 }
 
 /**
- * Verifica si la regularidad venció por exceso de intentos fallidos/ausentes
+ * Verifica si la regularidad venció por exceso de desaprobaciones (Art. 32 RGE UNLu).
+ * Los ausentes no descuentan intentos.
  */
 export function verificarVencimientoIntentos(intentosFinal) {
     if (!intentosFinal || !Array.isArray(intentosFinal)) return false;
-    const fallidos = intentosFinal.filter(i => i.estado === 'reprobado' || i.estado === 'ausente').length;
-    return fallidos >= reglas.limites.intentos_final;
+    const desaprobados = intentosFinal.filter(i => i.estado === 'reprobado').length;
+    return desaprobados >= reglas.limites.intentos_final;
 }
 
 /**
@@ -74,8 +75,8 @@ export function obtenerPlanificacionInstancias(fechaRegularidad, intentosFinal) 
     const transcurridos = getCuatrimestresTranscurridos(fechaRegularidad);
     const cuatrimestresRestantes = Math.max(0, reglas.limites.cuatrimestres_regularidad - transcurridos);
 
-    const fallidos = intentosFinal ? intentosFinal.filter(i => i.estado === 'reprobado' || i.estado === 'ausente').length : 0;
-    const intentosRestantes = Math.max(0, reglas.limites.intentos_final - fallidos);
+    const desaprobados = intentosFinal ? intentosFinal.filter(i => i.estado === 'reprobado').length : 0;
+    const intentosRestantes = Math.max(0, reglas.limites.intentos_final - desaprobados);
 
     return { cuatrimestresRestantes, intentosRestantes };
 }

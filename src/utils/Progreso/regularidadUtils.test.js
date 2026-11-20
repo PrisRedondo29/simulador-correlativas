@@ -55,12 +55,14 @@ describe('regularidadUtils - Reglas académicas UNLu', () => {
         });
     });
 
-    describe('límite de llamados a final (4 fallidos/ausentes)', () => {
-        it('mantiene Regular con 3 intentos fallidos/ausentes y calcula 1 intento restante', () => {
+    describe('límite de desaprobaciones a final (Art. 32 RGE: 4 desaprobaciones, ausentes no descuentan)', () => {
+        it('mantiene Regular con 3 desaprobaciones aunque tenga ausentes y calcula 1 oportunidad restante', () => {
             const intentos = [
                 { estado: 'reprobado', nota: 2 },
                 { estado: 'ausente', nota: null },
                 { estado: 'reprobado', nota: 3 },
+                { estado: 'ausente', nota: null },
+                { estado: 'reprobado', nota: 1 },
             ];
             expect(verificarVencimientoIntentos(intentos)).toBe(false);
             const plan = obtenerPlanificacionInstancias({ anio: 2025, cuatrimestre: 2 }, intentos);
@@ -68,23 +70,25 @@ describe('regularidadUtils - Reglas académicas UNLu', () => {
             expect(calcularEstadoConsolidado('Regular', { anio: 2025, cuatrimestre: 2 }, intentos)).toBe('Regular');
         });
 
-        it('no vence a Libre si el 4° llamado es aprobado tras 3 fallidos', () => {
+        it('no vence a Libre si tras 3 desaprobaciones y ausentes aprueba el final', () => {
             const intentos = [
                 { estado: 'reprobado', nota: 2 },
                 { estado: 'ausente', nota: null },
                 { estado: 'reprobado', nota: 3 },
+                { estado: 'reprobado', nota: 2 },
                 { estado: 'aprobado', nota: 7 },
             ];
             expect(verificarVencimientoIntentos(intentos)).toBe(false);
             expect(calcularEstadoConsolidado('Regular', { anio: 2025, cuatrimestre: 2 }, intentos)).toBe('Regular');
         });
 
-        it('pasa a Libre al alcanzar el 4° intento reprobado o ausente', () => {
+        it('pasa a Libre al alcanzar la 4° desaprobación (reprobado)', () => {
             const intentos = [
                 { estado: 'reprobado', nota: 2 },
                 { estado: 'ausente', nota: null },
                 { estado: 'reprobado', nota: 3 },
                 { estado: 'reprobado', nota: 1 },
+                { estado: 'reprobado', nota: 2 },
             ];
             expect(verificarVencimientoIntentos(intentos)).toBe(true);
             expect(calcularEstadoConsolidado('Regular', { anio: 2025, cuatrimestre: 2 }, intentos)).toBe('Libre');

@@ -177,6 +177,19 @@ function bloquearDependencias(materias, codigoMateria, nuevoProgreso) {
     });
 }
 
+/**
+ * Regla UNLu al quedar Libre: las materias dependientes que ya obtuvieron
+ * Regular, Cursando, Aprobado o Promocionado conservan su estado.
+ * Solo pasan a Bloqueado aquellas que aún estaban en Disponible (sin cursar).
+ */
+function bloquearDependenciasDisponibles(materias, codigoMateria, nuevoProgreso) {
+    materias.forEach((m) => {
+        if (m.correlativas?.includes(codigoMateria) && nuevoProgreso[m.codigo] === ESTADOS_MATERIA.DISPONIBLE) {
+            nuevoProgreso[m.codigo] = ESTADOS_MATERIA.BLOQUEADO;
+        }
+    });
+}
+
 function desbloquearDependencias(materias, codigoMateria, nuevoProgreso) {
     materias.forEach((m) => {
         if (m.tesis) return;
@@ -218,7 +231,9 @@ const STATE_TRANSITION_HANDLERS = {
     [ESTADOS_MATERIA.BLOQUEADO]: ({ materias, materiaActual, nuevoProgreso }) => {
         bloquearDependencias(materias, materiaActual.codigo, nuevoProgreso);
     },
-    [ESTADOS_MATERIA.LIBRE]: () => {},
+    [ESTADOS_MATERIA.LIBRE]: ({ materias, materiaActual, nuevoProgreso }) => {
+        bloquearDependenciasDisponibles(materias, materiaActual.codigo, nuevoProgreso);
+    },
 };
 
 /**
