@@ -13,8 +13,8 @@ const faqData = [
     {
         id: 'afecta-progreso',
         category: 'general',
-        question: '¿El simulador afecta mi progreso real?',
-        answer: 'No. El Simulador de Avance y el Cambio de Plan son herramientas de proyección 100% aisladas. Podés simular libremente cualquier camino o combinación sin que se modifique lo que cargaste en "Mi Progreso".',
+        question: '¿El simulador afecta las materias que ya cargué?',
+        answer: 'No. El Simulador de Avance y el Cambio de Plan son herramientas de proyección 100% aisladas. Podés simular libremente cualquier camino o combinación sin que se modifique lo que cargaste en "Mis Materias".',
         icon: 'fa-shield-halved',
     },
     {
@@ -56,7 +56,7 @@ const faqData = [
 
 const categories = [
     { id: 'todas', label: 'Todas las preguntas', icon: 'fa-layer-group' },
-    { id: 'progreso', label: 'Progreso y Notas', icon: 'fa-chart-line' },
+    { id: 'progreso', label: 'Mis Materias y Notas', icon: 'fa-graduation-cap' },
     { id: 'planes', label: 'Planes y Transición', icon: 'fa-arrows-rotate' },
     { id: 'general', label: 'General y Cuenta', icon: 'fa-circle-info' },
 ]

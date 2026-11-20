@@ -45,13 +45,13 @@ export default function ComoUsar() {
 
                     <div className="space-y-3">
                         <FeatureGuideCard
-                            icon="fa-chart-line"
-                            title="Mi Progreso"
-                            subtitle="Tu tablero académico personal"
+                            icon="fa-graduation-cap"
+                            title="Mis Materias"
+                            subtitle="Tu listado de materias, notas y correlativas"
                             accentColor="emerald"
                             defaultOpen={true}
                             navigateTo="/progreso"
-                            ctaLabel="Ir a Mi Progreso"
+                            ctaLabel="Ir a Mis Materias"
                             features={[
                                 'Cambiá el estado de cada materia entre Libre, Regular, Aprobado o Promocionado con un clic.',
                                 'El resumen superior por estado te permite abrir el listado filtrado de cada categoría.',
@@ -86,6 +86,24 @@ export default function ComoUsar() {
                         </FeatureGuideCard>
 
                         <FeatureGuideCard
+                            icon="fa-calendar-days"
+                            title="Mi Agenda"
+                            subtitle="Calendario de parciales, horarios semanales y apuntes de clase"
+                            accentColor="emerald"
+                            navigateTo="/cursada"
+                            ctaLabel="Ir a Mi Agenda"
+                            features={[
+                                'Agendá fechas de parciales, recuperatorios, entregas de TP y exámenes finales.',
+                                'Armá tu grilla de horarios de cursada semanal con detección automática de superposiciones.',
+                                'Anotá los temas vistos en cada clase en tu bitácora para repasar rápido antes de rendir.',
+                            ]}
+                            proTip={{
+                                title: 'Avisos automáticos',
+                                description: 'La campanita de notificaciones te avisa automáticamente cuando tenés un parcial, final o entrega dentro de los próximos 7 días.',
+                            }}
+                        />
+
+                        <FeatureGuideCard
                             icon="fa-route"
                             title="Simulador de Avance"
                             subtitle="Planificá tu recorrido cuatrimestre a cuatrimestre"
@@ -100,7 +118,7 @@ export default function ComoUsar() {
                             ]}
                             proTip={{
                                 title: 'Dato clave',
-                                description: 'El simulador trabaja en un entorno separado de Mi Progreso para que puedas probar distintos escenarios con tranquilidad.',
+                                description: 'El simulador trabaja en un entorno separado de Mis Materias para que puedas probar distintos escenarios con tranquilidad.',
                             }}
                         />
 
@@ -179,7 +197,7 @@ export default function ComoUsar() {
                                 onPress={() => navigate('/progreso')}
                                 className="bg-white text-[#005A36] hover:bg-[#F8FAFC] font-semibold px-6 rounded-xl"
                             >
-                                Ir a Mi Progreso
+                                Ir a Mis Materias
                             </Button>
                             <Button
                                 size="md"

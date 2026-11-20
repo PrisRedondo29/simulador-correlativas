@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import tailwindcss from '@tailwindcss/vite'
-import viteCompression from 'vite-plugin-compression'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
@@ -23,7 +22,7 @@ export default defineConfig({
         name: 'Simulador de Correlativas UNLu',
         short_name: 'Correlativas UNLu',
         description:
-          'Planificá tu carrera en la UNLu: seguimiento de materias, correlativas, Mi Cursada y simulador de egreso offline.',
+          'Planificá tu carrera en la UNLu: seguimiento de materias, correlativas, Mi Agenda y simulador de egreso offline.',
         lang: 'es-AR',
         start_url: '/',
         scope: '/',
@@ -57,16 +56,36 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         globIgnores: [
           '**/*.map',
-          '**/*.gz',
-          '**/*.br',
+          'assets/vendor-utils-*.js',
           'imgs/dashboard.png',
           'imgs/Priscila*',
           'imgs/logo_temporal.png',
         ],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/__\/auth\//, /^\/__\/firebase\//, /^\/api\//],
+        navigateFallbackDenylist: [
+          /^\/__\/auth\//,
+          /^\/__\/firebase\//,
+          /^\/api\//,
+          /^\/assets\//,
+          /^\/icons\//,
+          /^\/imgs\//,
+        ],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/vendor-utils-.*\.js$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'lazy-export-utils',
+              expiration: {
+                maxEntries: 4,
+                maxAgeSeconds: 60 * 60 * 24 * 90,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
@@ -94,14 +113,6 @@ export default defineConfig({
         enabled: false,
       },
     }),
-    viteCompression({
-      algorithm: 'brotliCompress',
-      ext: '.br',
-    }),
-    viteCompression({
-      algorithm: 'gzip',
-      ext: '.gz',
-    }),
   ],
   resolve: {
     dedupe: ['react', 'react-dom'],
@@ -110,7 +121,7 @@ export default defineConfig({
     exclude: ['node_modules/**', 'dist/**', 'src/**/*.emulator.test.{js,jsx}'],
   },
   build: {
-    sourcemap: true,
+    sourcemap: false,
     chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {

@@ -106,7 +106,7 @@ export default function Cursada({ plan }) {
 
             {/* Navegación interna de 3 vistas */}
             <Tabs
-                aria-label="Secciones de Mi Cursada"
+                aria-label="Secciones de Mi Agenda"
                 variant="bordered"
                 selectedKey={activeTab}
                 onSelectionChange={(key) => setActiveTab(String(key))}
@@ -123,7 +123,7 @@ export default function Cursada({ plan }) {
                     title={
                         <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold">
                             <CalendarDays size={15} aria-hidden="true" />
-                            <span>Agenda</span>
+                            <span>Calendario</span>
                         </div>
                     }
                 />

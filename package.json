@@ -14,31 +14,24 @@
     "test:emulator": "npx -y firebase-tools emulators:exec --only firestore --project demo-unlu-simulador \"npx vitest run --config vitest.emulator.config.js\""
   },
   "dependencies": {
-    "@awesome.me/webawesome": "^3.3.1",
     "@emailjs/browser": "^4.4.1",
     "@fortawesome/fontawesome-free": "^7.2.0",
-    "@fortawesome/fontawesome-svg-core": "^7.2.0",
-    "@fortawesome/react-fontawesome": "^3.2.0",
     "@heroui/card": "^2.2.27",
     "@heroui/react": "^2.8.10",
     "@heroui/system": "^2.4.27",
     "@heroui/theme": "^2.4.26",
     "@tailwindcss/vite": "^4.2.1",
     "@xyflow/react": "^12.10.2",
-    "axios": "^1.13.6",
     "firebase": "^12.11.0",
     "framer-motion": "^12.34.4",
     "html-to-image": "^1.11.13",
-    "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.575.0",
     "next-themes": "^0.4.6",
     "prop-types": "^15.8.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-indiana-drag-scroll": "^2.2.1",
-    "react-router-dom": "^7.13.1",
-    "react-zoom-pan-pinch": "^3.7.0"
+    "react-router-dom": "^7.13.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -57,7 +50,6 @@
     "tailwindcss": "^4.2.1",
     "typescript": "^7.0.2",
     "vite": "^7.3.1",
-    "vite-plugin-compression": "^0.5.1",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.1.1"
   }

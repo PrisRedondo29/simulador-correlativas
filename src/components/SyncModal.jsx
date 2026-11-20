@@ -67,7 +67,7 @@ function SummaryCard({ title, subtitle, icon, summary, tone = 'neutral' }) {
                         </li>
                     )}
                     <li className="flex justify-between gap-2">
-                        <span className="text-[#64748B] dark:text-[#94A3B8]">Mi Cursada (ítems)</span>
+                        <span className="text-[#64748B] dark:text-[#94A3B8]">Mi Agenda (ítems)</span>
                         <span className="font-semibold tabular-nums">{cursadaCount}</span>
                     </li>
                     <li className="flex justify-between gap-2">

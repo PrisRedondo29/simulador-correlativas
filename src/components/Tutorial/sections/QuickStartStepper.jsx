@@ -5,27 +5,27 @@ import { Button } from '@heroui/react';
 const steps = [
     {
         number: 'Paso 01',
-        icon: 'fa-chart-line',
-        title: 'Cargá tu progreso',
+        icon: 'fa-graduation-cap',
+        title: 'Marcá tus materias',
         description: 'Registrá qué materias aprobaste, regularizaste o estás cursando. El sistema calcula tus promedios y vencimientos.',
         path: '/progreso',
-        cta: 'Ir a Mi Progreso',
+        cta: 'Ir a Mis Materias',
     },
     {
         number: 'Paso 02',
+        icon: 'fa-calendar-days',
+        title: 'Armá tu agenda',
+        description: 'Anotá tus fechas de parciales, finales, horarios semanales de cursada y apuntes de cada clase.',
+        path: '/cursada',
+        cta: 'Ir a Mi Agenda',
+    },
+    {
+        number: 'Paso 03',
         icon: 'fa-route',
         title: 'Simulá tus cuatrimestres',
         description: 'Proyectá cuántos cuatrimestres te faltan y organizá tus cursadas futuras sin modificar tu avance real.',
         path: '/simulador',
         cta: 'Ir al Simulador',
-    },
-    {
-        number: 'Paso 03',
-        icon: 'fa-scale-balanced',
-        title: 'Consultá equivalencias',
-        description: 'Compará materias y carga horaria entre los planes de estudio 17.13 y 17.14.',
-        path: '/equivalencias',
-        cta: 'Ver Equivalencias',
     },
 ];
 
