@@ -5,10 +5,13 @@ import storageRepository from './storageRepository';
  * Aplana mapas anidados que Firestore pudo generar cuando un ID de plan contiene punto
  * (ej: { "17": { "14": { "11071": "Aprobado" } } } -> { "17.14": { "11071": "Aprobado" } }).
  * Funciona de forma genérica para cualquier prefijo de carrera (17.14, 20.08, etc.).
+ * @param {Record<string, any>} [rawMap]
+ * @returns {Record<string, any>}
  */
 export function normalizeNestedPlanMap(rawMap = {}) {
     if (!rawMap || typeof rawMap !== 'object') return {};
 
+    /** @type {Record<string, any>} */
     const normalized = { ...rawMap };
 
     for (const [key, value] of Object.entries(rawMap)) {
@@ -38,6 +41,9 @@ export function normalizeNestedPlanMap(rawMap = {}) {
  * Sube el progreso actual de un plan a la nube de forma manual.
  * Se asegura de leer tanto el progreso (estados) como los detalles (notas, fechas)
  * desde storageRepository antes de enviarlos.
+ * @param {string} uid
+ * @param {string} plan
+ * @returns {Promise<boolean>}
  */
 export const uploadPlanProgress = async (uid, plan) => {
     try {
@@ -59,15 +65,17 @@ export const uploadPlanProgress = async (uid, plan) => {
 /**
  * Descarga TODO el progreso y detalles desde la nube y lo guarda en local.
  * Esta función es la que se llama al iniciar sesión o al presionar "Cargar".
+ * @param {string} uid
+ * @returns {Promise<Record<string, any> | false>}
  */
 export const downloadAllProgress = async (uid) => {
     try {
         const cloudData = await getUserData(uid);
         if (!cloudData) return false;
 
-        let progreso = normalizeNestedPlanMap(cloudData.progreso || {});
-        let detalles = normalizeNestedPlanMap(cloudData.progresoDetalles || {});
-        let simulaciones = normalizeNestedPlanMap(cloudData.simulaciones || {});
+        const progreso = normalizeNestedPlanMap(cloudData.progreso || {});
+        const detalles = normalizeNestedPlanMap(cloudData.progresoDetalles || {});
+        const simulaciones = normalizeNestedPlanMap(cloudData.simulaciones || {});
 
         // Normalización: Extraemos datos de llaves con puntos literales (ej: "progreso.17.14")
         Object.keys(cloudData).forEach((key) => {

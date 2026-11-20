@@ -5,6 +5,11 @@
  * y las notificaciones reactivas dentro de la misma pestaña.
  */
 
+/** @typedef {import('../types/domain').StorageLike} StorageLike */
+/** @typedef {import('../types/domain').StorageWriteOptions} StorageWriteOptions */
+/** @typedef {import('../types/domain').ProgresoMap} ProgresoMap */
+/** @typedef {import('../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
+
 export const STORAGE_SCHEMA_VERSION = 1;
 export const STORAGE_CHANGE_EVENT = 'unlu-storage-updated';
 
@@ -17,11 +22,17 @@ export const STORAGE_KEYS = {
     PROGRESO_VISTA: 'materias_vista_preferida',
     PROGRESO_EXPANDED_YEARS: 'progreso_expanded_years:v2',
     SIMULADOR_VISTA: 'simulador_vista_preferida',
+    /** @param {string} plan */
     progreso: (plan) => `progreso+${plan}`,
+    /** @param {string} plan */
     progresoDetalles: (plan) => `detalles_progreso+${plan}`,
+    /** @param {string} plan */
     simulacion: (plan) => `simulacion+${plan}`,
 };
 
+/**
+ * @returns {StorageLike | null}
+ */
 function getBrowserStorage() {
     if (typeof window === 'undefined') return null;
     try {
@@ -31,6 +42,9 @@ function getBrowserStorage() {
     }
 }
 
+/**
+ * @param {string} key
+ */
 function emitStorageUpdated(key) {
     if (typeof window === 'undefined') return;
     try {
@@ -43,6 +57,8 @@ function emitStorageUpdated(key) {
 /**
  * Suscribe un callback a cambios locales (misma pestaña), entre pestañas (`storage`)
  * y de hidratación desde Firebase (`progress-hydrated`).
+ * @param {EventListener} callback
+ * @returns {() => void}
  */
 export function subscribeStorageChanges(callback) {
     if (typeof window === 'undefined') return () => {};
@@ -59,9 +75,16 @@ export function subscribeStorageChanges(callback) {
 
 /**
  * Factory testeable: permite inyectar un storage en memoria para tests unitarios.
+ * @param {StorageLike | null} [storage]
  */
 export function createStorageRepository(storage = getBrowserStorage()) {
-    const getRaw = (key, fallback = null) => {
+    /**
+     * @template [T=string | null]
+     * @param {string} key
+     * @param {T} [fallback]
+     * @returns {string | T}
+     */
+    const getRaw = (key, fallback = /** @type {any} */ (null)) => {
         if (!storage) return fallback;
         try {
             const val = storage.getItem(key);
@@ -71,6 +94,12 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         }
     };
 
+    /**
+     * @param {string} key
+     * @param {string | number | boolean} value
+     * @param {StorageWriteOptions} [options]
+     * @returns {boolean}
+     */
     const setRaw = (key, value, { silent = false } = {}) => {
         if (!storage) return false;
         try {
@@ -82,6 +111,11 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         }
     };
 
+    /**
+     * @param {string} key
+     * @param {StorageWriteOptions} [options]
+     * @returns {boolean}
+     */
     const remove = (key, { silent = false } = {}) => {
         if (!storage) return false;
         try {
@@ -93,7 +127,13 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         }
     };
 
-    const getJSON = (key, fallback = null) => {
+    /**
+     * @template [T=any]
+     * @param {string} key
+     * @param {T} [fallback]
+     * @returns {T}
+     */
+    const getJSON = (key, fallback = /** @type {any} */ (null)) => {
         const raw = getRaw(key, null);
         if (raw === null) return fallback;
         try {
@@ -103,6 +143,12 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         }
     };
 
+    /**
+     * @param {string} key
+     * @param {unknown} value
+     * @param {StorageWriteOptions} [options]
+     * @returns {boolean}
+     */
     const setJSON = (key, value, options) => {
         try {
             return setRaw(key, JSON.stringify(value), options);
@@ -111,16 +157,23 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         }
     };
 
+    /**
+     * @returns {number}
+     */
     const ensureSchemaVersion = () => {
-        const saved = Number(getRaw(STORAGE_KEYS.SCHEMA_VERSION, 0));
+        const saved = Number(getRaw(STORAGE_KEYS.SCHEMA_VERSION, '0'));
         if (saved < STORAGE_SCHEMA_VERSION) {
             setRaw(STORAGE_KEYS.SCHEMA_VERSION, STORAGE_SCHEMA_VERSION, { silent: true });
         }
         return STORAGE_SCHEMA_VERSION;
     };
 
+    /**
+     * @returns {void}
+     */
     const clearAcademicCache = () => {
         if (!storage) return;
+        /** @type {string[]} */
         const keysToDelete = [];
         for (let i = 0; i < storage.length; i++) {
             const key = storage.key(i);
@@ -146,36 +199,81 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         clearAcademicCache,
 
         // --- Dominio académico ---
+        /** @returns {string | null} */
         getPlanActivo: () => getRaw(STORAGE_KEYS.PLAN_ACTIVO, null),
+        /**
+         * @param {string | null | undefined} plan
+         * @param {StorageWriteOptions} [options]
+         */
         setPlanActivo: (plan, options) =>
             plan
                 ? setRaw(STORAGE_KEYS.PLAN_ACTIVO, plan, options)
                 : remove(STORAGE_KEYS.PLAN_ACTIVO, options),
 
-        getProgreso: (plan, fallback = null) =>
+        /**
+         * @template [T=ProgresoMap | null]
+         * @param {string | null | undefined} plan
+         * @param {T} [fallback]
+         * @returns {T}
+         */
+        getProgreso: (plan, fallback = /** @type {any} */ (null)) =>
             plan ? getJSON(STORAGE_KEYS.progreso(plan), fallback) : fallback,
+        /**
+         * @param {string | null | undefined} plan
+         * @param {ProgresoMap | Record<string, unknown>} data
+         * @param {StorageWriteOptions} [options]
+         */
         setProgreso: (plan, data, options) =>
             plan ? setJSON(STORAGE_KEYS.progreso(plan), data, options) : false,
 
-        getProgresoDetalles: (plan, fallback = null) =>
+        /**
+         * @template [T=ProgresoDetallesMap | null]
+         * @param {string | null | undefined} plan
+         * @param {T} [fallback]
+         * @returns {T}
+         */
+        getProgresoDetalles: (plan, fallback = /** @type {any} */ (null)) =>
             plan ? getJSON(STORAGE_KEYS.progresoDetalles(plan), fallback) : fallback,
+        /**
+         * @param {string | null | undefined} plan
+         * @param {ProgresoDetallesMap | Record<string, unknown>} data
+         * @param {StorageWriteOptions} [options]
+         */
         setProgresoDetalles: (plan, data, options) =>
             plan ? setJSON(STORAGE_KEYS.progresoDetalles(plan), data, options) : false,
 
-        getSimulacion: (plan, fallback = null) =>
+        /**
+         * @template [T=any]
+         * @param {string | null | undefined} plan
+         * @param {T} [fallback]
+         * @returns {T}
+         */
+        getSimulacion: (plan, fallback = /** @type {any} */ (null)) =>
             plan ? getJSON(STORAGE_KEYS.simulacion(plan), fallback) : fallback,
+        /**
+         * @param {string | null | undefined} plan
+         * @param {unknown} data
+         * @param {StorageWriteOptions} [options]
+         */
         setSimulacion: (plan, data, options) =>
             plan ? setJSON(STORAGE_KEYS.simulacion(plan), data, options) : false,
 
         // --- Preferencias y notificaciones ---
+        /** @returns {string[]} */
         getNotificationReadIds: () => {
-            const parsed = getJSON(STORAGE_KEYS.NOTIFICACIONES_LEIDAS, []);
+            const parsed = getJSON(STORAGE_KEYS.NOTIFICACIONES_LEIDAS, /** @type {string[]} */ ([]));
             return Array.isArray(parsed) ? parsed : [];
         },
+        /** @param {string[]} ids */
         setNotificationReadIds: (ids) =>
             setJSON(STORAGE_KEYS.NOTIFICACIONES_LEIDAS, ids, { silent: true }),
 
+        /** @returns {string | null} */
         getTheme: () => getRaw(STORAGE_KEYS.THEME, null),
+        /**
+         * @param {string} theme
+         * @param {StorageWriteOptions} [options]
+         */
         setTheme: (theme, options) => setRaw(STORAGE_KEYS.THEME, theme, options),
     };
 }

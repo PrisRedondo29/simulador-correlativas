@@ -12,20 +12,36 @@ import {
     normalizePlanNumber,
 } from '../config/careersRegistry';
 
+/** @typedef {import('../types/domain').CareerConfig} CareerConfig */
+/** @typedef {import('../types/domain').PlanData} PlanData */
+/** @typedef {import('../types/domain').Materia} Materia */
+/** @typedef {import('../types/domain').EquivalenciasMap} EquivalenciasMap */
+
+/**
+ * @param {CareerConfig[]} [registry]
+ */
 export function createPlanService(registry = CAREERS_REGISTRY) {
+    /** @type {Map<string, PlanData[]>} */
     const careerCache = new Map();
+    /** @type {Map<string, EquivalenciasMap>} */
     const equivalenciasCache = new Map();
 
+    /**
+     * @param {CareerConfig | null} career
+     * @returns {Promise<PlanData[]>}
+     */
     async function loadCareerPlans(career) {
         if (!career || typeof career.loadPlans !== 'function') return [];
 
         const cacheKey = career.id || career.planPrefix;
-        if (careerCache.has(cacheKey)) {
-            return careerCache.get(cacheKey);
+        const cached = careerCache.get(cacheKey);
+        if (cached) {
+            return cached;
         }
 
         const mod = await career.loadPlans();
-        const rawPlans = mod?.default || mod || [];
+        /** @type {PlanData[]} */
+        const rawPlans = Array.isArray(mod) ? mod : (mod?.default || []);
         const plans = career.name
             ? rawPlans.map((p) => (p.carrera ? p : { ...p, carrera: career.name }))
             : rawPlans;
@@ -37,8 +53,8 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
         /**
          * Obtiene un plan completo (con materias) de forma asíncrona,
          * cargando únicamente el JSON de la carrera correspondiente y cacheándolo en memoria.
-         * @param {string} planNumber - Número del plan (ej: "17.14")
-         * @returns {Promise<{ plan_numero: string, carrera?: string, materias: Array }|null>}
+         * @param {string | null | undefined} planNumber - Número del plan (ej: "17.14")
+         * @returns {Promise<PlanData | null>}
          */
         async getPlanByNumber(planNumber) {
             const normalized = normalizePlanNumber(planNumber);
@@ -54,7 +70,7 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
         /**
          * Obtiene el listado de materias de un plan específico de forma asíncrona.
          * @param {string} planNumber - Número del plan
-         * @returns {Promise<Array>}
+         * @returns {Promise<Materia[]>}
          */
         async getMateriasByPlan(planNumber) {
             const planData = await this.getPlanByNumber(planNumber);
@@ -66,8 +82,8 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
 
         /**
          * Carga dinámicamente el mapa de equivalencias configurado para un plan (si existe).
-         * @param {string} planNumber
-         * @returns {Promise<Object>}
+         * @param {string | null | undefined} planNumber
+         * @returns {Promise<EquivalenciasMap>}
          */
         async getEquivalenciasByPlan(planNumber) {
             const normalized = normalizePlanNumber(planNumber);
@@ -83,21 +99,26 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
 
             const sourcePlan = planEntry?.equivalencias?.sourcePlan || planEntry?.transition?.sourcePlan || normalized;
             const targetPlan = planEntry?.equivalencias?.targetPlan || planEntry?.transition?.targetPlan || normalized;
-            const cacheKey = `${planEntry.careerId || getCareerPrefix(normalized) || 'plan'}:${sourcePlan}->${targetPlan}`;
+            const cacheKey = `${planEntry?.careerId || getCareerPrefix(normalized) || 'plan'}:${sourcePlan}->${targetPlan}`;
 
-            if (equivalenciasCache.has(cacheKey)) {
-                return equivalenciasCache.get(cacheKey);
+            const cached = equivalenciasCache.get(cacheKey);
+            if (cached) {
+                return cached;
             }
 
             const mod = await loader();
-            const data = mod?.default || mod || {};
+            /** @type {EquivalenciasMap} */
+            const data =
+                mod && typeof mod === 'object' && 'default' in mod && mod.default
+                    ? /** @type {EquivalenciasMap} */ (mod.default)
+                    : /** @type {EquivalenciasMap} */ (mod || {});
             equivalenciasCache.set(cacheKey, data);
             return data;
         },
 
         /**
          * Devuelve todos los planes registrados cargando dinámicamente cada carrera.
-         * @returns {Promise<Array>}
+         * @returns {Promise<PlanData[]>}
          */
         async getAllPlans() {
             const results = await Promise.all(
@@ -110,6 +131,7 @@ export function createPlanService(registry = CAREERS_REGISTRY) {
 
         /**
          * Limpia los cachés en memoria (útil en tests).
+         * @returns {void}
          */
         clearCache() {
             careerCache.clear();

@@ -12,11 +12,14 @@ import { analytics, app } from './firebase';
 
 if (import.meta.env.DEV) console.log('[Analytics] Módulo cargado correctamente');
 
-// Función auxiliar para obtener analytics de forma segura
+/**
+ * Función auxiliar para obtener analytics de forma segura.
+ * @returns {Promise<import('firebase/analytics').Analytics | null>}
+ */
 const getAnalyticsInstance = async () => {
     if (analytics) return analytics;
-    if (typeof window === "undefined") return null;
-    
+    if (typeof window === 'undefined') return null;
+
     try {
         const { getAnalytics } = await import('firebase/analytics');
         return getAnalytics(app);
@@ -25,7 +28,12 @@ const getAnalyticsInstance = async () => {
     }
 };
 
-// Guard: en entornos donde analytics no está disponible (SSR, tests), no falla
+/**
+ * Guard: en entornos donde analytics no está disponible (SSR, tests), no falla.
+ * @param {string} eventName
+ * @param {Record<string, unknown>} [params]
+ * @returns {Promise<void>}
+ */
 const track = async (eventName, params = {}) => {
     if (import.meta.env.DEV) console.log(`[Analytics] Intentando trackear evento: ${eventName}`, params);
     try {
@@ -34,15 +42,17 @@ const track = async (eventName, params = {}) => {
             if (import.meta.env.DEV) console.warn(`[Analytics] No se pudo obtener la instancia para: ${eventName}. Revisa si el SDK cargó correctamente.`);
             return;
         }
-        
-        // Activar DebugView en desarrollo (esto es para GA4)
+
+        const payload = import.meta.env.DEV
+            ? { ...params, debug_mode: true }
+            : params;
+
         if (import.meta.env.DEV) {
-            params.debug_mode = true;
-            console.log(`[Analytics] ✅ Enviando a GA4: ${eventName}`, params);
+            console.log(`[Analytics] ✅ Enviando a GA4: ${eventName}`, payload);
         }
 
         const { logEvent } = await import('firebase/analytics');
-        logEvent(instance, eventName, params);
+        logEvent(instance, eventName, payload);
     } catch (err) {
         if (import.meta.env.DEV) console.error(`[Analytics] Error en track (${eventName}):`, err);
     }
@@ -87,17 +97,22 @@ export const trackLogout = () => {
  * Trackea una vista de página (page_view) al cambiar de ruta.
  * @param {{ path: string, title?: string }} params
  */
-export const trackPageView = ({ path, title = document.title }) =>
+export const trackPageView = ({ path, title = typeof document !== 'undefined' ? document.title : '' }) =>
     track('page_view', { page_path: path, page_title: title });
 
 // ─── Eventos de Progreso ──────────────────────────────────────────────────────
 
 /**
  * Trackea cuando el usuario cambia el estado de una materia en /progreso.
- * @param {{ plan: string, codigoMateria: string, estadoNuevo: string }} params
+ * @param {{ plan: string, codigoMateria: string, estadoNuevo: string, origenMateria?: string | null }} params
  */
 export const trackCambioMateria = ({ plan, codigoMateria, estadoNuevo, origenMateria = null }) =>
-    track('cambio_materia', { plan, materia_codigo: codigoMateria, estado_materia: estadoNuevo, ...(origenMateria && { origen_materia: origenMateria }) });
+    track('cambio_materia', {
+        plan,
+        materia_codigo: codigoMateria,
+        estado_materia: estadoNuevo,
+        ...(origenMateria && { origen_materia: origenMateria }),
+    });
 
 /**
  * Trackea cuando el usuario guarda su simulación.
@@ -118,14 +133,14 @@ export const trackAvanceSemestre = ({ plan, anio, cuatri }) =>
 /**
  * Trackea una búsqueda de materia.
  * Útil para detectar si los usuarios buscan cosas que no existen.
- * @param {{ term: string, resultsCount: number, context: string }} params
+ * @param {{ term: string, resultsCount: number, search_origen: string }} params
  */
 export const trackSearch = ({ term, resultsCount, search_origen }) => {
-    if (!term || term.length < 3) return; // Evitar ruido de búsquedas cortas
-    track('search_materia', { 
-        search_term: term.toLowerCase(), 
+    if (!term || term.length < 3) return;
+    track('search_materia', {
+        search_term: term.toLowerCase(),
         result_count: resultsCount,
-        search_origen: search_origen // 'equivalencias', 'progreso', etc.
+        search_origen,
     });
 };
 
@@ -134,10 +149,10 @@ export const trackSearch = ({ term, resultsCount, search_origen }) => {
  * @param {{ action: 'start' | 'step_view' | 'complete' | 'skip', stepIndex?: number, stepTitle?: string }} params
  */
 export const trackTutorial = ({ action, stepIndex, stepTitle }) =>
-    track('tutorial_progreso', { 
-        action, 
-        step_index: stepIndex, 
-        step_title: stepTitle 
+    track('tutorial_progreso', {
+        action,
+        step_index: stepIndex,
+        step_title: stepTitle,
     });
 
 /**
@@ -145,9 +160,9 @@ export const trackTutorial = ({ action, stepIndex, stepTitle }) =>
  * @param {{ code: string, message: string, fatal?: boolean }} params
  */
 export const trackErrorGA = ({ code, message, fatal = false }) =>
-    track('exception', { 
-        description: `${code}: ${message}`, 
-        fatal 
+    track('exception', {
+        description: `${code}: ${message}`,
+        fatal,
     });
 
 /**
@@ -167,8 +182,8 @@ export const trackDescargaPDF = ({ plan }) =>
 // ─── Nuevos Eventos Estratégicos (Insights Académicos) ────────────────────────
 
 /**
- * Trackea cuando el usuario elige o cambia de plan (Sistemas, Civil, etc.).
- * @param {{ plan: string, origen_plan: 'settings' | 'welcome_modal', carrera?: string }} params
+ * Trackea cuando el usuario elige o cambia de plan o carrera.
+ * @param {{ plan: string, origen_plan: 'settings' | 'settings_career' | 'welcome_modal', carrera?: string }} params
  */
 export const trackSeleccionCarrera = ({ plan, origen_plan, carrera = 'Analista en Sistemas' }) =>
     track('seleccion_carrera', { plan, origen_plan, carrera });
@@ -178,22 +193,22 @@ export const trackSeleccionCarrera = ({ plan, origen_plan, carrera = 'Analista e
  * @param {{ plan: string, aprobadas: number, total: number }} params
  */
 export const trackProgresoInicial = ({ plan, aprobadas, total }) =>
-    track('progreso_inicial', { 
-        plan, 
+    track('progreso_inicial', {
+        plan,
         cant_aprobadas: aprobadas,
-        porcentaje_inicial: Math.round((aprobadas / total) * 100)
+        porcentaje_inicial: total > 0 ? Math.round((aprobadas / total) * 100) : 0,
     });
 
 /**
  * Trackea clics en materias bloqueadas para identificar trabas.
- * @param {{ plan: string, codigo: string, nombre: string, impacto?: number }} params
+ * @param {{ plan: string, materia_codigo: string, materia_nombre: string, impacto?: number }} params
  */
 export const trackFriccionCorrelativa = ({ plan, materia_codigo, materia_nombre, impacto = 0 }) =>
     track('friccion_correlativa', { plan, materia_codigo, materia_nombre, materias_bloqueadas: impacto });
 
 /**
  * Trackea cuando un alumno pasa de un estado avanzado a uno inicial (recursada).
- * @param {{ plan: string, codigo: string, estado_anterior: string }} params
+ * @param {{ plan: string, materia_codigo: string, materia_nombre?: string, estado_anterior: string }} params
  */
 export const trackRecursada = ({ plan, materia_codigo, materia_nombre, estado_anterior }) =>
     track('recursada_materia', { plan, materia_codigo, materia_nombre, estado_anterior });
@@ -210,7 +225,12 @@ export const trackProyeccionEgreso = ({ plan, semestres_totales, anio_proyeccion
  * @param {{ plan: string, materias: string[], periodo: string }} params
  */
 export const trackIntencionCursada = ({ plan, materias, periodo }) =>
-    track('intencion_planificacion', { plan, cant_materias: materias.length, periodo, materias_codigos: materias.join(',') });
+    track('intencion_planificacion', {
+        plan,
+        cant_materias: materias.length,
+        periodo,
+        materias_codigos: materias.join(','),
+    });
 
 /**
  * Trackea una alerta de posible deserción o estancamiento crítico.

@@ -19,18 +19,20 @@ const IS_DEV = import.meta.env.DEV === true;
 
 // ─── Niveles de log ───────────────────────────────────────────────────────────
 export const LOG_LEVEL = Object.freeze({
-    ERROR:   'error',
-    WARNING: 'warning',
-    INFO:    'info',
+    ERROR: /** @type {'error'} */ ('error'),
+    WARNING: /** @type {'warning'} */ ('warning'),
+    INFO: /** @type {'info'} */ ('info'),
 });
 
+/** @typedef {'error' | 'warning' | 'info'} LogLevel */
+
 // ─── Throttle (máx. 5 logs por 60 segundos) ──────────────────────────────────
-const THROTTLE_LIMIT  = 5;
+const THROTTLE_LIMIT = 5;
 const THROTTLE_WINDOW = 60_000; // ms
 
 // Estado del throttle en memoria (se resetea al recargar la página)
 const _throttle = {
-    count:     0,
+    count: 0,
     windowStart: Date.now(),
 };
 
@@ -52,10 +54,6 @@ const canLog = () => {
 
 // ─── Sanitización de PII ──────────────────────────────────────────────────────
 
-/**
- * Campos del objeto User de Firebase y otros PII que nunca deben llegar a los logs.
- * Hay que eliminarlos antes de cualquier escritura.
- */
 const PII_FIELDS = new Set([
     'email', 'phoneNumber', 'photoURL', 'displayName',
     'providerData', 'refreshToken', 'stsTokenManager',
@@ -63,7 +61,6 @@ const PII_FIELDS = new Set([
     'ip', 'ipAddress', 'creditCard', 'ssn',
 ]);
 
-/** Regex para detectar emails o teléfonos en strings */
 const EMAIL_RE = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi;
 const PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
 
@@ -81,24 +78,26 @@ const sanitizeString = (str) =>
  * Sanitiza un objeto de contexto:
  *  - Elimina campos PII por nombre
  *  - Mantiene solo primitivos (string, number, boolean)
- *  - Sanitiza strings con regex
- *  - Trunca strings largos
+ *  - Sanitiza strings con regex y trunca strings largos
  *
  * @param {Record<string, unknown>} ctx
  * @returns {Record<string, string | number | boolean>}
  */
-const sanitizeContext = (ctx) =>
-    Object.fromEntries(
-        Object.entries(ctx)
-            .filter(([key]) => !PII_FIELDS.has(key))
-            .filter(([, v]) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
-            .map(([key, v]) => [
-                key,
-                typeof v === 'string'
-                    ? sanitizeString(String(v)).slice(0, 200)
-                    : v,
-            ])
-    );
+const sanitizeContext = (ctx) => {
+    /** @type {Record<string, string | number | boolean>} */
+    const clean = {};
+
+    for (const [key, value] of Object.entries(ctx)) {
+        if (PII_FIELDS.has(key)) continue;
+        if (typeof value === 'string') {
+            clean[key] = sanitizeString(value).slice(0, 200);
+        } else if (typeof value === 'number' || typeof value === 'boolean') {
+            clean[key] = value;
+        }
+    }
+
+    return clean;
+};
 
 /**
  * Sanitiza el mensaje de error: quita emails/teléfonos y trunca el stack.
@@ -107,21 +106,40 @@ const sanitizeContext = (ctx) =>
  */
 const sanitizeMessage = (msg) =>
     sanitizeString(String(msg))
-        // Eliminar líneas de stacktrace (contienen rutas de archivos)
         .replace(/\s+at\s+.+/g, '')
         .trim()
         .slice(0, 500);
+
+/**
+ * Extrae propiedades seguras de un error `unknown`.
+ * @param {unknown} err
+ * @returns {{ code: string, message: string }}
+ */
+const extractErrorInfo = (err) => {
+    if (err && typeof err === 'object') {
+        const record = /** @type {{ code?: unknown, message?: unknown }} */ (err);
+        return {
+            code: typeof record.code === 'string' ? record.code : 'js/unhandled',
+            message: typeof record.message === 'string' ? record.message : String(err),
+        };
+    }
+    return { code: 'js/unhandled', message: String(err) };
+};
 
 // ─── Escritura interna ────────────────────────────────────────────────────────
 
 /**
  * Imprime en consola de desarrollo con nivel correcto.
  * SOLO se ejecuta en DEV.
+ * @param {LogLevel} level
+ * @param {string} errorCode
+ * @param {string} errorMessage
+ * @param {Record<string, string | number | boolean>} context
  */
 const devLog = (level, errorCode, errorMessage, context) => {
     const prefix = `[LogService:${level.toUpperCase()}] ${errorCode}`;
-    if (level === LOG_LEVEL.ERROR)   { if (import.meta.env.DEV) console.error(prefix, errorMessage, context); return; }
-    if (level === LOG_LEVEL.WARNING) { if (import.meta.env.DEV) console.warn (prefix, errorMessage, context); return; }
+    if (level === LOG_LEVEL.ERROR) { if (import.meta.env.DEV) console.error(prefix, errorMessage, context); return; }
+    if (level === LOG_LEVEL.WARNING) { if (import.meta.env.DEV) console.warn(prefix, errorMessage, context); return; }
     if (import.meta.env.DEV) console.info(prefix, errorMessage, context);
 };
 
@@ -132,7 +150,7 @@ const devLog = (level, errorCode, errorMessage, context) => {
  * Fire-and-forget garantizado: nunca lanza, nunca rompe la UI.
  *
  * @param {{
- *   level?:        'error' | 'warning' | 'info',
+ *   level?:        LogLevel,
  *   errorCode?:    string,
  *   errorMessage?: string,
  *   route?:        string,
@@ -142,44 +160,39 @@ const devLog = (level, errorCode, errorMessage, context) => {
  * @returns {void}
  */
 export const writeLog = ({
-    level        = LOG_LEVEL.ERROR,
-    errorCode    = 'unknown',
+    level = LOG_LEVEL.ERROR,
+    errorCode = 'unknown',
     errorMessage = 'Sin detalle',
-    route        = window?.location?.pathname ?? '/',
-    userId       = null,
-    context      = {},
+    route = typeof window !== 'undefined' ? (window.location?.pathname ?? '/') : '/',
+    userId = null,
+    context = {},
 }) => {
-    // Descarte rápido si el throttle está saturado
     if (!canLog()) return;
 
     const cleanMessage = sanitizeMessage(errorMessage);
-    const cleanContext  = sanitizeContext(context);
+    const cleanContext = sanitizeContext(context);
 
-    // Trackear error en Analytics (sin datos sensibles)
     if (level !== LOG_LEVEL.INFO) {
-        trackErrorGA({ 
-            code: errorCode, 
-            message: cleanMessage, 
-            fatal: level === LOG_LEVEL.ERROR 
+        trackErrorGA({
+            code: errorCode,
+            message: cleanMessage,
+            fatal: level === LOG_LEVEL.ERROR,
         });
     }
 
-    // ── Modo DEV: solo consola, sin Firestore ─────────────────────────────────
     if (IS_DEV) {
         devLog(level, errorCode, cleanMessage, cleanContext);
         return;
     }
 
-    // ── Modo PROD: Firestore, sin consola ─────────────────────────────────────
     const logEntry = {
         level,
         errorCode,
-        errorMessage:  cleanMessage,
+        errorMessage: cleanMessage,
         route,
-        // userId puede ser null (usuario no autenticado): es aceptable
         userId,
-        context:       cleanContext,
-        timestamp:     serverTimestamp(),
+        context: cleanContext,
+        timestamp: serverTimestamp(),
         schemaVersion: 1,
     };
 
@@ -197,11 +210,11 @@ export const writeLog = ({
  * @returns {void}
  */
 export const logError = (err, opts = {}) => {
+    const { code, message } = extractErrorInfo(err);
     writeLog({
-        level:        LOG_LEVEL.ERROR,
-        errorCode:    err?.code ?? 'js/unhandled',
-        // Extraemos solo el mensaje, no el objeto Error completo
-        errorMessage: err?.message ?? String(err),
+        level: LOG_LEVEL.ERROR,
+        errorCode: code,
+        errorMessage: message,
         ...opts,
     });
 };
@@ -215,8 +228,8 @@ export const logError = (err, opts = {}) => {
  */
 export const logWarning = (message, opts = {}) => {
     writeLog({
-        level:        LOG_LEVEL.WARNING,
-        errorCode:    'app/warning',
+        level: LOG_LEVEL.WARNING,
+        errorCode: 'app/warning',
         errorMessage: message,
         ...opts,
     });

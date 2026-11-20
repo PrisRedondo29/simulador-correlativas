@@ -149,5 +149,21 @@ describe('regularidadUtils - Reglas académicas UNLu', () => {
             expect(res.promedioConAplazos).toBe(8);
             expect(res.materiasContadas).toBe(2);
         });
+
+        it('ignora entradas de detalle nulas sin fallar y descuenta intentos aunque falte fechaRegularidad', () => {
+            const res = calcularPromedioGeneral(
+                { M1: null, M2: { notaFinal: 10 } },
+                { M1: 'Aprobado', M2: 'Aprobado' },
+            );
+            expect(res.promedioSinAplazos).toBe(10);
+            expect(res.materiasContadas).toBe(1);
+
+            const planif = obtenerPlanificacionInstancias(null, [
+                { estado: 'reprobado', nota: 2 },
+                { estado: 'reprobado', nota: 3 },
+                { estado: 'reprobado', nota: 2 },
+            ]);
+            expect(planif.intentosRestantes).toBe(1);
+        });
     });
 });

@@ -6,10 +6,15 @@
 import { CAREERS_REGISTRY } from '../../config/careersRegistry';
 import { getIntermediateTitleConfig } from '../../config/planPolicies';
 
+/** @typedef {import('../../types/domain').CareerConfig} CareerConfig */
+/** @typedef {import('../../types/domain').Materia} Materia */
+/** @typedef {import('../../types/domain').ProgresoMap} ProgresoMap */
+/** @typedef {import('../../types/domain').ProgresoIntermedioResumen} ProgresoIntermedioResumen */
+
 /**
  * Obtiene el nombre del título intermedio según la configuración del plan.
- * @param {string} plan - Identificador del plan de estudios (ej: "17.14")
- * @param {Array} [registry] - Registro de carreras opcional (para inyección en tests)
+ * @param {string | null | undefined} plan - Identificador del plan de estudios (ej: "17.14")
+ * @param {CareerConfig[]} [registry] - Registro de carreras opcional (para inyección en tests)
  * @returns {string} - Nombre del título intermedio o string vacío si el plan no tiene
  */
 const getTituloIntermedioNombre = (plan, registry = CAREERS_REGISTRY) => {
@@ -20,10 +25,10 @@ const getTituloIntermedioNombre = (plan, registry = CAREERS_REGISTRY) => {
 /**
  * Obtiene las materias requeridas para el título intermedio según la configuración del plan.
  * Soporta corte por `maxCuatrimestre` o lista explícita de `codigos`.
- * @param {string} plan - Identificador del plan de estudios
- * @param {Array} materias - Lista de todas las materias del plan
- * @param {Array} [registry] - Registro de carreras opcional (para inyección en tests)
- * @returns {Array} - Lista de materias filtradas para el título intermedio
+ * @param {string | null | undefined} plan - Identificador del plan de estudios
+ * @param {Materia[] | null | undefined} materias - Lista de todas las materias del plan
+ * @param {CareerConfig[]} [registry] - Registro de carreras opcional (para inyección en tests)
+ * @returns {Materia[]} - Lista de materias filtradas para el título intermedio
  */
 const getMateriasIntermedio = (plan, materias, registry = CAREERS_REGISTRY) => {
     if (!materias || materias.length === 0) return [];
@@ -39,9 +44,10 @@ const getMateriasIntermedio = (plan, materias, registry = CAREERS_REGISTRY) => {
     }
 
     if (typeof config.maxCuatrimestre === 'number') {
+        const maxCuatrimestre = config.maxCuatrimestre;
         return materias.filter(
             (m) =>
-                Number(m.cuatrimestre) <= config.maxCuatrimestre &&
+                Number(m.cuatrimestre) <= maxCuatrimestre &&
                 !m.tesis &&
                 m.codigo !== 'N/A',
         );
@@ -52,9 +58,9 @@ const getMateriasIntermedio = (plan, materias, registry = CAREERS_REGISTRY) => {
 
 /**
  * Calcula el progreso del título intermedio.
- * @param {Array} materiasIntermedio - Materias requeridas para el título intermedio
- * @param {Object} progreso - Estado de progreso de todas las materias
- * @returns {{ porcentaje: number, completadas: number, totales: number }}
+ * @param {Materia[] | null | undefined} materiasIntermedio - Materias requeridas para el título intermedio
+ * @param {ProgresoMap} [progreso] - Estado de progreso de todas las materias
+ * @returns {ProgresoIntermedioResumen}
  */
 const calcularProgresoIntermedio = (materiasIntermedio, progreso = {}) => {
     if (!materiasIntermedio || materiasIntermedio.length === 0) {

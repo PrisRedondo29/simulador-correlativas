@@ -1,7 +1,7 @@
 /**
  * notificationStrategies.js
  * Patrón Strategy para generación de alertas académicas del Centro de Notificaciones.
- * Cada estrategia es una función pura `(context) => Notification | null`.
+ * Cada estrategia es una función pura `(context) => NotificationItem | null`.
  * Cumple OCP: para agregar o modificar alertas no es necesario tocar NotificationCenter.jsx.
  */
 
@@ -9,6 +9,16 @@ import regularidadUtils from '../Progreso/regularidadUtils';
 import { esMateriaIncompleta } from '../Progreso/materiasUtils';
 import tituloIntermedioUtils from '../Progreso/tituloIntermedioUtils';
 
+/** @typedef {import('../../types/domain').Materia} Materia */
+/** @typedef {import('../../types/domain').NotificationContext} NotificationContext */
+/** @typedef {import('../../types/domain').NotificationItem} NotificationItem */
+/** @typedef {import('../../types/domain').NotificationStrategy} NotificationStrategy */
+
+/**
+ * @param {Materia[]} materias
+ * @param {number} [limite]
+ * @returns {string}
+ */
 function formatearNombres(materias, limite = 2) {
     const visibles = materias.slice(0, limite).map((m) => m.nombre).join(', ');
     const resto = materias.length - limite;
@@ -17,6 +27,7 @@ function formatearNombres(materias, limite = 2) {
 
 /**
  * 1. Alerta por regularidades con <= 1 cuatrimestre de vigencia restante (Art. 31° RGE).
+ * @type {NotificationStrategy}
  */
 export function estrategiaVencimientoRegularidad({ activePlan, materias = [], progreso = {}, progresoDetalles = {} }) {
     const enRiesgo = materias.filter((m) => {
@@ -47,6 +58,7 @@ export function estrategiaVencimientoRegularidad({ activePlan, materias = [], pr
 /**
  * 2. Alerta por última oportunidad de examen final (Art. 32° RGE: 3 desaprobaciones acumuladas).
  * Respeta que los ausentes no descuentan intentos.
+ * @type {NotificationStrategy}
  */
 export function estrategiaUltimoIntentoFinal({ activePlan, materias = [], progreso = {}, progresoDetalles = {} }) {
     const enUltimaOportunidad = materias.filter((m) => {
@@ -72,6 +84,7 @@ export function estrategiaUltimoIntentoFinal({ activePlan, materias = [], progre
 
 /**
  * 3. Alerta de transición de plan (solo si el plan activo tiene la capacidad habilitada).
+ * @type {NotificationStrategy}
  */
 export function estrategiaTransicionPlan({ activePlan, careerShortName, canSimulateTransition, transitionInfo }) {
     if (!canSimulateTransition || !transitionInfo) return null;
@@ -89,6 +102,7 @@ export function estrategiaTransicionPlan({ activePlan, careerShortName, canSimul
 
 /**
  * 4. Notificación positiva cuando el estudiante está a <= 2 materias del Título Intermedio o lo completó.
+ * @type {NotificationStrategy}
  */
 export function estrategiaTituloIntermedio({ activePlan, materias = [], progreso = {} }) {
     const nombre = tituloIntermedioUtils.getTituloIntermedioNombre(activePlan);
@@ -129,6 +143,7 @@ export function estrategiaTituloIntermedio({ activePlan, materias = [], progreso
 
 /**
  * 5. Alerta por materias aprobadas o regulares sin nota/fecha cargada.
+ * @type {NotificationStrategy}
  */
 export function estrategiaDatosIncompletos({ activePlan, materias = [], progreso = {}, progresoDetalles = {} }) {
     const incompletas = materias.filter((m) =>
@@ -150,6 +165,7 @@ export function estrategiaDatosIncompletos({ activePlan, materias = [], progreso
 
 /**
  * 6. Recordatorio de materias disponibles para cursar.
+ * @type {NotificationStrategy}
  */
 export function estrategiaMateriasDisponibles({ activePlan, materias = [], progreso = {} }) {
     const disponibles = materias.filter((m) => progreso[m.codigo] === 'Disponible').length;
@@ -168,6 +184,7 @@ export function estrategiaMateriasDisponibles({ activePlan, materias = [], progr
 
 /**
  * 7. Tip de respaldo en la nube para usuarios en modo visitante.
+ * @type {NotificationStrategy}
  */
 export function estrategiaRespaldoCuenta({ isAuthenticated }) {
     if (isAuthenticated) return null;
@@ -183,6 +200,7 @@ export function estrategiaRespaldoCuenta({ isAuthenticated }) {
     };
 }
 
+/** @type {NotificationStrategy[]} */
 export const DEFAULT_NOTIFICATION_STRATEGIES = [
     estrategiaUltimoIntentoFinal,
     estrategiaVencimientoRegularidad,
@@ -195,9 +213,12 @@ export const DEFAULT_NOTIFICATION_STRATEGIES = [
 
 /**
  * Ejecuta las estrategias registradas en orden de prioridad y devuelve las alertas activas.
+ * @param {NotificationContext} context
+ * @param {NotificationStrategy[]} [strategies]
+ * @returns {NotificationItem[]}
  */
 export function buildNotifications(context, strategies = DEFAULT_NOTIFICATION_STRATEGIES) {
     return strategies
         .map((strategy) => strategy(context))
-        .filter(Boolean);
+        .filter(/** @returns {item is NotificationItem} */ (item) => Boolean(item));
 }

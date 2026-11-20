@@ -1,8 +1,19 @@
 import reglas from './reglas_universidad.json';
 
+/** @typedef {import('../../types/domain').EstadoMateria} EstadoMateria */
+/** @typedef {import('../../types/domain').FechaRegularidad} FechaRegularidad */
+/** @typedef {import('../../types/domain').IntentoFinal} IntentoFinal */
+/** @typedef {import('../../types/domain').ProgresoMap} ProgresoMap */
+/** @typedef {import('../../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
+/** @typedef {import('../../types/domain').PlanificacionRegularidad} PlanificacionRegularidad */
+/** @typedef {import('../../types/domain').ResumenPromedio} ResumenPromedio */
+
 /**
  * Convierte {anio, cuatrimestre} a número de cuatrimestres desde el inicio de los tiempos.
  * Usado internamente para comparar distancias.
+ * @param {number} anio
+ * @param {number} cuatrimestre
+ * @returns {number}
  */
 function toCuatriIndex(anio, cuatrimestre) {
     return anio * 2 + cuatrimestre;
@@ -10,12 +21,14 @@ function toCuatriIndex(anio, cuatrimestre) {
 
 /**
  * Calcula cuántos cuatrimestres han pasado desde la fecha de regularidad hasta hoy.
- * @param {{ anio: number, cuatrimestre: number }|string} fechaRegularidad
+ * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @returns {number}
  */
 function getCuatrimestresTranscurridos(fechaRegularidad) {
     if (!fechaRegularidad) return 0;
 
-    let anioReg, cuatriReg;
+    let anioReg;
+    let cuatriReg;
 
     // Soportar el viejo formato "YYYY-MM" y el nuevo { anio, cuatrimestre }
     if (typeof fechaRegularidad === 'string') {
@@ -36,7 +49,9 @@ function getCuatrimestresTranscurridos(fechaRegularidad) {
 }
 
 /**
- * Verifica si la regularidad venció por tiempo (> 5 cuatrimestres)
+ * Verifica si la regularidad venció por tiempo (> 5 cuatrimestres).
+ * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @returns {boolean}
  */
 export function verificarVencimientoTiempo(fechaRegularidad) {
     if (!fechaRegularidad) return false;
@@ -47,15 +62,21 @@ export function verificarVencimientoTiempo(fechaRegularidad) {
 /**
  * Verifica si la regularidad venció por exceso de desaprobaciones (Art. 32 RGE UNLu).
  * Los ausentes no descuentan intentos.
+ * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @returns {boolean}
  */
 export function verificarVencimientoIntentos(intentosFinal) {
     if (!intentosFinal || !Array.isArray(intentosFinal)) return false;
-    const desaprobados = intentosFinal.filter(i => i.estado === 'reprobado').length;
+    const desaprobados = intentosFinal.filter((i) => i.estado === 'reprobado').length;
     return desaprobados >= reglas.limites.intentos_final;
 }
 
 /**
- * Determina si una materia 'Regular' debe pasar a 'Libre'
+ * Determina si una materia 'Regular' debe pasar a 'Libre'.
+ * @param {EstadoMateria} actualEstado
+ * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @returns {EstadoMateria}
  */
 export function calcularEstadoConsolidado(actualEstado, fechaRegularidad, intentosFinal) {
     if (actualEstado !== 'Regular' && actualEstado !== 'Libre') return actualEstado;
@@ -68,15 +89,23 @@ export function calcularEstadoConsolidado(actualEstado, fechaRegularidad, intent
 
 /**
  * Retorna cuántos cuatrimestres e intentos le quedan al alumno.
+ * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @param {IntentoFinal[] | null | undefined} intentosFinal
+ * @returns {PlanificacionRegularidad}
  */
 export function obtenerPlanificacionInstancias(fechaRegularidad, intentosFinal) {
-    if (!fechaRegularidad) return { cuatrimestresRestantes: reglas.limites.cuatrimestres_regularidad, intentosRestantes: reglas.limites.intentos_final };
+    const desaprobados = intentosFinal ? intentosFinal.filter((i) => i.estado === 'reprobado').length : 0;
+    const intentosRestantes = Math.max(0, reglas.limites.intentos_final - desaprobados);
+
+    if (!fechaRegularidad) {
+        return {
+            cuatrimestresRestantes: reglas.limites.cuatrimestres_regularidad,
+            intentosRestantes,
+        };
+    }
 
     const transcurridos = getCuatrimestresTranscurridos(fechaRegularidad);
     const cuatrimestresRestantes = Math.max(0, reglas.limites.cuatrimestres_regularidad - transcurridos);
-
-    const desaprobados = intentosFinal ? intentosFinal.filter(i => i.estado === 'reprobado').length : 0;
-    const intentosRestantes = Math.max(0, reglas.limites.intentos_final - desaprobados);
 
     return { cuatrimestresRestantes, intentosRestantes };
 }
@@ -84,12 +113,20 @@ export function obtenerPlanificacionInstancias(fechaRegularidad, intentosFinal) 
 /**
  * Calcula el promedio general de un alumno usando los detalles de progreso.
  * Solo incluye materias con nota final cargada.
- * @param {Object} progresoDetalles - { [codigo]: { notaFinal, notaRegularizacion, ... } }
- * @param {Object} progreso - { [codigo]: estado }
- * @returns {{ promedio: number|null, materiasContadas: number, totalNotas: number }}
+ * @param {ProgresoDetallesMap | null | undefined} progresoDetalles
+ * @param {ProgresoMap | null | undefined} progreso
+ * @returns {ResumenPromedio}
  */
 export function calcularPromedioGeneral(progresoDetalles, progreso) {
-    if (!progresoDetalles || !progreso) return { promedio: null, promedioConAplazos: null, promedioSinAplazos: null, materiasContadas: 0, totalNotas: 0 };
+    if (!progresoDetalles || !progreso) {
+        return {
+            promedio: null,
+            promedioConAplazos: null,
+            promedioSinAplazos: null,
+            materiasContadas: 0,
+            totalNotas: 0,
+        };
+    }
 
     let sumaAprobados = 0;
     let cantAprobados = 0;
@@ -97,12 +134,13 @@ export function calcularPromedioGeneral(progresoDetalles, progreso) {
     let cantTodos = 0;
 
     Object.entries(progresoDetalles).forEach(([codigo, detalles]) => {
+        if (!detalles) return;
         const estado = progreso[codigo];
-        
-        // Juntar todos los intentos de esta cursada y del historial
+
+        /** @type {IntentoFinal[]} */
         const intentos = [];
         if (detalles.historial) {
-            detalles.historial.forEach(cursada => {
+            detalles.historial.forEach((cursada) => {
                 if (cursada.intentosFinal) {
                     intentos.push(...cursada.intentosFinal);
                 }
@@ -114,13 +152,12 @@ export function calcularPromedioGeneral(progresoDetalles, progreso) {
 
         let notaAprobadaCounted = false;
 
-        // Sumar todos los intentos con nota (aprobados y reprobados)
-        intentos.forEach(intento => {
+        intentos.forEach((intento) => {
             if (intento.nota != null && (intento.estado === 'aprobado' || intento.estado === 'reprobado')) {
                 const notaNum = Number(intento.nota);
                 sumaTodos += notaNum;
                 cantTodos++;
-                
+
                 if (intento.estado === 'aprobado') {
                     sumaAprobados += notaNum;
                     cantAprobados++;
@@ -129,7 +166,6 @@ export function calcularPromedioGeneral(progresoDetalles, progreso) {
             }
         });
 
-        // Si la materia está aprobada o promocionada pero no tenía el intento cargado (por ej: aprobación directa / equivalencia / promoción)
         if ((estado === 'Aprobado' || estado === 'Promocionado') && detalles.notaFinal != null && !notaAprobadaCounted) {
             const notaNum = Number(detalles.notaFinal);
             sumaTodos += notaNum;
@@ -143,21 +179,24 @@ export function calcularPromedioGeneral(progresoDetalles, progreso) {
     const promedioConAplazos = cantTodos > 0 ? Math.round((sumaTodos / cantTodos) * 100) / 100 : null;
 
     return {
-        promedio: promedioSinAplazos, // Backward compatibility
+        promedio: promedioSinAplazos,
         promedioSinAplazos,
         promedioConAplazos,
         materiasContadas: cantAprobados,
-        totalNotas: sumaAprobados
+        totalNotas: sumaAprobados,
     };
 }
 
 /**
  * Calcula la fecha de vencimiento legible basada en el año y cuatrimestre de regularización.
+ * @param {FechaRegularidad | null | undefined} fechaRegularidad
+ * @returns {string | null}
  */
 export function obtenerFechaVencimientoLabel(fechaRegularidad) {
     if (!fechaRegularidad) return null;
 
-    let anioReg, cuatriReg;
+    let anioReg;
+    let cuatriReg;
     if (typeof fechaRegularidad === 'string') {
         const [year, month] = fechaRegularidad.split('-').map(Number);
         anioReg = year;
@@ -167,26 +206,11 @@ export function obtenerFechaVencimientoLabel(fechaRegularidad) {
         cuatriReg = fechaRegularidad.cuatrimestre;
     }
 
-    // Calculamos el índice del cuatri de vencimiento (5 cuatris después)
-    // Ej: 2024-C1 (índice 2024*2 + 1 = 4049) + 5 = 4054
-    // 4054 / 2 = 2027. 4054 % 2 = 0? No, wait.
-    // Usando toCuatriIndex: 2024, 1 -> 4049. 
-    // +5 -> 4054.
-    // 4054 / 2 = 2027, resto 0. So 2026-C2? 
-    // Let's re-check the logic.
-    // 2024-C1 (1), 2024-C2 (2), 2025-C1 (3), 2025-C2 (4), 2026-C1 (5).
-    // The 5th cuatri is 2026-C1.
-    // index(2024,1) = 4049.
-    // 4049 + 5 = 4054.
-    // index(2026,2) = 2026*2 + 2 = 4054. No.
-    // index(2027,0)? No.
-    // Let's use simpler logic:
-    let totalCuatris = cuatriReg + reglas.limites.cuatrimestres_regularidad;
-    let anioVenc = anioReg + Math.floor((totalCuatris - 1) / 2);
-    let cuatriVenc = ((totalCuatris - 1) % 2) + 1;
-    
-    // Mes estimado de vencimiento
-    const mesExp = cuatriVenc === 1 ? "Jul" : "Dic";
+    const totalCuatris = cuatriReg + reglas.limites.cuatrimestres_regularidad;
+    const anioVenc = anioReg + Math.floor((totalCuatris - 1) / 2);
+    const cuatriVenc = ((totalCuatris - 1) % 2) + 1;
+
+    const mesExp = cuatriVenc === 1 ? 'Jul' : 'Dic';
     return `${mesExp} ${anioVenc}`;
 }
 
@@ -197,4 +221,4 @@ export default {
     obtenerPlanificacionInstancias,
     calcularPromedioGeneral,
     obtenerFechaVencimientoLabel,
-}
+};

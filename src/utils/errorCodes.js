@@ -6,31 +6,45 @@
  */
 
 // ─── Mensajes por código de error ────────────────────────────────────────────
+/** @type {Record<string, string | null>} */
 const AUTH_ERROR_MESSAGES = {
     // Popup / OAuth
-    'auth/popup-closed-by-user':      null, // intencional → no mostrar nada
-    'auth/cancelled-popup-request':   null, // race entre popups → silencioso
-    'auth/popup-blocked':             'El popup fue bloqueado por tu navegador. Habilitá los popups para este sitio.',
+    'auth/popup-closed-by-user': null, // intencional → no mostrar nada
+    'auth/cancelled-popup-request': null, // race entre popups → silencioso
+    'auth/popup-blocked': 'El popup fue bloqueado por tu navegador. Habilitá los popups para este sitio.',
 
     // Red y disponibilidad
-    'auth/network-request-failed':    'Sin conexión a internet. Revisá tu red e intentá de nuevo.',
-    'auth/too-many-requests':         'Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.',
-    'auth/internal-error':            'Hubo un problema interno. Intentá de nuevo en unos segundos.',
+    'auth/network-request-failed': 'Sin conexión a internet. Revisá tu red e intentá de nuevo.',
+    'auth/too-many-requests': 'Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.',
+    'auth/internal-error': 'Hubo un problema interno. Intentá de nuevo en unos segundos.',
 
     // Cuenta
-    'auth/user-disabled':             'Esta cuenta fue deshabilitada. Contacta al soporte si creés que es un error.',
+    'auth/user-disabled': 'Esta cuenta fue deshabilitada. Contacta al soporte si creés que es un error.',
     'auth/account-exists-with-different-credential':
         'Ya existe una cuenta con ese email usando otro método de inicio de sesión.',
 
     // Firestore / permisos
-    'permission-denied':              'No tenés permisos para realizar esta acción.',
-    'unavailable':                    'El servicio no está disponible en este momento. Intentá de nuevo.',
-    'not-found':                      'No se encontraron los datos solicitados.',
-    'already-exists':                 'El registro ya existe.',
-    'resource-exhausted':             'Límite de operaciones alcanzado. Intentá más tarde.',
+    'permission-denied': 'No tenés permisos para realizar esta acción.',
+    unavailable: 'El servicio no está disponible en este momento. Intentá de nuevo.',
+    'not-found': 'No se encontraron los datos solicitados.',
+    'already-exists': 'El registro ya existe.',
+    'resource-exhausted': 'Límite de operaciones alcanzado. Intentá más tarde.',
 };
 
 const FALLBACK_MESSAGE = 'Ocurrió un error inesperado. Intentá de nuevo.';
+
+/**
+ * Extrae de forma segura la propiedad `code` de un error `unknown`.
+ * @param {unknown} error
+ * @returns {string | null}
+ */
+const extractErrorCode = (error) => {
+    if (error && typeof error === 'object' && 'code' in error) {
+        const code = /** @type {{ code?: unknown }} */ (error).code;
+        return typeof code === 'string' ? code : null;
+    }
+    return null;
+};
 
 // ─── Clase de error estructurado ─────────────────────────────────────────────
 
@@ -41,14 +55,14 @@ const FALLBACK_MESSAGE = 'Ocurrió un error inesperado. Intentá de nuevo.';
  */
 export class AppError extends Error {
     /**
-     * @param {string} code   - Código original de Firebase (ej: 'auth/popup-blocked')
+     * @param {string} code - Código original de Firebase (ej: 'auth/popup-blocked')
      * @param {string} message - Mensaje traducido listo para mostrar al usuario
-     * @param {unknown} originalError - Error raw de Firebase para debugging interno
+     * @param {unknown} [originalError] - Error raw de Firebase para debugging interno
      */
     constructor(code, message, originalError = null) {
         super(message);
-        this.name    = 'AppError';
-        this.code    = code;
+        this.name = 'AppError';
+        this.code = code;
         this.originalError = originalError;
     }
 }
@@ -64,8 +78,8 @@ export class AppError extends Error {
  * @returns {AppError | null}
  */
 export const mapFirebaseError = (firebaseError) => {
-    const code    = firebaseError?.code ?? 'unknown';
-    const rawMsg  = AUTH_ERROR_MESSAGES[code];
+    const code = extractErrorCode(firebaseError) ?? 'unknown';
+    const rawMsg = AUTH_ERROR_MESSAGES[code];
 
     // undefined → código desconocido → mensaje genérico
     // null      → error intencional → no mostrar nada
@@ -83,7 +97,7 @@ export const mapFirebaseError = (firebaseError) => {
  * @returns {boolean}
  */
 export const isIntentionalAuthCancel = (error) => {
-    const code = error?.code ?? '';
+    const code = extractErrorCode(error) ?? '';
     return (
         code === 'auth/popup-closed-by-user' ||
         code === 'auth/cancelled-popup-request'

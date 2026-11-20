@@ -16,8 +16,20 @@ import {
     getPlanEntry,
 } from './careersRegistry';
 
+/** @typedef {import('../types/domain').CareerConfig} CareerConfig */
+/** @typedef {import('../types/domain').EnrichedPlanConfig} EnrichedPlanConfig */
+/** @typedef {import('../types/domain').PlanFeatureFlags} PlanFeatureFlags */
+/** @typedef {import('../types/domain').TransitionConfig} TransitionConfig */
+/** @typedef {import('../types/domain').EquivalenciasConfig} EquivalenciasConfig */
+/** @typedef {import('../types/domain').IntermediateTitleConfig} IntermediateTitleConfig */
+/** @typedef {import('../types/domain').AcademicNavItem} AcademicNavItem */
+
 export { DEFAULT_PLAN };
 
+/**
+ * @param {CareerConfig[]} [registry]
+ * @returns {EnrichedPlanConfig}
+ */
 function buildUnselectedFallback(registry = CAREERS_REGISTRY) {
     const defaultCareer =
         getCareerById(DEFAULT_CAREER_ID, registry) ||
@@ -47,10 +59,18 @@ function buildUnselectedFallback(registry = CAREERS_REGISTRY) {
     };
 }
 
+/** @type {Record<string, EnrichedPlanConfig>} */
 export const PLAN_POLICIES = Object.fromEntries(
-    getAvailablePlans(CAREERS_REGISTRY).map((plan) => [plan.planNumero, plan]),
+    getAvailablePlans(CAREERS_REGISTRY)
+        .filter((plan) => Boolean(plan.planNumero))
+        .map((plan) => [/** @type {string} */ (plan.planNumero), plan]),
 );
 
+/**
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {EnrichedPlanConfig}
+ */
 export function getPlanPolicy(plan, registry = CAREERS_REGISTRY) {
     if (!plan) return buildUnselectedFallback(registry);
 
@@ -78,26 +98,52 @@ export function getPlanPolicy(plan, registry = CAREERS_REGISTRY) {
     };
 }
 
+/**
+ * @param {string | null | undefined} plan
+ * @param {keyof PlanFeatureFlags} featureName
+ * @param {CareerConfig[]} [registry]
+ * @returns {boolean}
+ */
 export function canUseFeature(plan, featureName, registry = CAREERS_REGISTRY) {
     const policy = getPlanPolicy(plan, registry);
     return Boolean(policy.features?.[featureName]);
 }
 
+/**
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {TransitionConfig | null}
+ */
 export function getPlanTransitionMeta(plan, registry = CAREERS_REGISTRY) {
     const policy = getPlanPolicy(plan, registry);
-    return policy.features?.planTransition ? policy.transition : null;
+    return policy.features?.planTransition ? (policy.transition ?? null) : null;
 }
 
+/**
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {EquivalenciasConfig | null}
+ */
 export function getPlanEquivalenciasMeta(plan, registry = CAREERS_REGISTRY) {
     const policy = getPlanPolicy(plan, registry);
-    return policy.features?.equivalencias ? policy.equivalencias : null;
+    return policy.features?.equivalencias ? (policy.equivalencias ?? null) : null;
 }
 
+/**
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {IntermediateTitleConfig | null}
+ */
 export function getIntermediateTitleConfig(plan, registry = CAREERS_REGISTRY) {
     const policy = getPlanPolicy(plan, registry);
-    return policy.features?.intermediateTitle ? policy.intermediateTitle : null;
+    return policy.features?.intermediateTitle ? (policy.intermediateTitle ?? null) : null;
 }
 
+/**
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {CareerConfig | null}
+ */
 export function getCareerMeta(plan, registry = CAREERS_REGISTRY) {
     const matched = getCareerByPlan(plan, registry);
     if (matched) return matched;
@@ -112,9 +158,13 @@ export function getCareerMeta(plan, registry = CAREERS_REGISTRY) {
 /**
  * Construye los ítems de navegación académica filtrados según capacidades del plan.
  * Evita que NavBar conozca reglas particulares de cada carrera o plan (ISP).
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {AcademicNavItem[]}
  */
 export function getAcademicNavItems(plan, registry = CAREERS_REGISTRY) {
     const transition = getPlanTransitionMeta(plan, registry);
+    /** @type {AcademicNavItem[]} */
     const items = [
         { name: 'Inicio', icon: 'fa-house', path: '/' },
         { name: 'Mi Progreso', icon: 'fa-graduation-cap', path: '/progreso' },

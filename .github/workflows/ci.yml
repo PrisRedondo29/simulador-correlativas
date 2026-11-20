@@ -24,6 +24,9 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      - name: Verificar tipos de dominio (TypeScript)
+        run: npm run typecheck
+
       - name: Ejecutar tests unitarios
         run: npm test
 

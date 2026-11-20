@@ -62,4 +62,17 @@ describe('projectionUtils - Proyección de cuatrimestres del Simulador', () => {
         // En C2 2025 (col 2), M3 queda en Presente porque M1 ya está completada
         expect(res.items.M3).toEqual({ columna: 2, estado: 'Presente' });
     });
+
+    it('normaliza anioActual recibido como string para evitar concatenación al proyectar el siguiente año', () => {
+        const res = calculateProjection({
+            materias: MATERIAS_SIM,
+            historialSemestres: [],
+            progresoBase: {},
+            cuatriActual: '2',
+            anioActual: '2026',
+        });
+
+        expect(res.labels[1]).toBe('C2 2026');
+        expect(res.labels[2]).toBe('C1 2027*');
+    });
 });

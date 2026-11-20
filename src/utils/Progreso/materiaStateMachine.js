@@ -6,16 +6,24 @@
  * No depende de React, localStorage ni Firebase para facilitar su prueba unitaria.
  */
 
-export const ESTADOS_MATERIA = {
-    BLOQUEADO: 'Bloqueado',
-    DISPONIBLE: 'Disponible',
-    CURSANDO: 'Cursando',
-    REGULAR: 'Regular',
-    APROBADO: 'Aprobado',
-    PROMOCIONADO: 'Promocionado',
-    LIBRE: 'Libre',
-};
+/** @typedef {import('../../types/domain').EstadoMateria} EstadoMateria */
+/** @typedef {import('../../types/domain').Materia} Materia */
+/** @typedef {import('../../types/domain').ProgresoMap} ProgresoMap */
+/** @typedef {import('../../types/domain').CambioEstadoResult} CambioEstadoResult */
+/** @typedef {import('../../types/domain').CambioMasivoResult} CambioMasivoResult */
+/** @typedef {import('../../types/domain').SincronizarTesinaResult} SincronizarTesinaResult */
 
+export const ESTADOS_MATERIA = Object.freeze({
+    BLOQUEADO: /** @type {'Bloqueado'} */ ('Bloqueado'),
+    DISPONIBLE: /** @type {'Disponible'} */ ('Disponible'),
+    CURSANDO: /** @type {'Cursando'} */ ('Cursando'),
+    REGULAR: /** @type {'Regular'} */ ('Regular'),
+    APROBADO: /** @type {'Aprobado'} */ ('Aprobado'),
+    PROMOCIONADO: /** @type {'Promocionado'} */ ('Promocionado'),
+    LIBRE: /** @type {'Libre'} */ ('Libre'),
+});
+
+/** @type {EstadoMateria[]} */
 const ESTADOS_ORDEN_CICLO = [
     ESTADOS_MATERIA.DISPONIBLE,
     ESTADOS_MATERIA.REGULAR,
@@ -24,17 +32,20 @@ const ESTADOS_ORDEN_CICLO = [
     ESTADOS_MATERIA.PROMOCIONADO,
 ];
 
+/** @type {EstadoMateria[]} */
 const ESTADOS_APROBACION_FINAL = [
     ESTADOS_MATERIA.APROBADO,
     ESTADOS_MATERIA.PROMOCIONADO,
 ];
 
+/** @type {EstadoMateria[]} */
 const ESTADOS_REGULAR_O_MEJOR = [
     ESTADOS_MATERIA.REGULAR,
     ESTADOS_MATERIA.APROBADO,
     ESTADOS_MATERIA.PROMOCIONADO,
 ];
 
+/** @type {EstadoMateria[]} */
 const ESTADOS_VALIDOS_DESBLOQUEO = [
     ESTADOS_MATERIA.REGULAR,
     ESTADOS_MATERIA.APROBADO,
@@ -44,9 +55,11 @@ const ESTADOS_VALIDOS_DESBLOQUEO = [
 
 /**
  * Determina el siguiente estado cuando se hace un avance cíclico sin target explícito.
+ * @param {EstadoMateria | undefined} estadoActual
+ * @returns {EstadoMateria}
  */
 export function obtenerSiguienteEstadoCiclico(estadoActual) {
-    const posEstado = ESTADOS_ORDEN_CICLO.indexOf(estadoActual);
+    const posEstado = estadoActual ? ESTADOS_ORDEN_CICLO.indexOf(estadoActual) : -1;
     if (posEstado === 0) {
         return ESTADOS_ORDEN_CICLO[1]; // Disponible -> Regular
     }
@@ -62,6 +75,10 @@ export function obtenerSiguienteEstadoCiclico(estadoActual) {
 /**
  * Calcula el estado base al reiniciar una materia (Disponible o Bloqueado)
  * según el cumplimiento actual de sus correlativas o regla de Tesina.
+ * @param {ProgresoMap} [progreso]
+ * @param {Materia | null | undefined} [materia]
+ * @param {Materia[]} [materias]
+ * @returns {EstadoMateria}
  */
 export function calcularEstadoBaseMateria(progreso = {}, materia, materias = []) {
     if (!materia) return ESTADOS_MATERIA.DISPONIBLE;
@@ -83,8 +100,12 @@ export function calcularEstadoBaseMateria(progreso = {}, materia, materias = [])
 
 /**
  * Detecta si una transición implica recursada (regresión o vuelta desde Libre).
+ * @param {EstadoMateria | undefined} estadoInicial
+ * @param {EstadoMateria} estadoNuevo
+ * @returns {boolean}
  */
 export function esTransicionRecursada(estadoInicial, estadoNuevo) {
+    /** @type {EstadoMateria[]} */
     const estadosPostRecursada = [
         ESTADOS_MATERIA.CURSANDO,
         ESTADOS_MATERIA.DISPONIBLE,
@@ -93,11 +114,18 @@ export function esTransicionRecursada(estadoInicial, estadoNuevo) {
         ESTADOS_MATERIA.APROBADO,
         ESTADOS_MATERIA.PROMOCIONADO,
     ];
+    /** @type {EstadoMateria[]} */
+    const estadosRegresionDestino = [
+        ESTADOS_MATERIA.CURSANDO,
+        ESTADOS_MATERIA.DISPONIBLE,
+        ESTADOS_MATERIA.BLOQUEADO,
+    ];
     const esRecursadaDesdeLibre =
         estadoInicial === ESTADOS_MATERIA.LIBRE && estadosPostRecursada.includes(estadoNuevo);
     const esRegresionDeEstado =
-        [ESTADOS_MATERIA.REGULAR, ESTADOS_MATERIA.APROBADO, ESTADOS_MATERIA.PROMOCIONADO].includes(estadoInicial) &&
-        [ESTADOS_MATERIA.CURSANDO, ESTADOS_MATERIA.DISPONIBLE, ESTADOS_MATERIA.BLOQUEADO].includes(estadoNuevo);
+        Boolean(estadoInicial) &&
+        ESTADOS_REGULAR_O_MEJOR.includes(/** @type {EstadoMateria} */ (estadoInicial)) &&
+        estadosRegresionDestino.includes(estadoNuevo);
 
     return esRecursadaDesdeLibre || esRegresionDeEstado;
 }
@@ -105,6 +133,9 @@ export function esTransicionRecursada(estadoInicial, estadoNuevo) {
 /**
  * Sincroniza el estado de la Tesina según si quedan materias sin aprobar/promocionar.
  * Corrige el caso en que materias Promocionadas mantenían bloqueada la Tesina.
+ * @param {ProgresoMap} [progreso]
+ * @param {Materia[]} [materias]
+ * @returns {SincronizarTesinaResult}
  */
 export function sincronizarTesina(progreso = {}, materias = []) {
     const tesina = materias.find((m) => m.tesis);
@@ -133,6 +164,11 @@ export function sincronizarTesina(progreso = {}, materias = []) {
     return { progreso, huboCambios: false };
 }
 
+/**
+ * @param {Materia[]} materias
+ * @param {ProgresoMap} nuevoProgreso
+ * @param {string[]} materiasModificadas
+ */
 function aprobarTodas(materias, nuevoProgreso, materiasModificadas) {
     materias.forEach((m) => {
         if (!ESTADOS_APROBACION_FINAL.includes(nuevoProgreso[m.codigo])) {
@@ -142,32 +178,49 @@ function aprobarTodas(materias, nuevoProgreso, materiasModificadas) {
     });
 }
 
+/**
+ * @param {Materia[]} materias
+ * @param {string[]} codigosCorrelativas
+ * @param {ProgresoMap} nuevoProgreso
+ * @param {string[]} materiasModificadas
+ */
 function regularizarCorrelativas(materias, codigosCorrelativas, nuevoProgreso, materiasModificadas) {
     codigosCorrelativas.forEach((codigo) => {
         if (!ESTADOS_REGULAR_O_MEJOR.includes(nuevoProgreso[codigo])) {
             nuevoProgreso[codigo] = ESTADOS_MATERIA.REGULAR;
             materiasModificadas.push(codigo);
             const materiaActual = materias.find((m) => m.codigo === codigo);
-            if (materiaActual?.correlativas?.length > 0) {
+            if ((materiaActual?.correlativas?.length ?? 0) > 0 && materiaActual) {
                 regularizarCorrelativas(materias, materiaActual.correlativas, nuevoProgreso, materiasModificadas);
             }
         }
     });
 }
 
+/**
+ * @param {Materia[]} materias
+ * @param {string[]} codigosCorrelativas
+ * @param {ProgresoMap} nuevoProgreso
+ * @param {string[]} materiasModificadas
+ */
 function aprobarCorrelativas(materias, codigosCorrelativas, nuevoProgreso, materiasModificadas) {
     codigosCorrelativas.forEach((codigo) => {
         if (!ESTADOS_APROBACION_FINAL.includes(nuevoProgreso[codigo])) {
             nuevoProgreso[codigo] = ESTADOS_MATERIA.APROBADO;
             materiasModificadas.push(codigo);
             const materiaActual = materias.find((m) => m.codigo === codigo);
-            if (materiaActual?.correlativas?.length > 0) {
+            if ((materiaActual?.correlativas?.length ?? 0) > 0 && materiaActual) {
                 aprobarCorrelativas(materias, materiaActual.correlativas, nuevoProgreso, materiasModificadas);
             }
         }
     });
 }
 
+/**
+ * @param {Materia[]} materias
+ * @param {string} codigoMateria
+ * @param {ProgresoMap} nuevoProgreso
+ */
 function bloquearDependencias(materias, codigoMateria, nuevoProgreso) {
     materias.forEach((m) => {
         if (m.correlativas?.includes(codigoMateria) && nuevoProgreso[m.codigo] !== ESTADOS_MATERIA.BLOQUEADO) {
@@ -181,6 +234,9 @@ function bloquearDependencias(materias, codigoMateria, nuevoProgreso) {
  * Regla UNLu al quedar Libre: las materias dependientes que ya obtuvieron
  * Regular, Cursando, Aprobado o Promocionado conservan su estado.
  * Solo pasan a Bloqueado aquellas que aún estaban en Disponible (sin cursar).
+ * @param {Materia[]} materias
+ * @param {string} codigoMateria
+ * @param {ProgresoMap} nuevoProgreso
  */
 function bloquearDependenciasDisponibles(materias, codigoMateria, nuevoProgreso) {
     materias.forEach((m) => {
@@ -190,6 +246,11 @@ function bloquearDependenciasDisponibles(materias, codigoMateria, nuevoProgreso)
     });
 }
 
+/**
+ * @param {Materia[]} materias
+ * @param {string} codigoMateria
+ * @param {ProgresoMap} nuevoProgreso
+ */
 function desbloquearDependencias(materias, codigoMateria, nuevoProgreso) {
     materias.forEach((m) => {
         if (m.tesis) return;
@@ -203,25 +264,35 @@ function desbloquearDependencias(materias, codigoMateria, nuevoProgreso) {
     });
 }
 
+/**
+ * @typedef {{
+ *   materias: Materia[],
+ *   materiaActual: Materia,
+ *   nuevoProgreso: ProgresoMap,
+ *   materiasModificadas: string[],
+ * }} TransitionHandlerContext
+ */
+
 // Tabla declarativa de efectos de transición por estado destino (Patrón State)
+/** @type {Record<EstadoMateria, (ctx: TransitionHandlerContext) => void>} */
 const STATE_TRANSITION_HANDLERS = {
     [ESTADOS_MATERIA.CURSANDO]: ({ materias, materiaActual, nuevoProgreso, materiasModificadas }) => {
-        if (materiaActual.correlativas?.length > 0) {
+        if ((materiaActual.correlativas?.length ?? 0) > 0) {
             regularizarCorrelativas(materias, materiaActual.correlativas, nuevoProgreso, materiasModificadas);
         }
     },
     [ESTADOS_MATERIA.REGULAR]: ({ materias, materiaActual, nuevoProgreso, materiasModificadas }) => {
-        if (materiaActual.correlativas?.length > 0) {
+        if ((materiaActual.correlativas?.length ?? 0) > 0) {
             regularizarCorrelativas(materias, materiaActual.correlativas, nuevoProgreso, materiasModificadas);
         }
     },
     [ESTADOS_MATERIA.APROBADO]: ({ materias, materiaActual, nuevoProgreso, materiasModificadas }) => {
-        if (materiaActual.correlativas?.length > 0) {
+        if ((materiaActual.correlativas?.length ?? 0) > 0) {
             aprobarCorrelativas(materias, materiaActual.correlativas, nuevoProgreso, materiasModificadas);
         }
     },
     [ESTADOS_MATERIA.PROMOCIONADO]: ({ materias, materiaActual, nuevoProgreso, materiasModificadas }) => {
-        if (materiaActual.correlativas?.length > 0) {
+        if ((materiaActual.correlativas?.length ?? 0) > 0) {
             aprobarCorrelativas(materias, materiaActual.correlativas, nuevoProgreso, materiasModificadas);
         }
     },
@@ -238,8 +309,13 @@ const STATE_TRANSITION_HANDLERS = {
 
 /**
  * Aplica una transición individual sobre una materia y recalcula correlativas/dependencias/Tesina.
+ * @param {ProgresoMap} [progreso]
+ * @param {Materia[]} [materias]
+ * @param {string} [codigoMateria]
+ * @param {EstadoMateria | null} [targetState]
+ * @returns {CambioEstadoResult}
  */
-export function aplicarCambioEstado(progreso = {}, materias = [], codigoMateria, targetState = null) {
+export function aplicarCambioEstado(progreso = {}, materias = [], codigoMateria = '', targetState = null) {
     const materiaActual = materias.find((m) => m.codigo === codigoMateria);
     if (!materiaActual) {
         return {
@@ -255,13 +331,12 @@ export function aplicarCambioEstado(progreso = {}, materias = [], codigoMateria,
     const estadoInicial = progreso[codigoMateria];
     const estadoNuevo = targetState || obtenerSiguienteEstadoCiclico(estadoInicial);
 
+    /** @type {ProgresoMap} */
     const nuevoProgreso = { ...progreso, [codigoMateria]: estadoNuevo };
+    /** @type {string[]} */
     const materiasModificadas = [materiaActual.codigo];
 
-    if (
-        materiaActual.tesis &&
-        [ESTADOS_MATERIA.REGULAR, ESTADOS_MATERIA.APROBADO, ESTADOS_MATERIA.PROMOCIONADO].includes(estadoNuevo)
-    ) {
+    if (materiaActual.tesis && ESTADOS_REGULAR_O_MEJOR.includes(estadoNuevo)) {
         aprobarTodas(materias, nuevoProgreso, materiasModificadas);
     } else {
         const handler = STATE_TRANSITION_HANDLERS[estadoNuevo];
@@ -288,9 +363,21 @@ export function aplicarCambioEstado(progreso = {}, materias = [], codigoMateria,
 
 /**
  * Aplica una transición masiva (ej. "Aprobar año" o "Aprobar hasta...") excluyendo Tesina y "N/A".
+ * @param {ProgresoMap} [progreso]
+ * @param {Materia[]} [materias]
+ * @param {string[]} [codigosMaterias]
+ * @param {EstadoMateria} [targetState]
+ * @returns {CambioMasivoResult}
  */
-export function aplicarCambioMasivo(progreso = {}, materias = [], codigosMaterias = [], targetState) {
+export function aplicarCambioMasivo(
+    progreso = {},
+    materias = [],
+    codigosMaterias = [],
+    targetState = ESTADOS_MATERIA.APROBADO,
+) {
+    /** @type {ProgresoMap} */
     const nuevoProgreso = { ...progreso };
+    /** @type {string[]} */
     const materiasModificadas = [];
 
     codigosMaterias.forEach((codigoMateria) => {
