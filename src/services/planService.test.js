@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import planService, { createPlanService } from './planService';
 import { createStorageRepository } from './storageRepository';
+import { buildNotifications } from '../utils/Notifications/notificationStrategies';
 
 describe('planService - Carga dinámica multi-carrera y caché en memoria', () => {
     beforeEach(() => {
@@ -187,5 +188,56 @@ describe('planService - Carga dinámica multi-carrera y caché en memoria', () =
         const cachedPlan = await swrService.getPlanByNumber('25.01');
         expect(cachedPlan?.version).toBe(2);
         expect(cachedPlan?.materias[0].codigo).toBe('IND101B');
+
+        // Integración con NotificationCenter (buildNotifications): la notificación aparece al tope con el motivo del cambio
+        const notificaciones = buildNotifications({
+            activePlan: '25.01',
+            materias: cachedPlan?.materias || [],
+            progreso: memStorage.getProgreso('25.01') || {},
+            progresoDetalles: memStorage.getProgresoDetalles('25.01') || {},
+            planUpdateNotice: memStorage.getPlanUpdateNotice('25.01'),
+            isAuthenticated: true,
+        });
+        expect(notificaciones[0]?.id).toBe('plan-update-25.01-v2');
+        expect(notificaciones[0]?.description).toContain('Se actualizó el código IND101 a IND101B');
+    });
+
+    it('rechaza un snapshot remoto inválido o con ciclos (A <-> B) sin corromper el caché ni el progreso local del estudiante', () => {
+        const map = new Map();
+        const memStorage = createStorageRepository({
+            get length() {
+                return map.size;
+            },
+            key: (idx) => Array.from(map.keys())[idx] ?? null,
+            getItem: (k) => (map.has(k) ? map.get(k) : null),
+            setItem: (k, v) => {
+                map.set(k, String(v));
+            },
+            removeItem: (k) => {
+                map.delete(k);
+            },
+        });
+
+        memStorage.setProgreso('17.14', { '11071': 'Aprobado' });
+
+        const service = createPlanService(undefined, {
+            storageRepo: memStorage,
+            enableRemoteCheck: false,
+        });
+
+        const cyclicSnapshot = {
+            plan_numero: '17.14',
+            version: 99,
+            materias: [
+                { codigo: '11071', nombre: 'Ciclo 1', anio: 1, correlativas: ['11072'] },
+                { codigo: '11072', nombre: 'Ciclo 2', anio: 1, correlativas: ['11071'] },
+            ],
+        };
+
+        const applied = service.applyPublishedPlanSnapshot(cyclicSnapshot);
+        expect(applied).toBeNull();
+        // No se guardó el plan corrupto en caché y el progreso local permanece intacto
+        expect(memStorage.getCachedPublishedPlan('17.14')).toBeNull();
+        expect(memStorage.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
     });
 });
