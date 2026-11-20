@@ -29,18 +29,73 @@ export type EstadoProyeccion =
 
 export type EstadoIntentoFinal = 'aprobado' | 'reprobado' | 'ausente';
 
-// ─── Materias, Planes y Progreso ──────────────────────────────────────────────
+// ─── Materias, Planes y Progreso (Esquema Canónico v2 Híbrido) ───────────────
+
+export type CondicionCorrelativa = 'regular' | 'aprobada';
+
+export interface RequisitoCorrelativa {
+    codigo: string;
+    condicion?: CondicionCorrelativa;
+}
+
+export type EntradaCorrelativa = string | RequisitoCorrelativa;
+
+export interface RequisitosEspecialesMateria {
+    todasLasMateriasAprobadas?: boolean;
+    minimoMateriasAprobadas?: number;
+    minimoHorasAprobadas?: number;
+    minimoCreditos?: number;
+    aniosCompletosAprobados?: Array<number | string>;
+    descripcion?: string;
+}
+
+export interface RequisitoFaltanteCorrelativa {
+    tipo: 'correlativa';
+    codigo: string;
+    nombre: string;
+    condicionRequerida: CondicionCorrelativa;
+    estadoActual: EstadoMateria;
+}
+
+export interface RequisitoFaltanteEspecial {
+    tipo:
+        | 'todas_aprobadas'
+        | 'minimo_materias_aprobadas'
+        | 'minimo_horas_aprobadas'
+        | 'minimo_creditos'
+        | 'anio_completo_aprobado';
+    mensaje: string;
+    actual: number;
+    requerido: number;
+    anio?: number;
+}
+
+export interface ElegibilidadMateriaResult {
+    puedeCursar: boolean;
+    puedeRendirFinal: boolean;
+    requisitosCursada: Required<RequisitoCorrelativa>[];
+    requisitosFinal: Required<RequisitoCorrelativa>[];
+    faltantesParaCursar: RequisitoFaltanteCorrelativa[];
+    faltantesParaFinal: RequisitoFaltanteCorrelativa[];
+    requisitosEspecialesFaltantes: RequisitoFaltanteEspecial[];
+    tieneReglasDiferenciadas: boolean;
+}
 
 export interface Materia {
     codigo: string;
     nombre: string;
-    anio: string | number;
-    cuatrimestre: string | number;
-    horas_semanales: string | number;
-    horas_totales: string | number;
+    anio: string | number | null;
+    cuatrimestre?: string | number | null;
+    horas_semanales?: string | number;
+    horas_totales?: string | number;
+    creditos?: number | string;
     correlativas: string[];
+    correlativasCursada?: EntradaCorrelativa[];
+    correlativasFinal?: EntradaCorrelativa[];
+    requisitosEspeciales?: RequisitosEspecialesMateria | null;
     notas?: string[];
     tesis?: boolean;
+    taller?: boolean;
     mostrarCodigo?: boolean;
 }
 

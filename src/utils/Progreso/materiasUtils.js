@@ -2,6 +2,8 @@
 /** @typedef {import('../../types/domain').Materia} Materia */
 /** @typedef {import('../../types/domain').MateriaDetalle} MateriaDetalle */
 
+import { obtenerCodigosCorrelativasMateria } from './materiaStateMachine';
+
 /**
  * Estilos de los estados (Semáforo Calmo UNLu).
  * @param {EstadoMateria | string | null | undefined} estado
@@ -53,6 +55,8 @@ const bloquear = 'Bloqueado';
 
 /**
  * Calcula cuántas materias dependen directa o indirectamente de una materia específica.
+ * Compatible con correlativas v1 (`correlativas`) y v2 (`correlativasCursada` / `correlativasFinal`),
+ * y protegido contra grafos cíclicos mediante `bloqueadas`.
  * @param {string} codigoMateria
  * @param {Materia[]} materias
  * @returns {number}
@@ -64,7 +68,8 @@ const calcularImpactoTapon = (codigoMateria, materias) => {
     /** @param {string} codigo */
     const encontrarDependientes = (codigo) => {
         materias.forEach((m) => {
-            if (m.correlativas.includes(codigo) && !bloqueadas.has(m.codigo)) {
+            const codigosCorr = obtenerCodigosCorrelativasMateria(m);
+            if (codigosCorr.includes(codigo) && m.codigo !== codigoMateria && !bloqueadas.has(m.codigo)) {
                 bloqueadas.add(m.codigo);
                 encontrarDependientes(m.codigo);
             }

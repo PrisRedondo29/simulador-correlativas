@@ -27,6 +27,10 @@ import {
 } from "lucide-react";
 import useDetalleMateria from "../../hooks/Progreso/useDetalleMateria";
 import estadoUtils from "../../utils/Progreso/estadoUtils";
+import {
+  evaluarElegibilidadMateria,
+  obtenerCodigosCorrelativasMateria,
+} from "../../utils/Progreso/materiaStateMachine";
 import materiasUtils from "../../utils/Progreso/materiasUtils";
 import regularidadUtils from "../../utils/Progreso/regularidadUtils";
 import reglas from "../../utils/Progreso/reglas_universidad.json";
@@ -279,13 +283,23 @@ export function MateriaContextContent({
   const estadoConfig =
     estadoUtils.ESTADO_CONFIG[estadoActual] || estadoUtils.ESTADO_CONFIG.Disponible;
 
+  const elegibilidad = evaluarElegibilidadMateria(materia, progreso, materias);
+  const codigosCorrelativas = obtenerCodigosCorrelativasMateria(materia);
   const correlativas = materiasUtils.buscarMateriasCorrelativas(
-    materia.correlativas || [],
+    codigosCorrelativas,
     materias,
   );
+  const mapaCondicionCursada = new Map(
+    elegibilidad.requisitosCursada.map((r) => [r.codigo, r.condicion]),
+  );
+  const codigosSoloFinal = new Set(
+    elegibilidad.requisitosFinal
+      .map((r) => r.codigo)
+      .filter((c) => !mapaCondicionCursada.has(c)),
+  );
 
-  const habilitaA = materias.filter(
-    (m) => Array.isArray(m.correlativas) && m.correlativas.includes(materia.codigo),
+  const habilitaA = materias.filter((m) =>
+    obtenerCodigosCorrelativasMateria(m).includes(materia.codigo),
   );
 
   const esEstadoAcademico = ["Regular", "Libre", "Aprobado", "Promocionado"].includes(
@@ -444,6 +458,16 @@ export function MateriaContextContent({
               const estCorr = progreso[corr.codigo] || "Bloqueado";
               const cfgCorr =
                 estadoUtils.ESTADO_CONFIG[estCorr] || estadoUtils.ESTADO_CONFIG.Bloqueado;
+              const condCursada = mapaCondicionCursada.get(corr.codigo);
+              const esSoloFinal = codigosSoloFinal.has(corr.codigo);
+              const etiquetaRequisito = esSoloFinal
+                ? "Final: Aprobada"
+                : condCursada === "aprobada"
+                  ? "Cursar: Aprobada"
+                  : elegibilidad.tieneReglasDiferenciadas
+                    ? "Cursar: Regular"
+                    : null;
+
               return (
                 <button
                   key={corr.codigo}
@@ -455,9 +479,16 @@ export function MateriaContextContent({
                     <p className="text-xs font-medium text-[#1E293B] dark:text-[#F1F5F9] truncate">
                       {corr.nombre}
                     </p>
-                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
-                      {corr.codigo}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
+                        {corr.codigo}
+                      </span>
+                      {etiquetaRequisito && (
+                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-[#E2E8F0]/70 dark:bg-[#24303C] text-[#334155] dark:text-[#CBD5E1]">
+                          {etiquetaRequisito}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <span
@@ -473,6 +504,37 @@ export function MateriaContextContent({
             })}
           </div>
         )}
+
+        {elegibilidad.requisitosEspecialesFaltantes.length > 0 && !materia.tesis && (
+          <div
+            role="status"
+            className="p-2.5 rounded-lg bg-[#FEF3C7]/60 dark:bg-[#2D2210] border border-[#F59E0B]/30 text-xs text-[#92400E] dark:text-[#FCD34D] space-y-1"
+          >
+            <p className="font-semibold">Requisitos adicionales pendientes:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {elegibilidad.requisitosEspecialesFaltantes.map((req, idx) => (
+                <li key={`${req.tipo}-${idx}`}>{req.mensaje}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {["Disponible", "Cursando", "Regular"].includes(estadoActual) &&
+          elegibilidad.puedeCursar &&
+          !elegibilidad.puedeRendirFinal &&
+          elegibilidad.faltantesParaFinal.length > 0 && (
+            <div
+              role="status"
+              className="p-2.5 rounded-lg bg-[#F0FDF4] dark:bg-[#11241B] border border-[#005A36]/25 dark:border-[#2E8B63]/40 text-xs text-[#166534] dark:text-[#A7F3D0]"
+            >
+              <span className="font-semibold">Habilitada para cursar.</span> Para rendir final o
+              promocionar necesitás aprobar el final de:{" "}
+              <span className="font-medium">
+                {elegibilidad.faltantesParaFinal.map((f) => f.nombre).join(", ")}
+              </span>
+              .
+            </div>
+          )}
       </section>
 
       {/* NIVEL 2: Información académica (cursada e intentos de final) */}

@@ -6,7 +6,11 @@ import {
     calcularEstadoBaseMateria,
     sincronizarTesina,
     esTransicionRecursada,
+    evaluarElegibilidadMateria,
+    obtenerRequisitosCursada,
+    obtenerRequisitosFinal,
 } from './materiaStateMachine';
+import materiasUtils from './materiasUtils';
 
 const MATERIAS_MOCK = [
     { codigo: 'M1', nombre: 'Intro Prog', anio: '1', correlativas: [] },
@@ -203,5 +207,197 @@ describe('materiaStateMachine - Transiciones, correlativas y Tesina', () => {
         expect(nuevoProgreso.M3).toBe(ESTADOS_MATERIA.REGULAR);
         // M5, al estar solo Disponible (sin cursar), vuelve a Bloqueado
         expect(nuevoProgreso.M5).toBe(ESTADOS_MATERIA.BLOQUEADO);
+    });
+
+    describe('Dominio Académico Canónico v2 (correlativas diferenciadas, requisitos especiales y guardas)', () => {
+        const MATERIAS_V2_MOCK = [
+            { codigo: 'C1', nombre: 'Álgebra', anio: 1, horas_totales: 128, creditos: 8, correlativas: [] },
+            { codigo: 'C2', nombre: 'Análisis I', anio: 1, horas_totales: 128, creditos: 8, correlativas: [] },
+            {
+                codigo: 'C3',
+                nombre: 'Física II',
+                anio: 2,
+                horas_totales: 96,
+                creditos: 6,
+                correlativas: ['C1', 'C2'],
+                // Para cursar C3: C1 debe estar APROBADA (con final) y C2 basta con REGULAR
+                correlativasCursada: [
+                    { codigo: 'C1', condicion: 'aprobada' },
+                    { codigo: 'C2', condicion: 'regular' },
+                ],
+                // Para rendir final de C3: ambas deben estar APROBADAS
+                correlativasFinal: ['C1', 'C2'],
+            },
+            {
+                codigo: 'PPS',
+                nombre: 'Práctica Profesional Supervisada',
+                anio: 4,
+                horas_totales: 200,
+                creditos: 12,
+                correlativas: [],
+                requisitosEspeciales: {
+                    minimoMateriasAprobadas: 2,
+                    minimoHorasAprobadas: 200,
+                    minimoCreditos: 15,
+                    aniosCompletosAprobados: [1],
+                },
+            },
+        ];
+
+        it('soporta correlativasCursada mixtas (regular + aprobada) para desbloquear y propagar en cascada', () => {
+            const progresoParcial = {
+                C1: ESTADOS_MATERIA.REGULAR, // No alcanza: C3 exige C1 aprobada para cursar
+                C2: ESTADOS_MATERIA.REGULAR,
+                C3: ESTADOS_MATERIA.BLOQUEADO,
+                PPS: ESTADOS_MATERIA.BLOQUEADO,
+            };
+
+            const elegParcial = evaluarElegibilidadMateria(
+                MATERIAS_V2_MOCK[2],
+                progresoParcial,
+                MATERIAS_V2_MOCK,
+            );
+            expect(elegParcial.puedeCursar).toBe(false);
+            expect(elegParcial.faltantesParaCursar).toHaveLength(1);
+            expect(elegParcial.faltantesParaCursar[0]).toMatchObject({
+                codigo: 'C1',
+                condicionRequerida: 'aprobada',
+                estadoActual: ESTADOS_MATERIA.REGULAR,
+            });
+
+            // Al aprobar C1 (y teniendo C2 Regular), C3 se desbloquea para cursar
+            const { nuevoProgreso } = aplicarCambioEstado(
+                progresoParcial,
+                MATERIAS_V2_MOCK,
+                'C1',
+                ESTADOS_MATERIA.APROBADO,
+            );
+            expect(nuevoProgreso.C3).toBe(ESTADOS_MATERIA.DISPONIBLE);
+
+            // Pero aún no puede rendir final de C3 porque C2 sigue Regular
+            const elegCursable = evaluarElegibilidadMateria(
+                MATERIAS_V2_MOCK[2],
+                nuevoProgreso,
+                MATERIAS_V2_MOCK,
+            );
+            expect(elegCursable.puedeCursar).toBe(true);
+            expect(elegCursable.puedeRendirFinal).toBe(false);
+            expect(elegCursable.faltantesParaFinal).toHaveLength(1);
+            expect(elegCursable.faltantesParaFinal[0].codigo).toBe('C2');
+
+            // Si el usuario marca C3 como Regular desde cero, C1 sube a Aprobado y C2 a Regular
+            const desdeCero = {
+                C1: ESTADOS_MATERIA.DISPONIBLE,
+                C2: ESTADOS_MATERIA.DISPONIBLE,
+                C3: ESTADOS_MATERIA.BLOQUEADO,
+                PPS: ESTADOS_MATERIA.BLOQUEADO,
+            };
+            const cascadaMixta = aplicarCambioEstado(
+                desdeCero,
+                MATERIAS_V2_MOCK,
+                'C3',
+                ESTADOS_MATERIA.REGULAR,
+            );
+            expect(cascadaMixta.nuevoProgreso.C3).toBe(ESTADOS_MATERIA.REGULAR);
+            expect(cascadaMixta.nuevoProgreso.C1).toBe(ESTADOS_MATERIA.APROBADO);
+            expect(cascadaMixta.nuevoProgreso.C2).toBe(ESTADOS_MATERIA.REGULAR);
+        });
+
+        it('evalúa y sincroniza automáticamente materias con requisitosEspeciales (materias, horas, créditos y año completo)', () => {
+            const progresoUnoAprobado = {
+                C1: ESTADOS_MATERIA.APROBADO, // 1 materia, 128 hs, 8 créditos (falta C2 para completar 1° año y umbrales)
+                C2: ESTADOS_MATERIA.REGULAR,
+                C3: ESTADOS_MATERIA.DISPONIBLE,
+                PPS: ESTADOS_MATERIA.BLOQUEADO,
+            };
+
+            const elegFaltante = evaluarElegibilidadMateria(
+                MATERIAS_V2_MOCK[3],
+                progresoUnoAprobado,
+                MATERIAS_V2_MOCK,
+            );
+            expect(elegFaltante.puedeCursar).toBe(false);
+            expect(
+                elegFaltante.requisitosEspecialesFaltantes.map((r) => r.tipo),
+            ).toEqual([
+                'minimo_materias_aprobadas',
+                'minimo_horas_aprobadas',
+                'minimo_creditos',
+                'anio_completo_aprobado',
+            ]);
+
+            // Al aprobar C2 se cumplen las 2 materias, 256 hs (>=200), 16 créditos (>=15) y 1° año completo
+            const { nuevoProgreso } = aplicarCambioEstado(
+                progresoUnoAprobado,
+                MATERIAS_V2_MOCK,
+                'C2',
+                ESTADOS_MATERIA.PROMOCIONADO,
+            );
+            expect(nuevoProgreso.PPS).toBe(ESTADOS_MATERIA.DISPONIBLE);
+
+            // Si C2 vuelve a Regular, PPS vuelve a Bloqueado si aún no fue cursada
+            const { nuevoProgreso: progresoRevertido } = aplicarCambioEstado(
+                nuevoProgreso,
+                MATERIAS_V2_MOCK,
+                'C2',
+                ESTADOS_MATERIA.REGULAR,
+            );
+            expect(progresoRevertido.PPS).toBe(ESTADOS_MATERIA.BLOQUEADO);
+        });
+
+        it('protege contra ciclos accidentales en correlativas sin lanzar Maximum call stack size exceeded', () => {
+            const planCiclico = [
+                { codigo: 'A', nombre: 'Ciclo A', anio: 1, correlativas: ['B'] },
+                { codigo: 'B', nombre: 'Ciclo B', anio: 1, correlativas: ['A'] },
+            ];
+            const progresoCiclico = {
+                A: ESTADOS_MATERIA.BLOQUEADO,
+                B: ESTADOS_MATERIA.BLOQUEADO,
+            };
+
+            expect(() =>
+                aplicarCambioEstado(progresoCiclico, planCiclico, 'A', ESTADOS_MATERIA.REGULAR),
+            ).not.toThrow();
+
+            const resReg = aplicarCambioEstado(
+                progresoCiclico,
+                planCiclico,
+                'A',
+                ESTADOS_MATERIA.REGULAR,
+            );
+            expect(resReg.nuevoProgreso.A).toBe(ESTADOS_MATERIA.REGULAR);
+            expect(resReg.nuevoProgreso.B).toBe(ESTADOS_MATERIA.REGULAR);
+
+            const resApr = aplicarCambioEstado(
+                resReg.nuevoProgreso,
+                planCiclico,
+                'A',
+                ESTADOS_MATERIA.APROBADO,
+            );
+            expect(resApr.nuevoProgreso.A).toBe(ESTADOS_MATERIA.APROBADO);
+            expect(resApr.nuevoProgreso.B).toBe(ESTADOS_MATERIA.APROBADO);
+
+            const resBloq = aplicarCambioEstado(
+                resApr.nuevoProgreso,
+                planCiclico,
+                'A',
+                ESTADOS_MATERIA.BLOQUEADO,
+            );
+            expect(resBloq.nuevoProgreso.A).toBe(ESTADOS_MATERIA.BLOQUEADO);
+            expect(resBloq.nuevoProgreso.B).toBe(ESTADOS_MATERIA.BLOQUEADO);
+
+            // calcularImpactoTapon tampoco entra en recursión infinita ni se cuenta a sí misma
+            expect(materiasUtils.calcularImpactoTapon('A', planCiclico)).toBe(1);
+        });
+
+        it('mantiene compatibilidad hacia atrás con correlativas v1 en obtenerRequisitosCursada y obtenerRequisitosFinal', () => {
+            const matV1 = { codigo: 'M3', nombre: 'Estructuras', anio: '2', correlativas: ['M1'] };
+            expect(obtenerRequisitosCursada(matV1)).toEqual([
+                { codigo: 'M1', condicion: 'regular' },
+            ]);
+            expect(obtenerRequisitosFinal(matV1)).toEqual([
+                { codigo: 'M1', condicion: 'aprobada' },
+            ]);
+        });
     });
 });

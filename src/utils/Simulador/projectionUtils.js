@@ -5,10 +5,34 @@
 
 /** @typedef {import('../../types/domain').Materia} Materia */
 /** @typedef {import('../../types/domain').HistorialSemestre} HistorialSemestre */
+/** @typedef {import('../../types/domain').ProgresoMap} ProgresoMap */
 /** @typedef {import('../../types/domain').ProgresoSimuladorMap} ProgresoSimuladorMap */
 /** @typedef {import('../../types/domain').ProyeccionCarrera} ProyeccionCarrera */
 /** @typedef {import('../../types/domain').ProyeccionItem} ProyeccionItem */
 /** @typedef {import('../../types/domain').ProyeccionSkippedItem} ProyeccionSkippedItem */
+
+import {
+    ESTADOS_MATERIA,
+    evaluarElegibilidadMateria,
+} from '../Progreso/materiaStateMachine';
+
+/**
+ * Construye un mapa de progreso sintético donde los códigos en `codigosAprobados`
+ * figuran como `'Aprobado'`, permitiendo reutilizar el evaluador canónico v2.
+ * @param {Materia[]} materias
+ * @param {Set<string>} codigosAprobados
+ * @returns {ProgresoMap}
+ */
+function crearProgresoSintetico(materias, codigosAprobados) {
+    /** @type {ProgresoMap} */
+    const mapa = {};
+    materias.forEach((mat) => {
+        mapa[mat.codigo] = codigosAprobados.has(mat.codigo)
+            ? ESTADOS_MATERIA.APROBADO
+            : ESTADOS_MATERIA.BLOQUEADO;
+    });
+    return mapa;
+}
 
 /**
  * Calcula la proyección temporal de cursadas pasadas, presentes y futuras.
@@ -74,20 +98,15 @@ export const calculateProjection = ({
     labels[turn] = `C${currentCuatri} ${currentAnio}`;
     /** @type {Set<string>} */
     const disponiblesAhora = new Set();
+    const progresoPresente = crearProgresoSintetico(materias, colocadas);
 
     materiasRestantes.forEach((m) => {
         if (colocadas.has(m.codigo)) return;
 
-        const correlativasCumplidas = (m.correlativas || []).every((c) => colocadas.has(c));
+        const elegibilidad = evaluarElegibilidadMateria(m, progresoPresente, materias);
         const paridadCorrecta = Number(m.cuatrimestre) % 2 === Number(currentCuatri) % 2;
 
-        let cumpleTesina = true;
-        if (m.tesis) {
-            const otrasPendientes = materias.some((mat) => !mat.tesis && !colocadas.has(mat.codigo));
-            if (otrasPendientes) cumpleTesina = false;
-        }
-
-        if (correlativasCumplidas && paridadCorrecta && cumpleTesina) {
+        if (elegibilidad.puedeCursar && paridadCorrecta) {
             disponiblesAhora.add(m.codigo);
             items[m.codigo] = {
                 columna: turn,
@@ -108,20 +127,15 @@ export const calculateProjection = ({
         labels[turnFuturo] = `C${fCuatri} ${fAnio}*`;
         /** @type {string[]} */
         const nuevasEnEsteTurno = [];
+        const progresoTurno = crearProgresoSintetico(materias, proyectadasAprobadas);
 
         materiasRestantes.forEach((m) => {
             if (items[m.codigo]) return;
 
-            const correlativasCumplidas = (m.correlativas || []).every((c) => proyectadasAprobadas.has(c));
+            const elegibilidad = evaluarElegibilidadMateria(m, progresoTurno, materias);
             const paridadCorrecta = Number(m.cuatrimestre) % 2 === Number(fCuatri) % 2;
 
-            let cumpleTesina = true;
-            if (m.tesis) {
-                const otrasPendientes = materias.some((mat) => !mat.tesis && !proyectadasAprobadas.has(mat.codigo));
-                if (otrasPendientes) cumpleTesina = false;
-            }
-
-            if (correlativasCumplidas && paridadCorrecta && cumpleTesina) {
+            if (elegibilidad.puedeCursar && paridadCorrecta) {
                 items[m.codigo] = {
                     columna: turnFuturo,
                     estado: 'Proyectada',
