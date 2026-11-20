@@ -348,9 +348,87 @@ export const calcularProyeccionMultianual = ({
     };
 };
 
+/**
+ * Evaluación simplificada enfocada en responder:
+ * 1) ¿Ya te corresponde cambiarte este año?
+ * 2) Si todavía no, ¿en qué año vas a poder?
+ * No expone estimaciones de años anteriores.
+ */
+export const evaluarElegibilidadActual = ({
+    progreso = {},
+    materias1713 = [],
+    materias1714 = [],
+    equivalenciasData = {},
+    anioActual = new Date().getFullYear(),
+    cuatrimestreActual = (new Date().getMonth() + 1) <= 6 ? 1 : 2
+}) => {
+    const anioEvaluado = Math.min(Math.max(anioActual, 2025), 2029);
+    const proyeccion = calcularProyeccionMultianual({
+        progreso,
+        materias1713,
+        materias1714,
+        equivalenciasData,
+        anioActual: anioEvaluado
+    });
+
+    const toCuatriAnual = (m) => (Number(m?.cuatrimestre) % 2 === 0 ? 2 : 1);
+
+    const futuros = proyeccion.proyeccion.filter(p => p.anio >= anioEvaluado);
+    const actualItem = futuros.find(p => p.anio === anioEvaluado) || proyeccion.resultadoActual;
+    const puedeCambiarseHoy = Boolean(actualItem?.esViable);
+
+    const itemHabilitado = puedeCambiarseHoy
+        ? actualItem
+        : (futuros.find(p => p.esViable) || futuros[futuros.length - 1]);
+
+    const anioHabilitado = itemHabilitado?.anio || 2029;
+    const resultadoHoy = actualItem?.resultado;
+    const cursablesHoy = resultadoHoy?.avance1714?.materiasCursables || [];
+
+    let cuatrimestreHabilitado = 1;
+    if (puedeCambiarseHoy) {
+        const cuatrisHoy = cursablesHoy.map(toCuatriAnual);
+        const vigentOrNext = cuatrisHoy.filter(c => c >= cuatrimestreActual);
+        cuatrimestreHabilitado = vigentOrNext.length > 0
+            ? Math.min(...vigentOrNext)
+            : (cuatrisHoy.length > 0 ? Math.min(...cuatrisHoy) : cuatrimestreActual);
+    } else {
+        const bacheCodigos = new Set((resultadoHoy?.avance1714?.materiasEnBache || []).map(m => m.codigo));
+        const cursablesFuturo = itemHabilitado?.resultado?.avance1714?.materiasCursables || [];
+        const desbloqueadas = cursablesFuturo.filter(m => bacheCodigos.has(m.codigo));
+        const fuente = desbloqueadas.length > 0 ? desbloqueadas : cursablesFuturo;
+        const cuatrisFuturo = fuente.map(toCuatriAnual);
+        cuatrimestreHabilitado = cuatrisFuturo.length > 0 ? Math.min(...cuatrisFuturo) : 1;
+    }
+
+    const periodoHabilitado = `${cuatrimestreHabilitado}° Cuatrimestre de ${anioHabilitado}`;
+
+    const mensajePrincipal = puedeCambiarseHoy
+        ? `Ya te corresponde cambiarte al Plan 17.14 (${periodoHabilitado})`
+        : `Todavía no te corresponde cambiarte. Vas a poder en el ${periodoHabilitado}.`;
+
+    const recomendacionCorta = puedeCambiarseHoy
+        ? (cursablesHoy.length > 0
+            ? `Con tu avance actual ya tenés ${cursablesHoy.length} ${cursablesHoy.length === 1 ? 'materia habilitada' : 'materias habilitadas'} para cursar en el ${periodoHabilitado} sin demoras por oferta.`
+            : `Tu avance actual cumple con las condiciones para realizar el cambio en el ${periodoHabilitado}.`)
+        : `Este año (${anioEvaluado}) todavía faltan materias intermedias con dictado activo en el Plan 17.14 para tu nivel. En el ${periodoHabilitado} se habilita la oferta correspondiente.`;
+
+    return {
+        anioEvaluado,
+        puedeCambiarseHoy,
+        anioHabilitado,
+        cuatrimestreHabilitado,
+        periodoHabilitado,
+        resultadoHoy,
+        mensajePrincipal,
+        recomendacionCorta
+    };
+};
+
 export default {
     OFERTA_RESOLUCION_89_2025,
     obtenerResumenPaso1,
     evaluarTransicionCompleta,
-    calcularProyeccionMultianual
+    calcularProyeccionMultianual,
+    evaluarElegibilidadActual
 };
