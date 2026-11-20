@@ -206,7 +206,12 @@ export default function MateriasList({
                       {group.totalCount}
                     </span>
 
-                    {group.completedCount < group.totalCount && (
+                    {group.materias.some(
+                      (m) =>
+                        !m.tesis &&
+                        m.codigo !== "N/A" &&
+                        !["Aprobado", "Promocionado"].includes(progreso[m.codigo]),
+                    ) && (
                       <Button
                         size="sm"
                         variant="flat"

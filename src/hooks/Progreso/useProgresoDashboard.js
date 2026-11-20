@@ -5,6 +5,7 @@ import useProgresoMaterias from './useProgresoMaterias';
 import regularidadUtils from '../../utils/Progreso/regularidadUtils';
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
 import materiasUtils, { esMateriaIncompleta } from '../../utils/Progreso/materiasUtils';
+import { calcularEstadoBaseMateria } from '../../utils/Progreso/materiaStateMachine';
 import { trackSearch, trackCambioVista } from '../../services/analyticsService';
 
 const EXPANDED_STORAGE_KEY = 'progreso_expanded_years:v2';
@@ -344,9 +345,7 @@ export default function useProgresoDashboard({
         const estadoActual = progreso[codigo];
 
         if (mappedState === 'Reiniciar') {
-            const ESTADOS_VALIDOS = [materiasUtils.estadosPosibles[1], materiasUtils.estadosPosibles[2], materiasUtils.estadosPosibles[4], 'Cursando'];
-            const todasBien = !materia?.correlativas?.length || materia.correlativas.every(c => ESTADOS_VALIDOS.includes(progreso[c]));
-            const baseState = todasBien ? materiasUtils.estadosPosibles[0] : materiasUtils.bloquear;
+            const baseState = calcularEstadoBaseMateria(progreso, materia, materias);
             cambioDeEstado(codigo, baseState);
             return;
         }
