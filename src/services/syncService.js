@@ -1,4 +1,4 @@
-import { saveUserProgreso, getUserData } from './dbService';
+import { saveUserProgreso, saveUserCursada, getUserData } from './dbService';
 import storageRepository from './storageRepository';
 
 /**
@@ -49,12 +49,17 @@ export const uploadPlanProgress = async (uid, plan) => {
     try {
         const progreso = storageRepository.getProgreso(plan, null);
         const detalles = storageRepository.getProgresoDetalles(plan, {});
+        const cursada = storageRepository.getCursada(plan, null);
 
-        if (!progreso) {
+        if (!progreso && !cursada) {
             throw new Error('No hay datos locales para este plan.');
         }
 
-        await saveUserProgreso(uid, plan, progreso, detalles || {});
+        if (progreso) {
+            await saveUserProgreso(uid, plan, progreso, detalles || {}, cursada);
+        } else if (cursada) {
+            await saveUserCursada(uid, plan, cursada);
+        }
         return true;
     } catch (error) {
         if (import.meta.env.DEV) console.error('Error al subir datos:', error);
@@ -63,7 +68,7 @@ export const uploadPlanProgress = async (uid, plan) => {
 };
 
 /**
- * Descarga TODO el progreso y detalles desde la nube y lo guarda en local.
+ * Descarga TODO el progreso, detalles, simulaciones y cursada desde la nube y lo guarda en local.
  * Esta función es la que se llama al iniciar sesión o al presionar "Cargar".
  * @param {string} uid
  * @returns {Promise<Record<string, any> | false>}
@@ -76,6 +81,7 @@ export const downloadAllProgress = async (uid) => {
         const progreso = normalizeNestedPlanMap(cloudData.progreso || {});
         const detalles = normalizeNestedPlanMap(cloudData.progresoDetalles || {});
         const simulaciones = normalizeNestedPlanMap(cloudData.simulaciones || {});
+        const cursadas = normalizeNestedPlanMap(cloudData.cursada || {});
 
         // Normalización: Extraemos datos de llaves con puntos literales (ej: "progreso.17.14")
         Object.keys(cloudData).forEach((key) => {
@@ -91,14 +97,19 @@ export const downloadAllProgress = async (uid) => {
                 const plan = key.substring('simulaciones.'.length);
                 if (!simulaciones[plan]) simulaciones[plan] = cloudData[key];
             }
+            if (key.startsWith('cursada.')) {
+                const plan = key.substring('cursada.'.length);
+                if (!cursadas[plan]) cursadas[plan] = cloudData[key];
+            }
         });
 
-        if (import.meta.env.DEV) console.log('🛠️ Progreso procesado para sincronización:', { progreso, detalles });
+        if (import.meta.env.DEV) console.log('🛠️ Progreso procesado para sincronización:', { progreso, detalles, cursadas });
 
         const hasAnyData =
             Object.keys(progreso).length > 0 ||
             Object.keys(detalles).length > 0 ||
             Object.keys(simulaciones).length > 0 ||
+            Object.keys(cursadas).length > 0 ||
             cloudData.config;
 
         if (!hasAnyData) {
@@ -122,6 +133,12 @@ export const downloadAllProgress = async (uid) => {
         for (const [plan, data] of Object.entries(simulaciones)) {
             if (data) {
                 storageRepository.setSimulacion(plan, data, { silent: true });
+            }
+        }
+
+        for (const [plan, data] of Object.entries(cursadas)) {
+            if (data && typeof data === 'object') {
+                storageRepository.setCursada(plan, data, { silent: true });
             }
         }
 

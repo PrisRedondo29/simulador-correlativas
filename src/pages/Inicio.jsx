@@ -52,6 +52,13 @@ function Inicio() {
                 path: '/progreso',
             },
             {
+                title: 'Mi Cursada',
+                subtitle: 'Organizá fechas de parciales, horarios semanales y bitácora de clases',
+                tag: 'Agenda',
+                icon: 'fa-solid fa-calendar-days',
+                path: '/cursada',
+            },
+            {
                 title: 'Simulador de Avance',
                 subtitle: 'Proyectá tus próximos cuatrimestres y exportá tu plan en PDF',
                 tag: 'Proyección',
@@ -213,9 +220,9 @@ function Inicio() {
                 </div>
 
                 <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3.5 ${
-                    mainTools.length >= 4
+                    mainTools.length === 4
                         ? 'lg:grid-cols-4'
-                        : mainTools.length === 3
+                        : mainTools.length >= 3
                             ? 'lg:grid-cols-3'
                             : 'lg:grid-cols-2'
                 }`}>

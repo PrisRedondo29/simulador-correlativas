@@ -5,6 +5,7 @@ import PlanFeatureRoute from '../components/Auth/PlanFeatureRoute';
 
 const Inicio = lazy(() => import('../pages/Inicio'));
 const Progreso = lazy(() => import('../pages/Progreso'));
+const Cursada = lazy(() => import('../pages/Cursada'));
 const Simulador = lazy(() => import('../pages/Simulador'));
 const Equivalencias = lazy(() => import('../pages/Equivalencias'));
 const TransicionPlan = lazy(() => import('../pages/TransicionPlan'));
@@ -29,6 +30,10 @@ const Rutas = ({ plan, setPlan }) => {
         {
             path: '/progreso',
             element: <Progreso plan={plan} setPlan={setPlan} />,
+        },
+        {
+            path: '/cursada',
+            element: <Cursada plan={plan} />,
         },
         {
             path: '/simulador',

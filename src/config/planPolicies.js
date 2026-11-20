@@ -168,6 +168,7 @@ export function getAcademicNavItems(plan, registry = CAREERS_REGISTRY) {
     const items = [
         { name: 'Inicio', icon: 'fa-house', path: '/' },
         { name: 'Mi Progreso', icon: 'fa-graduation-cap', path: '/progreso' },
+        { name: 'Mi Cursada', icon: 'fa-calendar-days', path: '/cursada' },
         { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador' },
     ];
 

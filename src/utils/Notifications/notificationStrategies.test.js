@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
     buildNotifications,
+    estrategiaEventosProximos,
     estrategiaUltimoIntentoFinal,
     estrategiaVencimientoRegularidad,
     estrategiaTransicionPlan,
@@ -140,5 +141,53 @@ describe('notificationStrategies - Patrón Strategy de alertas académicas', () 
         expect(list[0].tone).toBe('danger'); // última oportunidad primero
         expect(list[1].id).toContain('vencimiento'); // luego vencimiento
         expect(list[list.length - 1].id).toBe('sync-tip'); // respaldo al final
+    });
+
+    it('alerta eventos próximos de Mi Cursada con urgencia danger (hoy/mañana) y warning (2..7 días)', () => {
+        // Fecha simulada: 2026-04-15
+        const inminente = estrategiaEventosProximos({
+            activePlan: '17.14',
+            materias: MATERIAS_MOCK,
+            cursada: {
+                horarios: [],
+                bitacora: [],
+                eventos: [
+                    { id: 'e1', titulo: '1° Parcial', tipo: 'parcial', fecha: '2026-04-16', codigoMateria: 'M1' },
+                ],
+            },
+        });
+        expect(inminente).not.toBeNull();
+        expect(inminente.tone).toBe('danger');
+        expect(inminente.path).toBe('/cursada');
+        expect(inminente.description).toContain('Bases de Datos I');
+        expect(inminente.description).toContain('Mañana');
+
+        const semana = estrategiaEventosProximos({
+            activePlan: '17.14',
+            materias: MATERIAS_MOCK,
+            cursada: {
+                horarios: [],
+                bitacora: [],
+                eventos: [
+                    { id: 'e2', titulo: 'Entrega TP 1', tipo: 'tp', fecha: '2026-04-20', codigoMateria: 'M2' },
+                ],
+            },
+        });
+        expect(semana).not.toBeNull();
+        expect(semana.tone).toBe('warning');
+        expect(semana.description).toContain('En 5 días');
+
+        const lejano = estrategiaEventosProximos({
+            activePlan: '17.14',
+            materias: MATERIAS_MOCK,
+            cursada: {
+                horarios: [],
+                bitacora: [],
+                eventos: [
+                    { id: 'e3', titulo: 'Final lejano', tipo: 'final', fecha: '2026-05-01', codigoMateria: 'M1' },
+                ],
+            },
+        });
+        expect(lejano).toBeNull();
     });
 });

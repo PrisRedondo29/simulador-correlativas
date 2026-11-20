@@ -54,14 +54,18 @@ describe('storageRepository - Persistencia centralizada y versionada', () => {
         repo.setProgreso('17.14', { M1: 'Aprobado' });
         repo.setProgresoDetalles('17.14', { M1: { notaFinal: 8 } });
         repo.setSimulacion('17.14', { anio: 2026 });
+        repo.setCursada('17.14', { horarios: [], eventos: [{ id: 'ev-1' }], bitacora: [] });
         repo.setTheme('dark');
         repo.setRaw(STORAGE_KEYS.SIDEBAR_COLLAPSED, 'true');
+
+        expect(repo.getCursada('17.14')?.eventos).toHaveLength(1);
 
         repo.clearAcademicCache();
 
         expect(repo.getProgreso('17.14')).toBeNull();
         expect(repo.getProgresoDetalles('17.14')).toBeNull();
         expect(repo.getSimulacion('17.14')).toBeNull();
+        expect(repo.getCursada('17.14')).toBeNull();
         expect(repo.getTheme()).toBe('dark');
         expect(repo.getRaw(STORAGE_KEYS.SIDEBAR_COLLAPSED)).toBe('true');
     });

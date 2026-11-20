@@ -228,6 +228,7 @@ export interface NotificationContext {
     materias?: Materia[];
     progreso?: ProgresoMap;
     progresoDetalles?: ProgresoDetallesMap;
+    cursada?: CursadaPlanData | null;
     isAuthenticated?: boolean;
     canSimulateTransition?: boolean;
     transitionInfo?: TransitionConfig | null;
@@ -364,3 +365,61 @@ export interface ProyeccionCarrera {
     labels: Record<number, string>;
     maxCol: number;
 }
+
+// ─── Mi Cursada (Calendario, Horarios y Bitácora) ─────────────────────────────
+
+export type TipoEventoCursada = 'parcial' | 'recuperatorio' | 'final' | 'tp' | 'otro';
+
+export type DiaSemana = 1 | 2 | 3 | 4 | 5 | 6;
+
+export type ModalidadClase = 'Presencial' | 'Virtual' | 'Híbrida';
+
+export interface EventoCursada {
+    id: string;
+    titulo: string;
+    tipo: TipoEventoCursada;
+    /** Fecha calendario ISO sin zona horaria: YYYY-MM-DD */
+    fecha: string;
+    /** Hora local de reloj opcional: HH:mm */
+    hora?: string;
+    codigoMateria?: string | null;
+    nota?: string;
+}
+
+export interface EventoCursadaProximo extends EventoCursada {
+    diasRestantes: number;
+}
+
+export interface HorarioClase {
+    id: string;
+    codigoMateria: string;
+    dia: DiaSemana;
+    /** Hora de inicio: HH:mm */
+    horaInicio: string;
+    /** Hora de fin: HH:mm */
+    horaFin: string;
+    aula?: string;
+    modalidad?: ModalidadClase;
+}
+
+export interface EntradaBitacora {
+    id: string;
+    /** Fecha calendario ISO sin zona horaria: YYYY-MM-DD */
+    fecha: string;
+    codigoMateria: string;
+    tema: string;
+    notas?: string;
+}
+
+export interface CursadaPlanData {
+    horarios: HorarioClase[];
+    eventos: EventoCursada[];
+    bitacora: EntradaBitacora[];
+}
+
+export interface CalendarCell {
+    iso: string;
+    day: number;
+    inCurrentMonth: boolean;
+}
+

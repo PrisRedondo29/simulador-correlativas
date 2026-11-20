@@ -20,6 +20,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     const [isOpen, setIsOpen] = useState(false);
     const [progreso, setProgreso] = useState({});
     const [progresoDetalles, setProgresoDetalles] = useState({});
+    const [cursada, setCursada] = useState(null);
     const [materiasPlan, setMateriasPlan] = useState([]);
     const [readIds, setReadIds] = useState(() => storageRepository.getNotificationReadIds());
 
@@ -29,6 +30,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
         const cargarDatos = () => {
             setProgreso(storageRepository.getProgreso(activePlan, {}));
             setProgresoDetalles(storageRepository.getProgresoDetalles(activePlan, {}));
+            setCursada(storageRepository.getCursada(activePlan, null));
         };
 
         cargarDatos();
@@ -50,11 +52,12 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
             materias: materiasPlan,
             progreso,
             progresoDetalles,
+            cursada,
             isAuthenticated,
             canSimulateTransition,
             transitionInfo,
         });
-    }, [activePlan, policy?.careerShortName, materiasPlan, progreso, progresoDetalles, isAuthenticated, canSimulateTransition, transitionInfo]);
+    }, [activePlan, policy?.careerShortName, materiasPlan, progreso, progresoDetalles, cursada, isAuthenticated, canSimulateTransition, transitionInfo]);
 
     const unreadCount = useMemo(
         () => notificaciones.filter(n => !readIds.includes(n.id)).length,

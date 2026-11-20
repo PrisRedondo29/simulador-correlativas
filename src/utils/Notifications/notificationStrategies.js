@@ -8,6 +8,11 @@
 import regularidadUtils from '../Progreso/regularidadUtils';
 import { esMateriaIncompleta } from '../Progreso/materiasUtils';
 import tituloIntermedioUtils from '../Progreso/tituloIntermedioUtils';
+import {
+    obtenerEventosProximos,
+    formatCuentaRegresiva,
+    TIPOS_EVENTO,
+} from '../Cursada/cursadaUtils';
 
 /** @typedef {import('../../types/domain').Materia} Materia */
 /** @typedef {import('../../types/domain').NotificationContext} NotificationContext */
@@ -23,6 +28,45 @@ function formatearNombres(materias, limite = 2) {
     const visibles = materias.slice(0, limite).map((m) => m.nombre).join(', ');
     const resto = materias.length - limite;
     return resto > 0 ? `${visibles} y ${resto} más` : visibles;
+}
+
+/**
+ * 0. Alerta por evaluaciones o entregas registradas en Mi Cursada dentro de los próximos 7 días.
+ * @type {NotificationStrategy}
+ */
+export function estrategiaEventosProximos({ activePlan, cursada, materias = [] }) {
+    const eventos = cursada?.eventos || [];
+    if (eventos.length === 0) return null;
+
+    const proximos = obtenerEventosProximos(eventos, { dias: 7 });
+    if (proximos.length === 0) return null;
+
+    const materiaPorCodigo = new Map(materias.map((m) => [m.codigo, m.nombre]));
+    const inminentes = proximos.filter((e) => e.diasRestantes <= 1);
+    const esUrgente = inminentes.length > 0;
+    const destacados = (esUrgente ? inminentes : proximos).slice(0, 2);
+
+    const resumen = destacados
+        .map((ev) => {
+            const tipoLabel = TIPOS_EVENTO[ev.tipo]?.label || 'Evento';
+            const matNombre = ev.codigoMateria ? materiaPorCodigo.get(ev.codigoMateria) : null;
+            const contexto = matNombre ? `${ev.titulo} (${matNombre})` : `${tipoLabel}: ${ev.titulo}`;
+            return `${contexto} — ${formatCuentaRegresiva(ev.diasRestantes)}`;
+        })
+        .join(' · ');
+
+    const resto = proximos.length - destacados.length;
+    const suffix = resto > 0 ? ` y ${resto} más` : '';
+
+    return {
+        id: `cursada-proximos-${activePlan}-${proximos.map((e) => `${e.id}:${e.fecha}`).sort().join('-')}`,
+        icon: esUrgente ? 'fa-solid fa-calendar-day' : 'fa-regular fa-calendar-check',
+        tone: esUrgente ? 'danger' : 'warning',
+        title: esUrgente ? 'Evaluación o entrega inminente' : 'Próximas fechas de cursada',
+        description: `${resumen}${suffix}.`,
+        path: '/cursada',
+        time: esUrgente ? 'Próximas 24h' : 'Próximos 7 días',
+    };
 }
 
 /**
@@ -203,6 +247,7 @@ export function estrategiaRespaldoCuenta({ isAuthenticated }) {
 /** @type {NotificationStrategy[]} */
 export const DEFAULT_NOTIFICATION_STRATEGIES = [
     estrategiaUltimoIntentoFinal,
+    estrategiaEventosProximos,
     estrategiaVencimientoRegularidad,
     estrategiaTransicionPlan,
     estrategiaTituloIntermedio,

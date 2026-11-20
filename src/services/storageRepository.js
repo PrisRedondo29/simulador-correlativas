@@ -9,8 +9,9 @@
 /** @typedef {import('../types/domain').StorageWriteOptions} StorageWriteOptions */
 /** @typedef {import('../types/domain').ProgresoMap} ProgresoMap */
 /** @typedef {import('../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
+/** @typedef {import('../types/domain').CursadaPlanData} CursadaPlanData */
 
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
 export const STORAGE_CHANGE_EVENT = 'unlu-storage-updated';
 
 export const STORAGE_KEYS = {
@@ -28,6 +29,8 @@ export const STORAGE_KEYS = {
     progresoDetalles: (plan) => `detalles_progreso+${plan}`,
     /** @param {string} plan */
     simulacion: (plan) => `simulacion+${plan}`,
+    /** @param {string} plan */
+    cursada: (plan) => `cursada+${plan}`,
 };
 
 /**
@@ -181,7 +184,8 @@ export function createStorageRepository(storage = getBrowserStorage()) {
                 key &&
                 (key.startsWith('progreso+') ||
                     key.startsWith('detalles_progreso+') ||
-                    key.startsWith('simulacion+'))
+                    key.startsWith('simulacion+') ||
+                    key.startsWith('cursada+'))
             ) {
                 keysToDelete.push(key);
             }
@@ -257,6 +261,22 @@ export function createStorageRepository(storage = getBrowserStorage()) {
          */
         setSimulacion: (plan, data, options) =>
             plan ? setJSON(STORAGE_KEYS.simulacion(plan), data, options) : false,
+
+        /**
+         * @template [T=CursadaPlanData | null]
+         * @param {string | null | undefined} plan
+         * @param {T} [fallback]
+         * @returns {T}
+         */
+        getCursada: (plan, fallback = /** @type {any} */ (null)) =>
+            plan ? getJSON(STORAGE_KEYS.cursada(plan), fallback) : fallback,
+        /**
+         * @param {string | null | undefined} plan
+         * @param {CursadaPlanData} data
+         * @param {StorageWriteOptions} [options]
+         */
+        setCursada: (plan, data, options) =>
+            plan ? setJSON(STORAGE_KEYS.cursada(plan), data, options) : false,
 
         // --- Preferencias y notificaciones ---
         /** @returns {string[]} */
