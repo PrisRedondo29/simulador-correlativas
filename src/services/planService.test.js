@@ -240,4 +240,63 @@ describe('planService - Carga dinámica multi-carrera y caché en memoria', () =
         expect(memStorage.getCachedPublishedPlan('17.14')).toBeNull();
         expect(memStorage.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
     });
+
+    it('descarga en el primer intento un plan o carrera 100% nueva publicada en Firestore (version: 1 sin JSON estático local)', async () => {
+        const map = new Map();
+        const memStorage = createStorageRepository({
+            get length() {
+                return map.size;
+            },
+            key: (idx) => Array.from(map.keys())[idx] ?? null,
+            getItem: (k) => (map.has(k) ? map.get(k) : null),
+            setItem: (k, v) => {
+                map.set(k, String(v));
+            },
+            removeItem: (k) => {
+                map.delete(k);
+            },
+        });
+
+        const fetchMeta = vi.fn(async () => ({
+            '30.01': {
+                version: 1,
+                carrera: 'Licenciatura en Administración',
+                careerId: 'administracion',
+                careerShortName: 'Lic. Admin',
+                label: 'Plan 30.01',
+                estimatedSubjects: 2,
+                changelogMessage: 'Publicación inicial de Licenciatura en Administración',
+            },
+        }));
+
+        const fetchPlan = vi.fn(async () => ({
+            plan_numero: '30.01',
+            carrera: 'Licenciatura en Administración',
+            version: 1,
+            changelogMessage: 'Publicación inicial de Licenciatura en Administración',
+            materias: [
+                { codigo: 'ADM101', nombre: 'Principios de Administración', anio: 1, correlativas: [] },
+                { codigo: 'ADM102', nombre: 'Contabilidad Básica', anio: 1, correlativas: ['ADM101'] },
+            ],
+        }));
+
+        const remoteOnlyService = createPlanService(undefined, {
+            storageRepo: memStorage,
+            ttlMs: 60_000,
+            fetchRemoteCatalogMeta: fetchMeta,
+            fetchRemotePublishedPlan: fetchPlan,
+        });
+
+        const plan = await remoteOnlyService.getPlanByNumber('30.01');
+        expect(plan).not.toBeNull();
+        expect(plan?.plan_numero).toBe('30.01');
+        expect(plan?.carrera).toBe('Licenciatura en Administración');
+        expect(plan?.version).toBe(1);
+        expect(plan?.materias).toHaveLength(2);
+
+        const materias = await remoteOnlyService.getMateriasByPlan('30.01');
+        expect(materias.map((m) => m.codigo)).toEqual(['ADM101', 'ADM102']);
+        expect(fetchMeta).toHaveBeenCalledTimes(1);
+        expect(fetchPlan).toHaveBeenCalledTimes(1);
+    });
 });

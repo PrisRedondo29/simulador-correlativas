@@ -11,6 +11,7 @@ import {
     getCareerByPlan,
     getCareerPrefix,
     getPlanEntry,
+    mergeDynamicCatalogCareers,
     normalizePlanNumber,
 } from '../config/careersRegistry';
 import { reconciliarProgresoConNuevaVersionPlan } from '../utils/Plan/planMigration';
@@ -203,10 +204,13 @@ export function createPlanService(registry = CAREERS_REGISTRY, options = {}) {
      * Solo descarga `catalog_plans/{plan}` si `remoteVersion > localVersion`.
      *
      * @param {string} normalizedPlanNum
-     * @param {{ force?: boolean }} [opts]
+     * @param {{ force?: boolean, hasStaticFallback?: boolean }} [opts]
      * @returns {Promise<PlanData | null>}
      */
-    async function revalidatePlanIfStale(normalizedPlanNum, { force = false } = {}) {
+    async function revalidatePlanIfStale(
+        normalizedPlanNum,
+        { force = false, hasStaticFallback = true } = {},
+    ) {
         if (!enableRemoteCheck) return null;
 
         const now = Date.now();
@@ -244,7 +248,7 @@ export function createPlanService(registry = CAREERS_REGISTRY, options = {}) {
         }
 
         const cachedLocal = storageRepo.getCachedPublishedPlan(normalizedPlanNum);
-        const localVersion = cachedLocal?.version ?? 1;
+        const localVersion = cachedLocal?.version ?? (hasStaticFallback ? 1 : 0);
 
         if (remoteEntry.version <= localVersion) {
             return null;
@@ -305,15 +309,18 @@ export function createPlanService(registry = CAREERS_REGISTRY, options = {}) {
             const normalized = normalizePlanNumber(planNumber);
             if (!normalized) return null;
 
-            const career = getCareerByPlan(normalized, registry);
-            if (!career) return null;
+            const effectiveRegistry = mergeDynamicCatalogCareers(
+                storageRepo.getCatalogMetaCache()?.plans,
+                registry,
+            );
+            const career = getCareerByPlan(normalized, effectiveRegistry);
 
             const cachedPublished = storageRepo.getCachedPublishedPlan(normalized);
             if (cachedPublished) {
-                void revalidatePlanIfStale(normalized);
+                void revalidatePlanIfStale(normalized, { hasStaticFallback: true });
                 return {
                     plan_numero: cachedPublished.plan_numero,
-                    carrera: cachedPublished.carrera || career.name,
+                    carrera: cachedPublished.carrera || career?.name,
                     version: cachedPublished.version,
                     materias: cachedPublished.materias,
                 };
@@ -322,8 +329,12 @@ export function createPlanService(registry = CAREERS_REGISTRY, options = {}) {
             const plans = await loadCareerPlans(career);
             const staticPlan = plans.find((p) => p.plan_numero === normalized) ?? null;
 
-            void revalidatePlanIfStale(normalized);
-            return staticPlan;
+            if (staticPlan) {
+                void revalidatePlanIfStale(normalized, { hasStaticFallback: true });
+                return staticPlan;
+            }
+
+            return await revalidatePlanIfStale(normalized, { hasStaticFallback: false });
         },
 
         applyPublishedPlanSnapshot,

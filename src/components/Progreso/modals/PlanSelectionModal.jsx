@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
     Modal,
     ModalContent,
@@ -10,11 +10,13 @@ import {
 } from '@heroui/react';
 import PropTypes from 'prop-types';
 import { getAvailableCareers, getCatalogCareers } from '../../../config/careersRegistry';
+import { PlanContext } from '../../../context/planContextInstance';
 import { trackSeleccionCarrera } from '../../../services/analyticsService';
 
 export default function PlanSelectionModal({ isOpen, onSelect }) {
-    const availableCareers = getAvailableCareers();
-    const catalogCareers = getCatalogCareers();
+    const planCtx = useContext(PlanContext);
+    const availableCareers = planCtx?.availableCareers || getAvailableCareers();
+    const catalogCareers = planCtx?.catalogCareers || getCatalogCareers();
     const [selectedCareerId, setSelectedCareerId] = useState(() => availableCareers[0]?.id || null);
 
     const activeCareer =
