@@ -45,15 +45,15 @@ function Inicio() {
     const mainTools = useMemo(() => {
         const base = [
             {
-                title: 'Mi Progreso',
+                title: 'Mis Materias',
                 subtitle: 'Registrá materias aprobadas, finales, intentos y correlativas',
                 tag: 'Núcleo',
                 icon: 'fa-solid fa-graduation-cap',
                 path: '/progreso',
             },
             {
-                title: 'Mi Cursada',
-                subtitle: 'Organizá fechas de parciales, horarios semanales y bitácora de clases',
+                title: 'Mi Agenda',
+                subtitle: 'Organizá fechas de parciales, horarios semanales y apuntes de clases',
                 tag: 'Agenda',
                 icon: 'fa-solid fa-calendar-days',
                 path: '/cursada',

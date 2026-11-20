@@ -65,10 +65,10 @@ export default function Cursada({ plan }) {
                         </Chip>
                     </div>
                     <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E293B] dark:text-[#F1F5F9]">
-                        Mi Cursada
+                        Mi Agenda
                     </h1>
                     <p className="text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8]">
-                        Organizá tus evaluaciones, horarios semanales y el registro de temas vistos en clase.
+                        Organizá tus fechas de parciales, horarios semanales y el registro de temas vistos en clase.
                         {sinMateriasActivas && (
                             <>
                                 {' '}
@@ -76,7 +76,7 @@ export default function Cursada({ plan }) {
                                     to="/progreso"
                                     className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline"
                                 >
-                                    Marcá tus materias en curso en Mi Progreso →
+                                    Marcá tus materias en curso en Mis Materias →
                                 </Link>
                             </>
                         )}

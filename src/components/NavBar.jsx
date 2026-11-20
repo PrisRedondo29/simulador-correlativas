@@ -20,8 +20,8 @@ import { useActivePlan, usePlanCapabilities } from '../context/PlanContext';
 
 const ROUTE_TITLES = {
     '/': 'Inicio',
-    '/progreso': 'Mi Progreso',
-    '/cursada': 'Mi Cursada',
+    '/progreso': 'Mis Materias',
+    '/cursada': 'Mi Agenda',
     '/simulador': 'Simulador de Avance',
     '/equivalencias': 'Equivalencias',
     '/cambio-plan': 'Cambio de Plan',

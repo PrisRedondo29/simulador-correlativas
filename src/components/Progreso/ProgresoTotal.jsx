@@ -116,10 +116,10 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
             </Chip>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#1E293B] dark:text-[#F1F5F9]">
-            Mi Progreso Académico
+            Mis Materias
           </h1>
           <p className="text-sm text-[#475569] dark:text-[#94A3B8]">
-            Seguimiento de tu avance en la carrera, correlativas y estado de materias.
+            Marcá las materias que aprobaste o estás cursando para ver tus correlativas habilitadas y tu promedio.
           </p>
         </div>
 

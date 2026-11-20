@@ -63,8 +63,8 @@ describe('planPolicies - Capacidades y navegación por plan y carrera', () => {
 
         expect(nav13).toContain('Cambio de Plan');
         expect(nav14).not.toContain('Cambio de Plan');
-        expect(nav14).toContain('Mi Progreso');
-        expect(nav14).toContain('Mi Cursada');
+        expect(nav14).toContain('Mis Materias');
+        expect(nav14).toContain('Mi Agenda');
         expect(nav14).toContain('Equivalencias');
     });
 
@@ -80,7 +80,7 @@ describe('planPolicies - Capacidades y navegación por plan y carrera', () => {
         expect(getIntermediateTitleConfig('25.01', SECOND_CAREER_REGISTRY)).toBeNull();
 
         const navInd = getAcademicNavItems('25.01', SECOND_CAREER_REGISTRY).map((i) => i.name);
-        expect(navInd).toEqual(['Inicio', 'Mi Progreso', 'Mi Cursada', 'Simulador de Avance']);
+        expect(navInd).toEqual(['Inicio', 'Mis Materias', 'Mi Agenda', 'Simulador de Avance']);
     });
 
     it('deshabilita capacidades opcionales ante un plan desconocido', () => {
