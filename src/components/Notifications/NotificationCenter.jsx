@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePlanCapabilities } from '../../context/PlanContext';
 import planService from '../../services/planService';
-import regularidadUtils from '../../utils/Progreso/regularidadUtils';
+import { buildNotifications } from '../../utils/Notifications/notificationStrategies';
 import PropTypes from 'prop-types';
 
 const READ_STORAGE_KEY = 'notificaciones_leidas:v1';
@@ -63,91 +63,15 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     }, [activePlan]);
 
     const notificaciones = useMemo(() => {
-        const list = [];
-        const materias = materiasPlan;
-
-        const disponibles = materias.filter(m => progreso[m.codigo] === 'Disponible').length;
-        const regulares = materias.filter(m => progreso[m.codigo] === 'Regular');
-        const incompletas = materias.filter(m => {
-            const est = progreso[m.codigo];
-            const det = progresoDetalles?.[m.codigo];
-            if (est === 'Regular') return !det?.fechaRegularidad || !det?.notaRegularizacion;
-            if (est === 'Aprobado' || est === 'Promocionado') return !det?.notaFinal;
-            return false;
-        }).length;
-
-        const proximasAVencer = regulares.filter(m => {
-            const det = progresoDetalles?.[m.codigo];
-            if (!det?.fechaRegularidad) return false;
-            try {
-                const info = regularidadUtils.obtenerPlanificacionInstancias(det.fechaRegularidad, det.intentosFinal);
-                return info && info.cuatrimestresRestantes <= 1;
-            } catch {
-                return false;
-            }
-        }).length;
-
-        if (proximasAVencer > 0) {
-            list.push({
-                id: `vencimiento-${activePlan}-${proximasAVencer}`,
-                icon: 'fa-regular fa-clock',
-                tone: 'warning',
-                title: 'Regularidades próximas a vencer',
-                description: `Tenés ${proximasAVencer} ${proximasAVencer === 1 ? 'materia regular con 1 cuatrimestre o menos' : 'materias regulares con 1 cuatrimestre o menos'} de vigencia.`,
-                path: '/progreso',
-                time: 'Académico',
-            });
-        }
-
-        if (disponibles > 0) {
-            list.push({
-                id: `disponibles-${activePlan}-${disponibles}`,
-                icon: 'fa-solid fa-lock-open',
-                tone: 'info',
-                title: 'Correlativas habilitadas',
-                description: `Tenés ${disponibles} ${disponibles === 1 ? 'materia disponible' : 'materias disponibles'} para cursar en el Plan ${activePlan}.`,
-                path: '/progreso',
-                time: 'Plan de estudios',
-            });
-        }
-
-        if (incompletas > 0) {
-            list.push({
-                id: `incompletas-${activePlan}-${incompletas}`,
-                icon: 'fa-solid fa-pen-to-square',
-                tone: 'warning',
-                title: 'Datos pendientes de carga',
-                description: `Hay ${incompletas} ${incompletas === 1 ? 'materia' : 'materias'} sin nota final o fecha de regularidad para calcular tu promedio.`,
-                path: '/progreso',
-                time: 'Historial',
-            });
-        }
-
-        if (canSimulateTransition && transitionInfo) {
-            list.push({
-                id: 'res-89-25',
-                icon: 'fa-solid fa-scale-balanced',
-                tone: 'brand',
-                title: `Transición de Plan (${transitionInfo.shortBadge})`,
-                description: `Podés simular el impacto de migrar del Plan ${activePlan} al Plan ${transitionInfo.targetPlan} según tu avance actual.`,
-                path: transitionInfo.route,
-                time: 'UNLu LSI',
-            });
-        }
-
-        if (!isAuthenticated) {
-            list.push({
-                id: 'sync-tip',
-                icon: 'fa-solid fa-cloud-arrow-up',
-                tone: 'neutral',
-                title: 'Respaldo de progreso',
-                description: 'Iniciá sesión con Google desde Configuración o el menú para sincronizar tus avances en otros dispositivos.',
-                path: '/config',
-                time: 'Cuenta',
-            });
-        }
-
-        return list;
+        return buildNotifications({
+            activePlan,
+            materias: materiasPlan,
+            progreso,
+            progresoDetalles,
+            isAuthenticated,
+            canSimulateTransition,
+            transitionInfo,
+        });
     }, [activePlan, materiasPlan, progreso, progresoDetalles, isAuthenticated, canSimulateTransition, transitionInfo]);
 
     const unreadCount = useMemo(
@@ -178,6 +102,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     };
 
     const toneClasses = {
+        danger: 'bg-[#FEE2E2] text-[#991B1B] dark:bg-[#2D1619] dark:text-[#FCA5A5]',
         info: 'bg-[#E0F2FE] text-[#075985] dark:bg-[#0F2636] dark:text-[#7DD3FC]',
         warning: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#2D2210] dark:text-[#FCD34D]',
         brand: 'bg-[#ECFDF5] text-[#005A36] dark:bg-[#102A20] dark:text-[#86EFAC]',
