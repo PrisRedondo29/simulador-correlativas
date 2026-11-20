@@ -74,7 +74,8 @@ describe('authService - Registro seguro sin fugas de localStorage entre cuentas'
                 email: 'nueva@unlu.edu.ar',
                 syncRevision: 0,
             });
-            // Crítico: no se transfirió progreso ni detalles ni cursada locales a la cuenta nueva
+            // Crítico: no se transfirió progreso ni campos muertos legacy a la cuenta nueva
+            expect(writtenDoc.materiasAprobadas).toBeUndefined();
             expect(writtenDoc.progreso).toBeUndefined();
             expect(writtenDoc.progresoDetalles).toBeUndefined();
             expect(writtenDoc.cursada).toBeUndefined();

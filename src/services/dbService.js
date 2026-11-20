@@ -228,6 +228,7 @@ export const saveUserSimulacion = async (uid, plan, simulacion) => {
  *   deps?: {
  *     runTransactionFn?: typeof runTransaction,
  *     docFn?: typeof doc,
+ *     getDocFn?: typeof getDoc,
  *     firestoreDb?: typeof db,
  *     serverTimestampFn?: typeof serverTimestamp,
  *     getCurrentUserEmail?: () => string,
@@ -253,6 +254,7 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
 
     const runTransactionFn = deps.runTransactionFn ?? runTransaction;
     const docFn = deps.docFn ?? doc;
+    const getDocFn = deps.getDocFn ?? (deps.runTransactionFn ? null : getDoc);
     const firestoreDb = deps.firestoreDb ?? db;
     const serverTimestampFn = deps.serverTimestampFn ?? serverTimestamp;
     const resolvedEmail =
@@ -287,9 +289,13 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
         };
     }
 
-    try {
-        const userRef = docFn(firestoreDb, 'users', uid);
+    const userRef = docFn(firestoreDb, 'users', uid);
+    const hasKnownRevision =
+        typeof expectedRevision === 'number' &&
+        Number.isInteger(expectedRevision) &&
+        expectedRevision >= 0;
 
+    try {
         /** @type {CommitSyncTransactionResult} */
         const txOutcome = await runTransactionFn(firestoreDb, async (transaction) => {
             const docSnap = await transaction.get(userRef);
@@ -299,11 +305,6 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
             const remoteEmpty = isAcademicBundleEmpty(remoteBundle);
 
             if (!forceOverwrite) {
-                const hasKnownRevision =
-                    typeof expectedRevision === 'number' &&
-                    Number.isInteger(expectedRevision) &&
-                    expectedRevision >= 0;
-
                 const isStaleRevision = hasKnownRevision
                     ? remoteRevision !== expectedRevision
                     : remoteRevision > 0 || !remoteEmpty;
@@ -341,12 +342,51 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
 
         return txOutcome;
     } catch (error) {
-        if (import.meta.env.DEV) console.error('Error en transacción de sincronización:', error);
-        const mapped = mapFirebaseError(error);
         const rawCode =
             error && typeof error === 'object' && 'code' in error && typeof error.code === 'string'
                 ? error.code
                 : 'sync/transaction-failed';
+
+        // En Firestore real, las Security Rules (`syncRevision == prevRev + 1`) se evalúan antes del
+        // chequeo MVCC de la transacción. Si dos dispositivos leen v10 simultáneamente y el primero
+        // commitea v11, el segundo recibe `permission-denied` o `aborted` al intentar escribir v11.
+        // Verificamos con una lectura fresca si la revisión remota avanzó para devolver `conflict`
+        // (conservando `error` ante fallos genuinos de permisos).
+        if (
+            !forceOverwrite &&
+            getDocFn &&
+            (rawCode === 'permission-denied' ||
+                rawCode === 'aborted' ||
+                rawCode === 'failed-precondition')
+        ) {
+            try {
+                const freshSnap = await getDocFn(userRef);
+                if (freshSnap.exists()) {
+                    const freshData = freshSnap.data();
+                    const remoteRevision = getSafeSyncRevision(freshData);
+                    const remoteBundle = extractAcademicBundleFromCloudDoc(freshData);
+                    const remoteEmpty = isAcademicBundleEmpty(remoteBundle);
+                    const isStaleRevision = hasKnownRevision
+                        ? remoteRevision !== expectedRevision
+                        : remoteRevision > 0 || !remoteEmpty;
+
+                    if (isStaleRevision) {
+                        return {
+                            status: 'conflict',
+                            reason: 'revision_conflict',
+                            remoteRevision,
+                            remoteBundle,
+                            remoteHash: computeBundleHash(remoteBundle),
+                        };
+                    }
+                }
+            } catch {
+                // Si tampoco podemos leer (ej: error genuino de permisos u offline), caemos a `error`.
+            }
+        }
+
+        if (import.meta.env.DEV) console.error('Error en transacción de sincronización:', error);
+        const mapped = mapFirebaseError(error);
         return {
             status: 'error',
             code: mapped?.code && mapped.code !== 'unknown' ? mapped.code : rawCode,

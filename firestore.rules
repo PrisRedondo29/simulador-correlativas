@@ -1,26 +1,315 @@
 rules_version = '2';
 
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// This security rules file assumes the following data structures:
+//
+// Collection: users
+// Document ID: {userId} (must match request.auth.uid)
+// Access: Private per-user profile and unified academic sync snapshot.
+//         Contains PII (email, displayName, photoURL); strictly owner-get only.
+//         Collection listing and client-side deletes are explicitly denied.
+// Fields:
+//   - uid: string (required, immutable after creation, must equal userId / request.auth.uid)
+//   - email: string | null (optional, empty string or valid email, max 254 chars)
+//   - displayName: string | null (optional, max 120 chars)
+//   - photoURL: string | null (optional, empty string or valid http/https URL, max 1000 chars)
+//   - createdAt: timestamp (optional on create, immutable once set; cannot be added/modified/deleted on update)
+//   - schemaVersion: int (optional, range 1..10)
+//   - syncRevision: int (optional; on create: 1 if academic payload is present, else 0..1;
+//                        on update: must increment strictly by +1 from previous revision
+//                        whenever any academic sync field changes, otherwise must remain unchanged)
+//   - academicHash: string (optional, 1..64 chars, deterministic content hash e.g. "v1:<16 hex>")
+//   - academicUpdatedAt: timestamp (optional, server timestamp of last academic sync)
+//   - configUpdatedAt: timestamp (optional, server timestamp of last config update)
+//   - config: map (optional, keys strictly limited to ['alias', 'planActivo', 'tema']):
+//       - alias: string (optional, max 80 chars)
+//       - planActivo: string | null (optional, max 20 chars)
+//       - tema: string (optional, enum: 'light' | 'dark' | 'system')
+//   - progreso: map (optional, max 25 plan entries, maps plan ID -> subject status map)
+//   - progresoDetalles: map (optional, max 25 plan entries, maps plan ID -> subject details map)
+//   - cursada: map (optional, max 25 plan entries, maps plan ID -> schedule/events/log map)
+//   - simulaciones: map (optional, max 25 plan entries, maps plan ID -> simulation payload)
+//
+// Legacy Update Compatibility:
+//   Existing production documents may contain untouched legacy keys (e.g.,
+//   materiasAprobadas, progresoUpdatedAt, cursadaUpdatedAt, simulacionUpdatedAt,
+//   or literal dotted root keys like "progreso.17.13"). Updates validate
+//   request.resource.data.diff(resource.data).affectedKeys().hasOnly(...) so
+//   untouched legacy fields do not break legitimate updates while still blocking
+//   clients from creating, modifying, or deleting unauthorized fields.
+//
+// Collection: roles
+// Document ID: {userId} (must match request.auth.uid)
+// Access: Self-lookup only via single-document get. Listing and all client
+//         writes are denied; roles are managed exclusively via Admin SDK / Console.
+// Fields:
+//   - role: string ('admin' | 'user', managed out-of-band)
+//
+// All other collections (including app_logs and any subcollections):
+//   Explicitly denied by default fallback rule.
+//
+// ===============================================================
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Función para verificar si el usuario es dueño del documento
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if the authenticated user owns the document path
     function isOwner(userId) {
-      return request.auth != null && request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Colección de Usuarios: Solo el dueño puede leer y escribir
+    // Verify UID matches the authenticated user on create
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    // Ensure an existing uid field is never modified on update
+    function uidNotModified() {
+      return !('uid' in resource.data) ||
+        ('uid' in request.resource.data && request.resource.data.uid == resource.data.uid);
+    }
+
+    // Validate required fields exist in the resulting document
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // Validate the resulting document contains only allowed fields
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // Validate that immutable fields are not added, modified, or deleted on update
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Validate email format (RFC-compatible practical check)
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // Validate URL format (must start with https:// or http://)
+    function isValidUrl(url) {
+      return url is string &&
+        (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    // ===============================================================
+    // User Schema & Domain Validators
+    // ===============================================================
+
+    function allowedUserCreateFields() {
+      return [
+        'uid',
+        'email',
+        'displayName',
+        'photoURL',
+        'createdAt',
+        'schemaVersion',
+        'syncRevision',
+        'academicHash',
+        'academicUpdatedAt',
+        'configUpdatedAt',
+        'config',
+        'progreso',
+        'progresoDetalles',
+        'cursada',
+        'simulaciones'
+      ];
+    }
+
+    // createdAt is intentionally excluded so it can never be forged, altered, or deleted on update
+    function allowedUserMutableFields() {
+      return [
+        'uid',
+        'email',
+        'displayName',
+        'photoURL',
+        'schemaVersion',
+        'syncRevision',
+        'academicHash',
+        'academicUpdatedAt',
+        'configUpdatedAt',
+        'config',
+        'progreso',
+        'progresoDetalles',
+        'cursada',
+        'simulaciones'
+      ];
+    }
+
+    function academicPayloadFields() {
+      return [
+        'academicHash',
+        'academicUpdatedAt',
+        'progreso',
+        'progresoDetalles',
+        'cursada',
+        'simulaciones'
+      ];
+    }
+
+    function academicSyncFields() {
+      return [
+        'syncRevision',
+        'academicHash',
+        'academicUpdatedAt',
+        'progreso',
+        'progresoDetalles',
+        'cursada',
+        'simulaciones'
+      ];
+    }
+
+    function isValidOptionalEmail(data) {
+      return !('email' in data) ||
+        data.email == null ||
+        data.email == '' ||
+        (data.email is string && data.email.size() <= 254 && isValidEmail(data.email));
+    }
+
+    function isValidOptionalDisplayName(data) {
+      return !('displayName' in data) ||
+        data.displayName == null ||
+        (data.displayName is string && data.displayName.size() <= 120);
+    }
+
+    function isValidOptionalPhotoUrl(data) {
+      return !('photoURL' in data) ||
+        data.photoURL == null ||
+        data.photoURL == '' ||
+        (isValidUrl(data.photoURL) && data.photoURL.size() <= 1000);
+    }
+
+    function isValidConfig(config) {
+      return config is map &&
+        config.keys().hasOnly(['alias', 'planActivo', 'tema']) &&
+        (!('alias' in config) || (config.alias is string && config.alias.size() <= 80)) &&
+        (!('planActivo' in config) ||
+          config.planActivo == null ||
+          (config.planActivo is string && config.planActivo.size() <= 20)) &&
+        (!('tema' in config) ||
+          (config.tema is string && config.tema in ['light', 'dark', 'system']));
+    }
+
+    function isValidAcademicMap(data, field) {
+      return !(field in data) ||
+        (data[field] is map && data[field].size() <= 25);
+    }
+
+    // Core domain validator called on BOTH create and update
+    function isValidUser(data, userId) {
+      return hasRequiredFields(['uid']) &&
+        data.uid is string &&
+        data.uid == userId &&
+        isValidOptionalEmail(data) &&
+        isValidOptionalDisplayName(data) &&
+        isValidOptionalPhotoUrl(data) &&
+        (!('createdAt' in data) || data.createdAt is timestamp) &&
+        (!('schemaVersion' in data) ||
+          (data.schemaVersion is int && data.schemaVersion >= 1 && data.schemaVersion <= 10)) &&
+        (!('syncRevision' in data) ||
+          (data.syncRevision is int && data.syncRevision >= 0)) &&
+        (!('academicHash' in data) ||
+          (data.academicHash is string &&
+           data.academicHash.size() > 0 &&
+           data.academicHash.size() <= 64)) &&
+        (!('academicUpdatedAt' in data) || data.academicUpdatedAt is timestamp) &&
+        (!('configUpdatedAt' in data) || data.configUpdatedAt is timestamp) &&
+        (!('config' in data) || isValidConfig(data.config)) &&
+        isValidAcademicMap(data, 'progreso') &&
+        isValidAcademicMap(data, 'progresoDetalles') &&
+        isValidAcademicMap(data, 'cursada') &&
+        isValidAcademicMap(data, 'simulaciones');
+    }
+
+    // On create: initial syncRevision is 1 when academic data is written directly,
+    // or 0..1 (or omitted) on profile/config-only creation.
+    function isValidInitialSyncRevision(data) {
+      return data.keys().hasAny(academicPayloadFields())
+        ? ('syncRevision' in data && data.syncRevision is int && data.syncRevision == 1)
+        : (!('syncRevision' in data) ||
+            (data.syncRevision is int && data.syncRevision >= 0 && data.syncRevision <= 1));
+    }
+
+    // Legacy docs without an integer syncRevision default to revision 0
+    function previousSyncRevision(existingData) {
+      return ('syncRevision' in existingData &&
+              existingData.syncRevision is int &&
+              existingData.syncRevision >= 0)
+        ? existingData.syncRevision
+        : 0;
+    }
+
+    // Server-side Optimistic Concurrency Control (OCC) enforcement:
+    // - Any change to academic sync fields must advance syncRevision strictly by +1.
+    // - Non-academic updates (e.g. config) must leave syncRevision untouched.
+    function isValidSyncRevisionTransition(newData, existingData) {
+      let affected = newData.diff(existingData).affectedKeys();
+      let prevRev = previousSyncRevision(existingData);
+      return affected.hasAny(academicSyncFields())
+        ? ('syncRevision' in newData &&
+           newData.syncRevision is int &&
+           newData.syncRevision == prevRev + 1)
+        : (('syncRevision' in existingData)
+            ? ('syncRevision' in newData && newData.syncRevision == existingData.syncRevision)
+            : !('syncRevision' in newData));
+    }
+
+    function isValidUserCreate(data, userId) {
+      return hasOnlyAllowedFields(allowedUserCreateFields()) &&
+        uidUnchanged() &&
+        isValidUser(data, userId) &&
+        isValidInitialSyncRevision(data);
+    }
+
+    function isValidUserUpdate(newData, existingData, userId) {
+      return newData.diff(existingData).affectedKeys().hasOnly(allowedUserMutableFields()) &&
+        areImmutableFieldsUnchanged(['createdAt']) &&
+        (!('createdAt' in existingData) || newData.createdAt == existingData.createdAt) &&
+        uidNotModified() &&
+        isValidUser(newData, userId) &&
+        isValidSyncRevisionTransition(newData, existingData);
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    // Private per-user profile and unified academic sync document
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidUserCreate(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data, resource.data, userId);
+      allow delete: if false;
     }
 
-    // Colección de Roles: 
-    // Los usuarios solo pueden leer su propio rol.
-    // Solo admins (o vía Firebase Console/Backend) pueden escribir.
+    // Read-only self role lookup (managed exclusively via Admin SDK / Firebase Console)
     match /roles/{userId} {
-      allow read: if isOwner(userId);
-      allow write: if false; // Solo manual o via admin SDK
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow write: if false;
     }
 
-    // Otras colecciones...
+    // Default deny for all other collections (including app_logs) and subcollections
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }

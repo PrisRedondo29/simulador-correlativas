@@ -1,0 +1,73 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mockTrackErrorGA = vi.fn();
+
+vi.mock('./analyticsService', () => ({
+    trackErrorGA: (...args) => mockTrackErrorGA(...args),
+}));
+
+import {
+    LOG_LEVEL,
+    logError,
+    logWarning,
+    resetLogThrottle,
+    sanitizeLogContext,
+    sanitizeLogString,
+    writeLog,
+} from './logService';
+
+describe('logService - Telemetría solo GA4 con sanitización PII y throttling', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetLogThrottle();
+    });
+
+    it('sanitiza emails, teléfonos y descarta campos PII del contexto', () => {
+        expect(sanitizeLogString('Error para alumno@unlu.edu.ar tel +54 11 5555-4444')).toBe(
+            'Error para [EMAIL] tel [PHONE]',
+        );
+
+        const clean = sanitizeLogContext({
+            email: 'secreto@unlu.edu.ar',
+            token: 'abc',
+            displayName: 'Nombre',
+            route: '/progreso',
+            retries: 2,
+            offline: true,
+            nested: { ignored: true },
+        });
+
+        expect(clean).toEqual({
+            route: '/progreso',
+            retries: 2,
+            offline: true,
+        });
+    });
+
+    it('reporta errores y advertencias a GA4 sanitizando el mensaje y omite GA4 para nivel info', () => {
+        logError({ code: 'sync/failed', message: 'Falló para user@unlu.edu.ar at file.js:12' });
+        expect(mockTrackErrorGA).toHaveBeenCalledWith({
+            code: 'sync/failed',
+            message: 'Falló para [EMAIL]',
+            fatal: true,
+        });
+
+        logWarning('Aviso con tel 11-4444-5555');
+        expect(mockTrackErrorGA).toHaveBeenLastCalledWith({
+            code: 'app/warning',
+            message: 'Aviso con tel [PHONE]',
+            fatal: false,
+        });
+
+        mockTrackErrorGA.mockClear();
+        writeLog({ level: LOG_LEVEL.INFO, errorCode: 'info/test', errorMessage: 'Solo info' });
+        expect(mockTrackErrorGA).not.toHaveBeenCalled();
+    });
+
+    it('aplica throttling (máx. 5 reportes por ventana) para evitar tormentas de errores', () => {
+        for (let i = 0; i < 8; i++) {
+            logError(new Error(`Error ${i}`));
+        }
+        expect(mockTrackErrorGA).toHaveBeenCalledTimes(5);
+    });
+});

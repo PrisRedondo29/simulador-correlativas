@@ -19,6 +19,9 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
+  test: {
+    exclude: ['node_modules/**', 'dist/**', 'src/**/*.emulator.test.{js,jsx}'],
+  },
   build: {
     sourcemap: true,
     chunkSizeWarningLimit: 2000,

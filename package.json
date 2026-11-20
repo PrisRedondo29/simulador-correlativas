@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:emulator": "npx -y firebase-tools emulators:exec --only firestore --project demo-unlu-simulador \"npx vitest run --config vitest.emulator.config.js\""
   },
   "dependencies": {
     "@awesome.me/webawesome": "^3.3.1",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@testing-library/react": "^16.3.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

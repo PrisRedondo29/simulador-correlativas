@@ -75,16 +75,13 @@ describe('AdminRoute - Protección de rutas administrativas', () => {
                             </AdminRoute>
                         }
                     />
-                    <Route path="/inicio" element={<div>Destino Redirección</div>} />
                     <Route path="/" element={<div>Destino Inicio</div>} />
                 </Routes>
             </MemoryRouter>,
         );
 
         expect(screen.queryByText('Panel Secreto Admin')).toBeNull();
-        expect(
-            screen.queryByText('Destino Redirección') || screen.queryByText('Destino Inicio'),
-        ).toBeTruthy();
+        expect(screen.getByText('Destino Inicio')).toBeTruthy();
     });
 
     it('permite el acceso únicamente cuando el usuario tiene rol admin', () => {

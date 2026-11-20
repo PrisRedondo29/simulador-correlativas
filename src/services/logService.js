@@ -1,17 +1,16 @@
 /**
- * @fileoverview Servicio de logging propietario con control de entorno,
+ * @fileoverview Servicio de telemetría de errores propietario con control de entorno,
  * throttling y sanitización de PII.
  *
- * Contratos de seguridad:
- *  ✅ NUNCA lanza excepciones — fire-and-forget garantizado.
- *  ✅ En DEV: imprime por consola, NO escribe en Firestore (preserva cuota Spark).
- *  ✅ En PROD: escribe en Firestore, SIN logs en consola del cliente.
- *  ✅ Throttling: máx. 5 escrituras por ventana de 60 s (evita inundación por bucle).
- *  ✅ PII: elimina emails, teléfonos, IPs y campos de objeto User de Firebase.
+ * Contratos de seguridad (Etapa 6B):
+ *  - NUNCA lanza excepciones (fire-and-forget garantizado).
+ *  - En DEV: imprime por consola de desarrollo.
+ *  - En PROD: reporta errores y advertencias exclusivamente a Google Analytics 4 (`trackErrorGA`),
+ *    sin intentar escrituras a `app_logs` en Firestore (que están bloqueadas por `firestore.rules`).
+ *  - Throttling: máx. 5 reportes por ventana de 60 s (evita inundación por bucles).
+ *  - PII: elimina emails, teléfonos, tokens y campos sensibles del contexto y mensaje.
  */
 
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from './firebase';
 import { trackErrorGA } from './analyticsService';
 
 // ─── Entorno ──────────────────────────────────────────────────────────────────
@@ -26,19 +25,25 @@ export const LOG_LEVEL = Object.freeze({
 
 /** @typedef {'error' | 'warning' | 'info'} LogLevel */
 
-// ─── Throttle (máx. 5 logs por 60 segundos) ──────────────────────────────────
+// ─── Throttle (máx. 5 reportes por 60 segundos) ───────────────────────────────
 const THROTTLE_LIMIT = 5;
 const THROTTLE_WINDOW = 60_000; // ms
 
-// Estado del throttle en memoria (se resetea al recargar la página)
 const _throttle = {
     count: 0,
     windowStart: Date.now(),
 };
 
 /**
- * Devuelve true si el log puede escribirse (dentro del límite).
- * Resetea el contador automáticamente cuando pasa la ventana de tiempo.
+ * Resetea la ventana de throttle (utilidad para tests unitarios).
+ */
+export const resetLogThrottle = () => {
+    _throttle.count = 0;
+    _throttle.windowStart = Date.now();
+};
+
+/**
+ * Devuelve true si el log puede reportarse dentro del límite de la ventana actual.
  * @returns {boolean}
  */
 const canLog = () => {
@@ -69,8 +74,8 @@ const PHONE_RE = /(\+?\d[\d\s\-().]{7,}\d)/g;
  * @param {string} str
  * @returns {string}
  */
-const sanitizeString = (str) =>
-    str
+export const sanitizeLogString = (str) =>
+    String(str)
         .replace(EMAIL_RE, '[EMAIL]')
         .replace(PHONE_RE, '[PHONE]');
 
@@ -83,14 +88,14 @@ const sanitizeString = (str) =>
  * @param {Record<string, unknown>} ctx
  * @returns {Record<string, string | number | boolean>}
  */
-const sanitizeContext = (ctx) => {
+export const sanitizeLogContext = (ctx) => {
     /** @type {Record<string, string | number | boolean>} */
     const clean = {};
 
-    for (const [key, value] of Object.entries(ctx)) {
+    for (const [key, value] of Object.entries(ctx || {})) {
         if (PII_FIELDS.has(key)) continue;
         if (typeof value === 'string') {
-            clean[key] = sanitizeString(value).slice(0, 200);
+            clean[key] = sanitizeLogString(value).slice(0, 200);
         } else if (typeof value === 'number' || typeof value === 'boolean') {
             clean[key] = value;
         }
@@ -105,7 +110,7 @@ const sanitizeContext = (ctx) => {
  * @returns {string}
  */
 const sanitizeMessage = (msg) =>
-    sanitizeString(String(msg))
+    sanitizeLogString(String(msg))
         .replace(/\s+at\s+.+/g, '')
         .trim()
         .slice(0, 500);
@@ -138,16 +143,16 @@ const extractErrorInfo = (err) => {
  */
 const devLog = (level, errorCode, errorMessage, context) => {
     const prefix = `[LogService:${level.toUpperCase()}] ${errorCode}`;
-    if (level === LOG_LEVEL.ERROR) { if (import.meta.env.DEV) console.error(prefix, errorMessage, context); return; }
-    if (level === LOG_LEVEL.WARNING) { if (import.meta.env.DEV) console.warn(prefix, errorMessage, context); return; }
-    if (import.meta.env.DEV) console.info(prefix, errorMessage, context);
+    if (level === LOG_LEVEL.ERROR) { console.error(prefix, errorMessage, context); return; }
+    if (level === LOG_LEVEL.WARNING) { console.warn(prefix, errorMessage, context); return; }
+    console.info(prefix, errorMessage, context);
 };
 
 // ─── API pública ──────────────────────────────────────────────────────────────
 
 /**
- * Escribe (o imprime en DEV) un log de la aplicación.
- * Fire-and-forget garantizado: nunca lanza, nunca rompe la UI.
+ * Registra un evento de telemetría de error o advertencia en GA4 (y consola en DEV).
+ * Fire-and-forget garantizado: nunca lanza, nunca escribe en Firestore.
  *
  * @param {{
  *   level?:        LogLevel,
@@ -164,41 +169,28 @@ export const writeLog = ({
     errorCode = 'unknown',
     errorMessage = 'Sin detalle',
     route = typeof window !== 'undefined' ? (window.location?.pathname ?? '/') : '/',
-    userId = null,
     context = {},
 }) => {
     if (!canLog()) return;
 
     const cleanMessage = sanitizeMessage(errorMessage);
-    const cleanContext = sanitizeContext(context);
+    const cleanContext = sanitizeLogContext({ ...context, route });
 
     if (level !== LOG_LEVEL.INFO) {
-        trackErrorGA({
-            code: errorCode,
-            message: cleanMessage,
-            fatal: level === LOG_LEVEL.ERROR,
-        });
+        try {
+            trackErrorGA({
+                code: errorCode,
+                message: cleanMessage,
+                fatal: level === LOG_LEVEL.ERROR,
+            });
+        } catch {
+            // Silencio garantizado: el log nunca debe romper la UX.
+        }
     }
 
     if (IS_DEV) {
         devLog(level, errorCode, cleanMessage, cleanContext);
-        return;
     }
-
-    const logEntry = {
-        level,
-        errorCode,
-        errorMessage: cleanMessage,
-        route,
-        userId,
-        context: cleanContext,
-        timestamp: serverTimestamp(),
-        schemaVersion: 1,
-    };
-
-    addDoc(collection(db, 'app_logs'), logEntry).catch(() => {
-        // Silencio total en producción. El log nunca debe romper la UX.
-    });
 };
 
 /**

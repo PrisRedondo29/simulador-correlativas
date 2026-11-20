@@ -23,7 +23,6 @@ const buildUserDoc = (user) => ({
     email: user.email,
     displayName: user.displayName,
     photoURL: user.photoURL,
-    materiasAprobadas: [],
     createdAt: serverTimestamp(),
     schemaVersion: SCHEMA_VERSION,
     syncRevision: 0,
