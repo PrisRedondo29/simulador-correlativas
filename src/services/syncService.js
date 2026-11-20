@@ -1,14 +1,15 @@
 import { saveUserProgreso, getUserData } from './dbService';
+import storageRepository from './storageRepository';
 
 /**
  * Sube el progreso actual de un plan a la nube de forma manual.
  * Se asegura de leer tanto el progreso (estados) como los detalles (notas, fechas)
- * desde el localStorage antes de enviarlos.
+ * desde storageRepository antes de enviarlos.
  */
 export const uploadPlanProgress = async (uid, plan) => {
     try {
-        const progreso = JSON.parse(localStorage.getItem(`progreso+${plan}`));
-        const detalles = JSON.parse(localStorage.getItem(`detalles_progreso+${plan}`));
+        const progreso = storageRepository.getProgreso(plan, null);
+        const detalles = storageRepository.getProgresoDetalles(plan, {});
 
         if (!progreso) {
             throw new Error("No hay datos locales para este plan.");
@@ -74,37 +75,33 @@ export const downloadAllProgress = async (uid) => {
         }
 
         // Limpiamos cualquier progreso local viejo para evitar mezclas indeseadas.
-        Object.keys(localStorage).forEach(key => {
-            if (key.startsWith('progreso+') || key.startsWith('detalles_progreso+') || key.startsWith('simulacion+')) {
-                localStorage.removeItem(key);
-            }
-        });
-        
-        // Escribimos los datos de la nube en el localStorage.
+        storageRepository.clearAcademicCache();
+
+        // Escribimos los datos de la nube en el repositorio local (modo silent para emitir 1 sola hidratación al final).
         for (const [plan, data] of Object.entries(progreso)) {
             if (data && typeof data === 'object') {
-                localStorage.setItem(`progreso+${plan}`, JSON.stringify(data));
+                storageRepository.setProgreso(plan, data, { silent: true });
             }
         }
 
         for (const [plan, data] of Object.entries(detalles)) {
             if (data && typeof data === 'object') {
-                localStorage.setItem(`detalles_progreso+${plan}`, JSON.stringify(data));
+                storageRepository.setProgresoDetalles(plan, data, { silent: true });
             }
         }
 
         for (const [plan, data] of Object.entries(simulaciones)) {
             if (data) {
-                localStorage.setItem(`simulacion+${plan}`, JSON.stringify(data));
+                storageRepository.setSimulacion(plan, data, { silent: true });
             }
         }
 
         if (cloudData.config?.tema) {
-            localStorage.setItem('theme', cloudData.config.tema);
+            storageRepository.setTheme(cloudData.config.tema, { silent: true });
         }
 
         if (cloudData.config?.planActivo) {
-            localStorage.setItem('plan_activo', cloudData.config.planActivo);
+            storageRepository.setPlanActivo(cloudData.config.planActivo, { silent: true });
         }
 
         // Avisamos a la UI que los datos han cambiado y necesita recargarse.

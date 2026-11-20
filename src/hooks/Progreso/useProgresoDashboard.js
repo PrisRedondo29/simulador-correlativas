@@ -7,8 +7,7 @@ import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
 import materiasUtils, { esMateriaIncompleta } from '../../utils/Progreso/materiasUtils';
 import { calcularEstadoBaseMateria } from '../../utils/Progreso/materiaStateMachine';
 import { trackSearch, trackCambioVista } from '../../services/analyticsService';
-
-const EXPANDED_STORAGE_KEY = 'progreso_expanded_years:v2';
+import storageRepository, { STORAGE_KEYS } from '../../services/storageRepository';
 
 /**
  * Centraliza el estado de tablero, filtros, KPIs, acordeones por año,
@@ -34,7 +33,7 @@ export default function useProgresoDashboard({
     const [busqueda, setBusqueda] = useState('');
     const [estadoFiltro, setEstadoFiltro] = useState('todas');
     const [soloIncompletas, setSoloIncompletas] = useState(false);
-    const [vista, setVista] = useState(() => localStorage.getItem('materias_vista_preferida') || 'grid');
+    const [vista, setVista] = useState(() => storageRepository.getRaw(STORAGE_KEYS.PROGRESO_VISTA, 'grid'));
     const [selection, setSelection] = useState({ plan, codigo: null });
     const selectedCodigo = selection.plan === plan ? selection.codigo : null;
     const setSelectedCodigo = useCallback((codigo) => {
@@ -85,7 +84,7 @@ export default function useProgresoDashboard({
     }, [plan, materias.length]);
 
     useEffect(() => {
-        localStorage.setItem('materias_vista_preferida', vista);
+        storageRepository.setRaw(STORAGE_KEYS.PROGRESO_VISTA, vista, { silent: true });
         trackCambioVista({ tipo: 'tipo_progreso', valor: vista });
     }, [vista]);
 
@@ -132,24 +131,13 @@ export default function useProgresoDashboard({
 
     // Estado de acordeones expandidos (siempre strings normalizados)
     const [expandedYears, setExpandedYears] = useState(() => {
-        try {
-            const saved = localStorage.getItem(EXPANDED_STORAGE_KEY);
-            if (saved) {
-                const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed)) return parsed.map(String);
-            }
-        } catch {
-            // ignorar error de lectura
-        }
+        const parsed = storageRepository.getJSON(STORAGE_KEYS.PROGRESO_EXPANDED_YEARS, null);
+        if (Array.isArray(parsed)) return parsed.map(String);
         return ['1'];
     });
 
     useEffect(() => {
-        try {
-            localStorage.setItem(EXPANDED_STORAGE_KEY, JSON.stringify(expandedYears));
-        } catch {
-            // ignorar
-        }
+        storageRepository.setJSON(STORAGE_KEYS.PROGRESO_EXPANDED_YEARS, expandedYears, { silent: true });
     }, [expandedYears]);
 
     // Garantizar que si el plan no tiene clave '1' pero sí otras, se expanda al menos una vez al iniciar si estaba vacío por cambio de plan

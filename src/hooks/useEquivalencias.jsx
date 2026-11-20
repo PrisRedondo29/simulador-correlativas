@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import planService from '../services/planService';
+import storageRepository from '../services/storageRepository';
 import equivalenciasData from '../data/equivalencias.json';
 import materiasUtils from '../utils/Progreso/materiasUtils';
 
@@ -7,18 +8,7 @@ export const useEquivalencias = () => {
     const [planViejo, setPlanViejo] = useState(null);
     const [planNuevo, setPlanNuevo] = useState(null);
 
-    const [progreso, setProgreso] = useState(() => {
-        const storageKey = "progreso+17.13";
-        const storageData = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
-        if (storageData) {
-            try {
-                return JSON.parse(storageData);
-            } catch {
-                // fallback
-            }
-        }
-        return {};
-    });
+    const [progreso, setProgreso] = useState(() => storageRepository.getProgreso('17.13', {}));
 
     const [filtro, setFiltro] = useState('todas');
     const [busqueda, setBusqueda] = useState('');
@@ -33,15 +23,10 @@ export const useEquivalencias = () => {
             setPlanViejo(viejo);
             setPlanNuevo(nuevo);
 
-            const storageKey = "progreso+17.13";
-            const storageData = localStorage.getItem(storageKey);
-            if (storageData) {
-                try {
-                    setProgreso(JSON.parse(storageData));
-                    return;
-                } catch {
-                    // fallback
-                }
+            const saved = storageRepository.getProgreso('17.13', null);
+            if (saved) {
+                setProgreso(saved);
+                return;
             }
             if (viejo?.materias) {
                 const initial = {};

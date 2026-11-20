@@ -20,16 +20,17 @@ import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
 import { trackCambioVista } from '../services/analyticsService';
+import storageRepository, { STORAGE_KEYS } from '../services/storageRepository';
 
 function Simulador({ plan: initialPlan }) {
-    const [plan, setPlan] = useState(() => initialPlan || localStorage.getItem('plan_activo') || '17.14');
+    const [plan, setPlan] = useState(() => initialPlan || storageRepository.getPlanActivo() || '17.14');
     const [anioInicio, setAnioInicio] = useState('2026');
     const [cuatriInicio, setCuatriInicio] = useState('1');
 
     const [openedAccordions, setOpenedAccordions] = useState(new Set());
     const [descargandoPDF, setDescargandoPDF] = useState(false);
     const [viewMode, setViewMode] = useState(() => {
-        const guardada = localStorage.getItem('simulador_vista_preferida');
+        const guardada = storageRepository.getRaw(STORAGE_KEYS.SIMULADOR_VISTA, null);
         if (guardada && ['malla', 'grafo', 'lista'].includes(guardada)) {
             return guardada;
         }
@@ -39,11 +40,7 @@ function Simulador({ plan: initialPlan }) {
 
     const handleCambioVista = (nuevoModo) => {
         setViewMode(nuevoModo);
-        try {
-            localStorage.setItem('simulador_vista_preferida', nuevoModo);
-        } catch {
-            // Ignorar errores de almacenamiento
-        }
+        storageRepository.setRaw(STORAGE_KEYS.SIMULADOR_VISTA, nuevoModo, { silent: true });
         trackCambioVista({ tipo: 'tipo_simulacion', valor: nuevoModo });
     };
 

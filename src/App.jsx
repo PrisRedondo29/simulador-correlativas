@@ -9,6 +9,7 @@ import { PlanProvider, useActivePlan } from './context/PlanContext';
 import { usePageTracking } from './hooks/usePageTracking';
 import ServerError from './components/Shared/ServerError';
 import ErrorBoundary from './components/Shared/ErrorBoundary';
+import storageRepository, { STORAGE_KEYS } from './services/storageRepository';
 
 const Footer = lazy(() => import('./components/Footer'));
 const SyncModal = lazy(() => import('./components/SyncModal'));
@@ -17,15 +18,14 @@ function AppContent() {
     const { isCriticalError } = useAuth();
     const { plan, setPlan } = useActivePlan();
     const location = useLocation();
-    const [isCollapsed, setIsCollapsed] = useState(() => {
-        const saved = localStorage.getItem('sidebar_collapsed:v1');
-        return saved ? JSON.parse(saved) : false;
-    });
+    const [isCollapsed, setIsCollapsed] = useState(() =>
+        Boolean(storageRepository.getJSON(STORAGE_KEYS.SIDEBAR_COLLAPSED, false)),
+    );
 
     usePageTracking();
 
     useEffect(() => {
-        localStorage.setItem('sidebar_collapsed:v1', JSON.stringify(isCollapsed));
+        storageRepository.setJSON(STORAGE_KEYS.SIDEBAR_COLLAPSED, isCollapsed, { silent: true });
     }, [isCollapsed]);
 
     if (isCriticalError) {

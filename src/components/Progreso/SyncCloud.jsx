@@ -3,6 +3,7 @@ import { Button, Popover, PopoverContent, PopoverTrigger, Spinner, addToast } fr
 import { useAuth } from '../../context/AuthContext';
 import { trackProgresoInicial } from '../../services/analyticsService';
 import planService from '../../services/planService';
+import storageRepository from '../../services/storageRepository';
 
 export default function SyncCloud({ plan }) {
     const { user, userData, uploadPlanProgress, downloadAllProgress } = useAuth();
@@ -20,7 +21,7 @@ export default function SyncCloud({ plan }) {
             addToast({ title: '¡Éxito!', description: 'Tu progreso se guardó en la nube.', color: 'success' });
 
             if (esPrimerGuardado) {
-                const progresoLocal = JSON.parse(localStorage.getItem(`progreso+${plan}`)) || {};
+                const progresoLocal = storageRepository.getProgreso(plan, {});
                 const planData = await planService.getPlanByNumber(plan);
                 const materiasPlan = planData?.materias || [];
                 const aprobadas = Object.values(progresoLocal).filter(s => s === 'Aprobado' || s === 'Promocionado').length;

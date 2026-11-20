@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlanCapabilities } from '../context/PlanContext';
 import { DEFAULT_PLAN } from '../config/planPolicies';
+import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 
 function Inicio() {
     const navigate = useNavigate();
@@ -14,26 +15,11 @@ function Inicio() {
 
     useEffect(() => {
         const cargarProgreso = () => {
-            const pPlan = localStorage.getItem(`progreso+${planActivo}`);
-            const data = pPlan || (planActivo === '17.13' ? localStorage.getItem('progreso+17.13') : null);
-            if (data) {
-                try {
-                    setProgresoGlobal(JSON.parse(data));
-                } catch {
-                    setProgresoGlobal({});
-                }
-            } else {
-                setProgresoGlobal({});
-            }
+            setProgresoGlobal(storageRepository.getProgreso(planActivo, {}));
         };
 
         cargarProgreso();
-        window.addEventListener('storage', cargarProgreso);
-        window.addEventListener('progress-hydrated', cargarProgreso);
-        return () => {
-            window.removeEventListener('storage', cargarProgreso);
-            window.removeEventListener('progress-hydrated', cargarProgreso);
-        };
+        return subscribeStorageChanges(cargarProgreso);
     }, [planActivo]);
 
     const stats = useMemo(() => {

@@ -8,6 +8,7 @@ import { logError } from '../services/logService';
 import { trackLogin, trackLogout } from '../services/analyticsService';
 import { getUserData, saveUserSimulacion, getUserRole } from '../services/dbService';
 import { uploadPlanProgress, downloadAllProgress } from '../services/syncService';
+import storageRepository from '../services/storageRepository';
 import { addToast } from '@heroui/react';
 
 // ============================================================================
@@ -159,11 +160,11 @@ export function AuthProvider({ children }) {
     // --- Funciones de Datos y Sincronización ---
 
     const updateAuthProgreso = useCallback((plan, nuevoProgreso, progresoDetalles = null) => {
-        // Esta función ahora solo se encarga de guardar en local.
+        // Esta función ahora solo se encarga de guardar en local mediante storageRepository.
         // La subida a la nube es responsabilidad de las funciones manuales.
-        localStorage.setItem(`progreso+${plan}`, JSON.stringify(nuevoProgreso));
+        storageRepository.setProgreso(plan, nuevoProgreso);
         if (progresoDetalles) {
-            localStorage.setItem(`detalles_progreso+${plan}`, JSON.stringify(progresoDetalles));
+            storageRepository.setProgresoDetalles(plan, progresoDetalles);
         }
     }, []);
 
@@ -189,30 +190,21 @@ export function AuthProvider({ children }) {
     const clearAuthError = useCallback(() => setAuthError(null), []);
     const clearFirestoreWarning = useCallback(() => setFirestoreWarning(null), []);
 
-    // --- Helpers para acceder a localStorage (expuestos para desacoplar) ---
+    // --- Helpers para acceder al almacenamiento local vía storageRepository ---
     const getProgresoLocal = useCallback((plan) => {
-        try {
-            const data = localStorage.getItem(`progreso+${plan}`);
-            return data ? JSON.parse(data) : null;
-        } catch { return null; }
+        return storageRepository.getProgreso(plan, null);
     }, []);
 
     const getProgresoDetallesLocal = useCallback((plan) => {
-        try {
-            const data = localStorage.getItem(`detalles_progreso+${plan}`);
-            return data ? JSON.parse(data) : null;
-        } catch { return null; }
+        return storageRepository.getProgresoDetalles(plan, null);
     }, []);
 
     const getSimulacionLocal = useCallback((plan) => {
-        try {
-            const data = localStorage.getItem(`simulacion+${plan}`);
-            return data ? JSON.parse(data) : null;
-        } catch { return null; }
+        return storageRepository.getSimulacion(plan, null);
     }, []);
 
     const setSimulacionLocal = useCallback((plan, data) => {
-        localStorage.setItem(`simulacion+${plan}`, JSON.stringify(data));
+        storageRepository.setSimulacion(plan, data);
         if (user) {
             saveUserSimulacion(user.uid, plan, data).catch(err => {
                 if (import.meta.env.DEV) console.error("Error al guardar simulación en la nube:", err);

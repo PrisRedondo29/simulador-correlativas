@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import planService from '../services/planService';
+import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import equivalenciasData from '../data/equivalencias.json';
 import {
     OFERTA_RESOLUCION_89_2025,
@@ -33,30 +34,13 @@ function TransicionPlan() {
     const anioActual = useMemo(() => new Date().getFullYear(), []);
     const [evaluado, setEvaluado] = useState(false);
 
-    const [progreso, setProgreso] = useState(() => {
-        try {
-            const raw = localStorage.getItem('progreso+17.13');
-            return raw ? JSON.parse(raw) : {};
-        } catch {
-            return {};
-        }
-    });
+    const [progreso, setProgreso] = useState(() => storageRepository.getProgreso('17.13', {}));
 
     useEffect(() => {
         const handleStorage = () => {
-            try {
-                const raw = localStorage.getItem('progreso+17.13');
-                setProgreso(raw ? JSON.parse(raw) : {});
-            } catch {
-                setProgreso({});
-            }
+            setProgreso(storageRepository.getProgreso('17.13', {}));
         };
-        window.addEventListener('storage', handleStorage);
-        window.addEventListener('progress-hydrated', handleStorage);
-        return () => {
-            window.removeEventListener('storage', handleStorage);
-            window.removeEventListener('progress-hydrated', handleStorage);
-        };
+        return subscribeStorageChanges(handleStorage);
     }, []);
 
     const [plan1713, setPlan1713] = useState(null);

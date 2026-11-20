@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardBody, Button, addToast } from '@heroui/react';
+import storageRepository from '../../services/storageRepository';
 
 /**
  * Pantalla de carrera finalizada: muestra el año de egreso estimado
@@ -7,13 +8,13 @@ import { Card, CardBody, Button, addToast } from '@heroui/react';
  */
 function CarreraFinalizada({ anioActual, plan, historialSemestres, progresoSimulado, progresoBase, cuatri, simulacionTerminada, onGuardarOpen, handleDownloadPDF, descargandoPDF }) {
     const handleGuardar = () => {
-        const existe = localStorage.getItem(`simulacion+${plan}`);
+        const existe = storageRepository.getSimulacion(plan, null);
         if (existe) {
             onGuardarOpen();
         } else {
-            localStorage.setItem(`simulacion+${plan}`, JSON.stringify({
+            storageRepository.setSimulacion(plan, {
                 historialSemestres, progresoSimulado, progresoBase, anioActual, cuatri, simulacionTerminada,
-            }));
+            });
             addToast({ title: 'Éxito', description: 'Simulación guardada', color: 'success' });
         }
     };

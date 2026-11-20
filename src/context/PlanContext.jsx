@@ -5,37 +5,24 @@ import {
     canUseFeature,
     getPlanTransitionMeta,
 } from '../config/planPolicies';
-
-const PLAN_STORAGE_KEY = 'plan_activo';
+import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 
 const PlanContext = createContext(null);
 
 export function PlanProvider({ children }) {
-    const [plan, setPlanState] = useState(() => {
-        if (typeof window === 'undefined') return null;
-        return localStorage.getItem(PLAN_STORAGE_KEY);
-    });
+    const [plan, setPlanState] = useState(() => storageRepository.getPlanActivo());
 
     useEffect(() => {
         const syncPlan = () => {
-            setPlanState(localStorage.getItem(PLAN_STORAGE_KEY));
+            setPlanState(storageRepository.getPlanActivo());
         };
 
-        window.addEventListener('progress-hydrated', syncPlan);
-        window.addEventListener('storage', syncPlan);
-        return () => {
-            window.removeEventListener('progress-hydrated', syncPlan);
-            window.removeEventListener('storage', syncPlan);
-        };
+        return subscribeStorageChanges(syncPlan);
     }, []);
 
     const setPlan = useCallback((nextPlan) => {
         setPlanState(nextPlan);
-        if (nextPlan) {
-            localStorage.setItem(PLAN_STORAGE_KEY, nextPlan);
-        } else {
-            localStorage.removeItem(PLAN_STORAGE_KEY);
-        }
+        storageRepository.setPlanActivo(nextPlan);
     }, []);
 
     const value = useMemo(() => {

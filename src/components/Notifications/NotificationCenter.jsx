@@ -4,10 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { usePlanCapabilities } from '../../context/PlanContext';
 import planService from '../../services/planService';
+import storageRepository, { subscribeStorageChanges } from '../../services/storageRepository';
 import { buildNotifications } from '../../utils/Notifications/notificationStrategies';
 import PropTypes from 'prop-types';
-
-const READ_STORAGE_KEY = 'notificaciones_leidas:v1';
 
 /**
  * Centro visual de notificaciones académicas en la barra superior.
@@ -21,37 +20,18 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
     const [progreso, setProgreso] = useState({});
     const [progresoDetalles, setProgresoDetalles] = useState({});
     const [materiasPlan, setMateriasPlan] = useState([]);
-    const [readIds, setReadIds] = useState(() => {
-        try {
-            const raw = localStorage.getItem(READ_STORAGE_KEY);
-            return raw ? JSON.parse(raw) : [];
-        } catch {
-            return [];
-        }
-    });
+    const [readIds, setReadIds] = useState(() => storageRepository.getNotificationReadIds());
 
-    const activePlan = plan || localStorage.getItem('plan_activo') || '17.14';
+    const activePlan = plan || storageRepository.getPlanActivo() || '17.14';
 
     useEffect(() => {
         const cargarDatos = () => {
-            try {
-                const rawProg = localStorage.getItem(`progreso+${activePlan}`);
-                const rawDet = localStorage.getItem(`progresoDetalles+${activePlan}`);
-                setProgreso(rawProg ? JSON.parse(rawProg) : {});
-                setProgresoDetalles(rawDet ? JSON.parse(rawDet) : {});
-            } catch {
-                setProgreso({});
-                setProgresoDetalles({});
-            }
+            setProgreso(storageRepository.getProgreso(activePlan, {}));
+            setProgresoDetalles(storageRepository.getProgresoDetalles(activePlan, {}));
         };
 
         cargarDatos();
-        window.addEventListener('storage', cargarDatos);
-        window.addEventListener('progress-hydrated', cargarDatos);
-        return () => {
-            window.removeEventListener('storage', cargarDatos);
-            window.removeEventListener('progress-hydrated', cargarDatos);
-        };
+        return subscribeStorageChanges(cargarDatos);
     }, [activePlan, isOpen]);
 
     useEffect(() => {
@@ -81,11 +61,7 @@ export default function NotificationCenter({ plan, variant = 'light-bar' }) {
 
     const persistRead = (nextIds) => {
         setReadIds(nextIds);
-        try {
-            localStorage.setItem(READ_STORAGE_KEY, JSON.stringify(nextIds));
-        } catch {
-            // Ignorar si storage está restringido
-        }
+        storageRepository.setNotificationReadIds(nextIds);
     };
 
     const handleMarkAllRead = () => {
