@@ -238,6 +238,7 @@ export function MateriaContextContent({
   plan,
   cambioDeEstado,
   onChangeEstado,
+  solicitarConfirmacionCascada,
   onSelectMateria,
   onClose,
 }) {
@@ -331,6 +332,41 @@ export function MateriaContextContent({
   ).length;
   const tieneIntentoAprobado = intentosFinal.some((i) => i.estado === "aprobado");
   const isTesinaBloqueada = Boolean(materia.tesis) && estadoActual === "Bloqueado";
+
+  const handleConfirmarNuevoIntento = () => {
+    const notaNum = Number(notaVal);
+    const esIntentoAprobado =
+      estadoVal === "rendido" &&
+      notaVal !== "" &&
+      !Number.isNaN(notaNum) &&
+      notaNum >= 4 &&
+      notaNum <= 10;
+
+    if (esIntentoAprobado && typeof solicitarConfirmacionCascada === "function") {
+      solicitarConfirmacionCascada({
+        codigo: materia.codigo,
+        targetState: "Aprobado",
+        onConfirmAction: () => handleGuardarIntento(),
+      });
+      return;
+    }
+    handleGuardarIntento();
+  };
+
+  const handleConfirmarEdicionIntento = (idx, updatedIntento) => {
+    if (
+      updatedIntento?.estado === "aprobado" &&
+      typeof solicitarConfirmacionCascada === "function"
+    ) {
+      solicitarConfirmacionCascada({
+        codigo: materia.codigo,
+        targetState: "Aprobado",
+        onConfirmAction: () => handleUpdateIntento(idx, updatedIntento),
+      });
+      return;
+    }
+    handleUpdateIntento(idx, updatedIntento);
+  };
 
   return (
     <div className="space-y-4">
@@ -685,7 +721,7 @@ export function MateriaContextContent({
                     <Button
                       size="sm"
                       className="bg-[#005A36] text-white"
-                      onPress={handleGuardarIntento}
+                      onPress={handleConfirmarNuevoIntento}
                     >
                       Guardar intento
                     </Button>
@@ -701,7 +737,7 @@ export function MateriaContextContent({
                         key={`${idx}-${intento.fecha || "edit"}`}
                         intento={intento}
                         index={idx}
-                        onSave={handleUpdateIntento}
+                        onSave={handleConfirmarEdicionIntento}
                         onCancel={() => setEditingIntentoIndex(null)}
                       />
                     ) : (

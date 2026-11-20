@@ -5,7 +5,10 @@ import useProgresoMaterias from './useProgresoMaterias';
 import regularidadUtils from '../../utils/Progreso/regularidadUtils';
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
 import materiasUtils, { esMateriaIncompleta } from '../../utils/Progreso/materiasUtils';
-import { calcularEstadoBaseMateria } from '../../utils/Progreso/materiaStateMachine';
+import {
+    calcularEstadoBaseMateria,
+    previsualizarCascadaCambioEstado,
+} from '../../utils/Progreso/materiaStateMachine';
 import { trackSearch, trackCambioVista } from '../../services/analyticsService';
 import storageRepository, { STORAGE_KEYS } from '../../services/storageRepository';
 
@@ -46,7 +49,14 @@ export default function useProgresoDashboard({
     const { isOpen: isCapturaOpen, onOpen: onCapturaOpen, onOpenChange: onCapturaOpenChange, onClose: onCapturaClose } = useDisclosure();
     const { isOpen: isAprobarAnioOpen, onOpen: onAprobarAnioOpen, onOpenChange: onAprobarAnioOpenChange, onClose: onAprobarAnioClose } = useDisclosure();
 
-    const [mostrarConfirmacionCascada, setMostrarConfirmacionCascada] = useState(true);
+    const [mostrarConfirmacionCascada, setMostrarConfirmacionCascadaState] = useState(() =>
+        storageRepository.getMostrarConfirmacionCascada()
+    );
+    const setMostrarConfirmacionCascada = useCallback((mostrar) => {
+        const nextVal = Boolean(mostrar);
+        setMostrarConfirmacionCascadaState(nextVal);
+        storageRepository.setMostrarConfirmacionCascada(nextVal);
+    }, []);
     const [pendingBlockedTransition, setPendingBlockedTransition] = useState(null);
     const [capturaConfig, setCapturaConfig] = useState({ tipo: null, materia: null, pendingState: null });
     const [codigoMateriaCaptura, setCodigoMateriaCaptura] = useState(null);
@@ -387,21 +397,62 @@ export default function useProgresoDashboard({
         const estadoActual = progreso[codigo];
         const esEstadoDeAvance = ['Cursando', 'Regular', 'Aprobado', 'Promocionado'].includes(targetState);
 
-        if (estadoActual === 'Bloqueado' && esEstadoDeAvance && mostrarConfirmacionCascada) {
-            setPendingBlockedTransition({ codigo, targetState });
-            onConfirmationOpen();
-            return;
+        if (esEstadoDeAvance && mostrarConfirmacionCascada) {
+            const afectadas = previsualizarCascadaCambioEstado(
+                progreso,
+                materias,
+                codigo,
+                /** @type {any} */ (targetState),
+            );
+            if (afectadas.length > 0 || estadoActual === 'Bloqueado') {
+                const materiaObj = materias.find((m) => m.codigo === codigo) || null;
+                setPendingBlockedTransition({
+                    codigo,
+                    nombreMateria: materiaObj?.nombre || codigo,
+                    targetState,
+                    materiasAfectadas: afectadas,
+                });
+                onConfirmationOpen();
+                return;
+            }
         }
 
         procesarTransicion(codigo, targetState);
-    }, [progreso, mostrarConfirmacionCascada, onConfirmationOpen, procesarTransicion]);
+    }, [progreso, materias, mostrarConfirmacionCascada, onConfirmationOpen, procesarTransicion]);
 
     const confirmarCascada = useCallback(() => {
         if (pendingBlockedTransition) {
-            procesarTransicion(pendingBlockedTransition.codigo, pendingBlockedTransition.targetState);
+            if (typeof pendingBlockedTransition.onAfterConfirm === 'function') {
+                pendingBlockedTransition.onAfterConfirm();
+            } else {
+                procesarTransicion(pendingBlockedTransition.codigo, pendingBlockedTransition.targetState);
+            }
             setPendingBlockedTransition(null);
         }
     }, [pendingBlockedTransition, procesarTransicion]);
+
+    const solicitarConfirmacionCascada = useCallback(({ codigo, targetState, onConfirmAction }) => {
+        const afectadas = previsualizarCascadaCambioEstado(
+            progreso,
+            materias,
+            codigo,
+            /** @type {any} */ (targetState),
+        );
+        if (afectadas.length > 0 && mostrarConfirmacionCascada) {
+            const materiaObj = materias.find((m) => m.codigo === codigo) || null;
+            setPendingBlockedTransition({
+                codigo,
+                nombreMateria: materiaObj?.nombre || codigo,
+                targetState,
+                materiasAfectadas: afectadas,
+                onAfterConfirm: onConfirmAction,
+            });
+            onConfirmationOpen();
+            return true;
+        }
+        onConfirmAction();
+        return false;
+    }, [progreso, materias, mostrarConfirmacionCascada, onConfirmationOpen]);
 
     const handleCapturaConfirm = useCallback((payload) => {
         if (payload?._sugerirLibre) {
@@ -501,7 +552,9 @@ export default function useProgresoDashboard({
         onConfirmationClose,
         pendingBlockedTransition,
         confirmarCascada,
+        mostrarConfirmacionCascada,
         setMostrarConfirmacionCascada,
+        solicitarConfirmacionCascada,
 
         // Reset y Aprobar hasta
         isResetOpen,

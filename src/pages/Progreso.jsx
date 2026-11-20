@@ -138,6 +138,7 @@ export default function Progreso() {
             plan={plan}
             cambioDeEstado={dashboard.cambioDeEstado}
             onChangeEstado={dashboard.handleCambioDeEstado}
+            solicitarConfirmacionCascada={dashboard.solicitarConfirmacionCascada}
             onSelectMateria={dashboard.setSelectedCodigo}
             onClose={() => dashboard.setSelectedCodigo(null)}
           />

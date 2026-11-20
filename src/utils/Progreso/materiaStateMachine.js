@@ -20,6 +20,7 @@
 /** @typedef {import('../../types/domain').RequisitoFaltanteCorrelativa} RequisitoFaltanteCorrelativa */
 /** @typedef {import('../../types/domain').RequisitoFaltanteEspecial} RequisitoFaltanteEspecial */
 /** @typedef {import('../../types/domain').ElegibilidadMateriaResult} ElegibilidadMateriaResult */
+/** @typedef {import('../../types/domain').MateriaCascadaPreview} MateriaCascadaPreview */
 
 export const ESTADOS_MATERIA = Object.freeze({
     BLOQUEADO: /** @type {'Bloqueado'} */ ('Bloqueado'),
@@ -797,6 +798,56 @@ export function aplicarCambioEstado(progreso = {}, materias = [], codigoMateria 
         materiasModificadas,
         esRecursada: esTransicionRecursada(estadoInicial, estadoNuevo),
     };
+}
+
+/**
+ * Simula una transición de estado y devuelve las materias correlativas previas
+ * que cambiarán automáticamente en cascada (excluyendo la propia materia objetivo).
+ * @param {ProgresoMap} [progreso]
+ * @param {Materia[]} [materias]
+ * @param {string} [codigoMateria]
+ * @param {EstadoMateria | null} [targetState]
+ * @returns {MateriaCascadaPreview[]}
+ */
+export function previsualizarCascadaCambioEstado(
+    progreso = {},
+    materias = [],
+    codigoMateria = '',
+    targetState = null,
+) {
+    if (!codigoMateria || !targetState) return [];
+    /** @type {EstadoMateria[]} */
+    const estadosConCascadaHaciaAtras = [
+        ESTADOS_MATERIA.CURSANDO,
+        ESTADOS_MATERIA.REGULAR,
+        ESTADOS_MATERIA.APROBADO,
+        ESTADOS_MATERIA.PROMOCIONADO,
+    ];
+    if (!estadosConCascadaHaciaAtras.includes(targetState)) {
+        return [];
+    }
+
+    const simulacion = aplicarCambioEstado(progreso, materias, codigoMateria, targetState);
+    const mapaMaterias = new Map(materias.map((m) => [m.codigo, m]));
+
+    /** @type {MateriaCascadaPreview[]} */
+    const afectadas = [];
+    simulacion.materiasModificadas.forEach((cod) => {
+        if (cod === codigoMateria) return;
+        const estadoAnterior = progreso[cod] || ESTADOS_MATERIA.BLOQUEADO;
+        const estadoNuevo = simulacion.nuevoProgreso[cod];
+        if (estadoNuevo && estadoNuevo !== estadoAnterior) {
+            const mat = mapaMaterias.get(cod);
+            afectadas.push({
+                codigo: cod,
+                nombre: mat?.nombre || cod,
+                estadoAnterior,
+                estadoNuevo,
+            });
+        }
+    });
+
+    return afectadas;
 }
 
 /**

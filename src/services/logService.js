@@ -1,17 +1,21 @@
 /**
  * @fileoverview Servicio de telemetría de errores propietario con control de entorno,
- * throttling y sanitización de PII.
+ * throttling, sanitización de PII y persistencia opcional en Firestore (`app_logs`)
+ * para errores críticos capturados en producción (consumibles desde el Panel Admin).
  *
- * Contratos de seguridad (Etapa 6B):
+ * Contratos de seguridad:
  *  - NUNCA lanza excepciones (fire-and-forget garantizado).
  *  - En DEV: imprime por consola de desarrollo.
- *  - En PROD: reporta errores y advertencias exclusivamente a Google Analytics 4 (`trackErrorGA`),
- *    sin intentar escrituras a `app_logs` en Firestore (que están bloqueadas por `firestore.rules`).
+ *  - En PROD / incidentes críticos (`persistToDatabase: true`): reporta a GA4 (`trackErrorGA`)
+ *    y guarda un registro estructurado y sanitizado en `app_logs` (validado por `firestore.rules`).
  *  - Throttling: máx. 5 reportes por ventana de 60 s (evita inundación por bucles).
  *  - PII: elimina emails, teléfonos, tokens y campos sensibles del contexto y mensaje.
  */
 
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from './firebase';
 import { trackErrorGA } from './analyticsService';
+import storageRepository from './storageRepository';
 
 // ─── Entorno ──────────────────────────────────────────────────────────────────
 const IS_DEV = import.meta.env.DEV === true;
@@ -82,7 +86,7 @@ export const sanitizeLogString = (str) =>
 /**
  * Sanitiza un objeto de contexto:
  *  - Elimina campos PII por nombre
- *  - Mantiene solo primitivos (string, number, boolean)
+ *  - Mantiene solo primitivos (string, number, boolean) y hasta 10 claves
  *  - Sanitiza strings con regex y trunca strings largos
  *
  * @param {Record<string, unknown>} ctx
@@ -91,17 +95,32 @@ export const sanitizeLogString = (str) =>
 export const sanitizeLogContext = (ctx) => {
     /** @type {Record<string, string | number | boolean>} */
     const clean = {};
+    let keyCount = 0;
 
     for (const [key, value] of Object.entries(ctx || {})) {
+        if (keyCount >= 10) break;
         if (PII_FIELDS.has(key)) continue;
         if (typeof value === 'string') {
             clean[key] = sanitizeLogString(value).slice(0, 200);
+            keyCount++;
         } else if (typeof value === 'number' || typeof value === 'boolean') {
             clean[key] = value;
+            keyCount++;
         }
     }
 
     return clean;
+};
+
+/**
+ * Sanitiza y recorta el componentStack de React para cumplir con el límite de Firestore (<= 1000 chars).
+ * @param {string | null | undefined} stack
+ * @returns {string | null}
+ */
+export const sanitizeComponentStack = (stack) => {
+    if (!stack || typeof stack !== 'string') return null;
+    const cleaned = sanitizeLogString(stack).trim().slice(0, 950);
+    return cleaned.length > 0 ? cleaned : null;
 };
 
 /**
@@ -151,16 +170,84 @@ const devLog = (level, errorCode, errorMessage, context) => {
 // ─── API pública ──────────────────────────────────────────────────────────────
 
 /**
- * Registra un evento de telemetría de error o advertencia en GA4 (y consola en DEV).
- * Fire-and-forget garantizado: nunca lanza, nunca escribe en Firestore.
+ * Persiste de forma asíncrona y segura (fire-and-forget) un registro de error en `app_logs`
+ * cumpliendo estrictamente el contrato validado por `firestore.rules`.
  *
  * @param {{
- *   level?:        LogLevel,
- *   errorCode?:    string,
- *   errorMessage?: string,
- *   route?:        string,
- *   userId?:       string | null,
- *   context?:      Record<string, unknown>,
+ *   level: 'error' | 'warning',
+ *   errorCode: string,
+ *   errorMessage: string,
+ *   route: string,
+ *   componentStack?: string | null,
+ *   planActivo?: string | null,
+ *   uid?: string | null,
+ *   context?: Record<string, string | number | boolean>,
+ * }} payload
+ * @param {{
+ *   addDocFn?: typeof addDoc,
+ *   collectionFn?: typeof collection,
+ *   serverTimestampFn?: typeof serverTimestamp,
+ *   firestoreDb?: typeof db,
+ * }} [deps]
+ * @returns {Promise<boolean>}
+ */
+export const persistAppLogToFirestore = async (payload, deps = {}) => {
+    const {
+        addDocFn = addDoc,
+        collectionFn = collection,
+        serverTimestampFn = serverTimestamp,
+        firestoreDb = db,
+    } = deps;
+
+    if (!firestoreDb) return false;
+
+    try {
+        const safeCode = String(payload.errorCode || 'unknown').trim().slice(0, 100) || 'unknown';
+        const safeMessage = sanitizeMessage(payload.errorMessage || 'Sin detalle') || 'Sin detalle';
+        const safeRoute = String(payload.route || '/').trim().slice(0, 200) || '/';
+        const safePlan =
+            typeof payload.planActivo === 'string' && payload.planActivo.trim()
+                ? payload.planActivo.trim().slice(0, 20)
+                : null;
+        const safeStack = sanitizeComponentStack(payload.componentStack);
+        const safeUid =
+            typeof payload.uid === 'string' && payload.uid.trim() ? payload.uid.trim() : null;
+
+        const docData = {
+            level: payload.level === LOG_LEVEL.WARNING ? LOG_LEVEL.WARNING : LOG_LEVEL.ERROR,
+            errorCode: safeCode,
+            errorMessage: safeMessage,
+            route: safeRoute,
+            componentStack: safeStack,
+            planActivo: safePlan,
+            uid: safeUid,
+            context: payload.context || {},
+            createdAt: serverTimestampFn(),
+        };
+
+        await addDocFn(collectionFn(firestoreDb, 'app_logs'), docData);
+        return true;
+    } catch {
+        // Silencio garantizado: un fallo de red o reglas nunca debe interrumpir la aplicación.
+        return false;
+    }
+};
+
+/**
+ * Registra un evento de telemetría de error o advertencia en GA4 (consola en DEV)
+ * y opcionalmente lo persiste en Firestore (`app_logs`) para el Panel Admin.
+ * Fire-and-forget garantizado: nunca lanza excepciones.
+ *
+ * @param {{
+ *   level?:             LogLevel,
+ *   errorCode?:         string,
+ *   errorMessage?:      string,
+ *   route?:             string,
+ *   userId?:            string | null,
+ *   componentStack?:    string | null,
+ *   persistToDatabase?: boolean,
+ *   context?:           Record<string, unknown>,
+ *   firestoreDeps?:     Parameters<typeof persistAppLogToFirestore>[1],
  * }} params
  * @returns {void}
  */
@@ -169,11 +256,15 @@ export const writeLog = ({
     errorCode = 'unknown',
     errorMessage = 'Sin detalle',
     route = typeof window !== 'undefined' ? (window.location?.pathname ?? '/') : '/',
+    userId,
+    componentStack = null,
+    persistToDatabase = false,
     context = {},
+    firestoreDeps,
 }) => {
     if (!canLog()) return;
 
-    const cleanMessage = sanitizeMessage(errorMessage);
+    const cleanMessage = sanitizeMessage(errorMessage) || 'Sin detalle';
     const cleanContext = sanitizeLogContext({ ...context, route });
 
     if (level !== LOG_LEVEL.INFO) {
@@ -186,6 +277,25 @@ export const writeLog = ({
         } catch {
             // Silencio garantizado: el log nunca debe romper la UX.
         }
+
+        if (persistToDatabase) {
+            const currentUid =
+                userId !== undefined ? userId : (auth?.currentUser?.uid ?? null);
+            const currentPlan = storageRepository.getPlanActivo();
+            void persistAppLogToFirestore(
+                {
+                    level: level === LOG_LEVEL.WARNING ? LOG_LEVEL.WARNING : LOG_LEVEL.ERROR,
+                    errorCode,
+                    errorMessage: cleanMessage,
+                    route,
+                    componentStack,
+                    planActivo: currentPlan,
+                    uid: currentUid,
+                    context: cleanContext,
+                },
+                firestoreDeps,
+            );
+        }
     }
 
     if (IS_DEV) {
@@ -194,20 +304,29 @@ export const writeLog = ({
 };
 
 /**
- * Shorthand para loguear errores desde bloques `catch`.
+ * Shorthand para loguear errores desde bloques `catch` o `ErrorBoundary`.
  * Extrae solo `code` y `message` del error — nunca el objeto completo.
  *
  * @param {unknown} err
- * @param {{ route?: string, userId?: string | null, context?: Record<string, unknown> }} [opts]
+ * @param {{
+ *   route?: string,
+ *   userId?: string | null,
+ *   errorCode?: string,
+ *   componentStack?: string | null,
+ *   persistToDatabase?: boolean,
+ *   context?: Record<string, unknown>,
+ *   firestoreDeps?: Parameters<typeof persistAppLogToFirestore>[1],
+ * }} [opts]
  * @returns {void}
  */
 export const logError = (err, opts = {}) => {
     const { code, message } = extractErrorInfo(err);
+    const { errorCode: overrideCode, ...restOpts } = opts;
     writeLog({
         level: LOG_LEVEL.ERROR,
-        errorCode: code,
+        errorCode: overrideCode || code,
         errorMessage: message,
-        ...opts,
+        ...restOpts,
     });
 };
 

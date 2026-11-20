@@ -9,6 +9,7 @@ import {
     evaluarElegibilidadMateria,
     obtenerRequisitosCursada,
     obtenerRequisitosFinal,
+    previsualizarCascadaCambioEstado,
 } from './materiaStateMachine';
 import materiasUtils from './materiasUtils';
 
@@ -398,6 +399,41 @@ describe('materiaStateMachine - Transiciones, correlativas y Tesina', () => {
             expect(obtenerRequisitosFinal(matV1)).toEqual([
                 { codigo: 'M1', condicion: 'aprobada' },
             ]);
+        });
+
+        it('previsualizarCascadaCambioEstado detecta correlativas que se aprobarán o regularizarán en cascada incluso desde Disponible o Regular', () => {
+            // M1 está Regular y M3 está Disponible (o Regular). Si el usuario marca M3 como Aprobado,
+            // M1 pasará en cascada de Regular -> Aprobado.
+            const progresoConM1Regular = {
+                ...PROGRESO_INICIAL,
+                M1: ESTADOS_MATERIA.REGULAR,
+                M3: ESTADOS_MATERIA.REGULAR,
+            };
+
+            const cascada = previsualizarCascadaCambioEstado(
+                progresoConM1Regular,
+                MATERIAS_MOCK,
+                'M3',
+                ESTADOS_MATERIA.APROBADO,
+            );
+
+            expect(cascada).toEqual([
+                {
+                    codigo: 'M1',
+                    nombre: 'Intro Prog',
+                    estadoAnterior: ESTADOS_MATERIA.REGULAR,
+                    estadoNuevo: ESTADOS_MATERIA.APROBADO,
+                },
+            ]);
+
+            // Si M1 ya estaba Aprobado, no hay cascada pendiente sobre correlativas previas
+            const sinCascada = previsualizarCascadaCambioEstado(
+                { ...progresoConM1Regular, M1: ESTADOS_MATERIA.APROBADO },
+                MATERIAS_MOCK,
+                'M3',
+                ESTADOS_MATERIA.APROBADO,
+            );
+            expect(sinCascada).toEqual([]);
         });
     });
 });

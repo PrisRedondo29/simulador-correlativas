@@ -205,4 +205,15 @@ describe('storageRepository - Persistencia centralizada y versionada', () => {
         // El progreso local previo permanece 100% intacto (no se ejecutó clearAcademicCache)
         expect(repo.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
     });
+
+    it('persiste la preferencia de mostrar/ocultar la advertencia de actualización en cascada', () => {
+        const mem = createMemoryStorage();
+        const repo = createStorageRepository(mem);
+
+        expect(repo.getMostrarConfirmacionCascada()).toBe(true);
+        repo.setMostrarConfirmacionCascada(false);
+        expect(repo.getMostrarConfirmacionCascada()).toBe(false);
+        repo.setMostrarConfirmacionCascada(true);
+        expect(repo.getMostrarConfirmacionCascada()).toBe(true);
+    });
 });

@@ -48,7 +48,25 @@ rules_version = '2';
 // Fields:
 //   - role: string ('admin' | 'user', managed out-of-band)
 //
-// All other collections (including app_logs and any subcollections):
+// Collection: app_logs
+// Document ID: {logId} (auto-generated)
+// Access: Client error/warning telemetry (e.g., ErrorBoundary crashes).
+//         Anyone (anonymous or authenticated) may create strictly validated log
+//         entries with bounded field sizes and anti-spoofing uid verification.
+//         Only verified admins (/roles/{uid}.role == 'admin') may get, list,
+//         update, or delete log documents from the Admin Panel.
+// Fields:
+//   - level: string (required, enum: 'error' | 'warning')
+//   - errorCode: string (required, 1..100 chars)
+//   - errorMessage: string (required, 1..500 chars)
+//   - route: string (required, 1..200 chars)
+//   - createdAt: timestamp (required)
+//   - componentStack: string | null (optional, max 1000 chars)
+//   - planActivo: string | null (optional, max 20 chars)
+//   - uid: string | null (optional; if non-null, caller must be authenticated and uid == request.auth.uid)
+//   - context: map (optional, max 10 entries)
+//
+// All other collections and subcollections:
 //   Explicitly denied by default fallback rule.
 //
 // ===============================================================
@@ -68,6 +86,13 @@ service cloud.firestore {
     // Check if the authenticated user owns the document path
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if the authenticated user holds the 'admin' role in /roles/{uid}
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/roles/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Verify UID matches the authenticated user on create
@@ -288,6 +313,62 @@ service cloud.firestore {
     }
 
     // ===============================================================
+    // App Logs Schema & Domain Validator
+    // ===============================================================
+
+    function requiredAppLogFields() {
+      return [
+        'level',
+        'errorCode',
+        'errorMessage',
+        'route',
+        'createdAt'
+      ];
+    }
+
+    function allowedAppLogFields() {
+      return [
+        'level',
+        'errorCode',
+        'errorMessage',
+        'route',
+        'componentStack',
+        'planActivo',
+        'uid',
+        'context',
+        'createdAt'
+      ];
+    }
+
+    function isValidAppLogCreate(data) {
+      return hasRequiredFields(requiredAppLogFields()) &&
+        hasOnlyAllowedFields(allowedAppLogFields()) &&
+        data.level is string &&
+        data.level in ['error', 'warning'] &&
+        data.errorCode is string &&
+        data.errorCode.size() >= 1 &&
+        data.errorCode.size() <= 100 &&
+        data.errorMessage is string &&
+        data.errorMessage.size() >= 1 &&
+        data.errorMessage.size() <= 500 &&
+        data.route is string &&
+        data.route.size() >= 1 &&
+        data.route.size() <= 200 &&
+        (!('componentStack' in data) ||
+          data.componentStack == null ||
+          (data.componentStack is string && data.componentStack.size() <= 1000)) &&
+        (!('planActivo' in data) ||
+          data.planActivo == null ||
+          (data.planActivo is string && data.planActivo.size() <= 20)) &&
+        (!('uid' in data) ||
+          data.uid == null ||
+          (isAuthenticated() && data.uid is string && data.uid == request.auth.uid)) &&
+        (!('context' in data) ||
+          (data.context is map && data.context.size() <= 10)) &&
+        data.createdAt is timestamp;
+    }
+
+    // ===============================================================
     // Collection Rules
     // ===============================================================
 
@@ -307,7 +388,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Default deny for all other collections (including app_logs) and subcollections
+    // Application error/warning telemetry (strictly validated create; admin-only management)
+    match /app_logs/{logId} {
+      allow create: if isValidAppLogCreate(request.resource.data);
+      allow get, list, update, delete: if isAdmin();
+    }
+
+    // Default deny for all other collections and subcollections
     match /{document=**} {
       allow read, write: if false;
     }

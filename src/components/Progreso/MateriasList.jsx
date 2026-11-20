@@ -352,7 +352,7 @@ export default function MateriasList({
         </ModalContent>
       </Modal>
 
-      {/* Modal de confirmación de cascada sobre materias bloqueadas */}
+      {/* Modal de confirmación de cascada sobre materias y correlativas */}
       <ConfirmarCambioModal
         isOpen={isConfirmationOpen}
         onOpenChange={onConfirmationOpenChange}
@@ -360,6 +360,8 @@ export default function MateriasList({
         onConfirm={confirmarCascada}
         setMostrar={setMostrarConfirmacionCascada}
         targetState={pendingBlockedTransition?.targetState}
+        nombreMateria={pendingBlockedTransition?.nombreMateria}
+        materiasAfectadas={pendingBlockedTransition?.materiasAfectadas}
       />
 
       {/* Modal de captura de notas / fechas en transiciones */}

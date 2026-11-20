@@ -38,6 +38,7 @@ export const STORAGE_KEYS = {
     NOTIFICACIONES_LEIDAS: 'notificaciones_leidas:v1',
     PROGRESO_VISTA: 'materias_vista_preferida',
     PROGRESO_EXPANDED_YEARS: 'progreso_expanded_years:v2',
+    OCULTAR_CONFIRMACION_CASCADA: 'ocultar_confirmacion_cascada:v1',
     SIMULADOR_VISTA: 'simulador_vista_preferida',
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
@@ -653,6 +654,23 @@ export function createStorageRepository(storage = getBrowserStorage()) {
          * @param {StorageWriteOptions} [options]
          */
         setTheme: (theme, options) => setRaw(STORAGE_KEYS.THEME, theme, options),
+
+        /**
+         * Devuelve si se debe mostrar la advertencia de actualización en cascada (default: true).
+         * @returns {boolean}
+         */
+        getMostrarConfirmacionCascada: () =>
+            getRaw(STORAGE_KEYS.OCULTAR_CONFIRMACION_CASCADA, 'false') !== 'true',
+
+        /**
+         * Persiste la preferencia de mostrar/ocultar la advertencia de actualización en cascada.
+         * @param {boolean} mostrar
+         * @returns {boolean}
+         */
+        setMostrarConfirmacionCascada: (mostrar) =>
+            setRaw(STORAGE_KEYS.OCULTAR_CONFIRMACION_CASCADA, mostrar ? 'false' : 'true', {
+                silent: true,
+            }),
     };
 }
 

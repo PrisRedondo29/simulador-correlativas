@@ -163,6 +163,13 @@ export interface ProgresoIntermedioResumen {
 
 // ─── Máquina de Estados ───────────────────────────────────────────────────────
 
+export interface MateriaCascadaPreview {
+    codigo: string;
+    nombre: string;
+    estadoAnterior: EstadoMateria;
+    estadoNuevo: EstadoMateria;
+}
+
 export interface CambioEstadoResult {
     nuevoProgreso: ProgresoMap;
     materiaActual: Materia | null;

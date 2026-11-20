@@ -10,7 +10,9 @@ import {
     LOG_LEVEL,
     logError,
     logWarning,
+    persistAppLogToFirestore,
     resetLogThrottle,
+    sanitizeComponentStack,
     sanitizeLogContext,
     sanitizeLogString,
     writeLog,
@@ -69,5 +71,48 @@ describe('logService - Telemetría solo GA4 con sanitización PII y throttling',
             logError(new Error(`Error ${i}`));
         }
         expect(mockTrackErrorGA).toHaveBeenCalledTimes(5);
+    });
+
+    it('persiste en app_logs de Firestore con campos sanitizados cuando persistToDatabase=true', async () => {
+        const mockAddDoc = vi.fn().mockResolvedValue({ id: 'log-1' });
+        const mockCollection = vi.fn().mockReturnValue('app_logs_ref');
+        const mockServerTimestamp = vi.fn().mockReturnValue('SERVER_TS');
+
+        const ok = await persistAppLogToFirestore(
+            {
+                level: LOG_LEVEL.ERROR,
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Fallo para alumno@unlu.edu.ar en render at App.jsx:10',
+                route: '/progreso',
+                componentStack: 'in MateriaCard (created by alumno@unlu.edu.ar)',
+                planActivo: '17.14',
+                uid: null,
+                context: { scope: 'page', route: '/progreso' },
+            },
+            {
+                addDocFn: mockAddDoc,
+                collectionFn: mockCollection,
+                serverTimestampFn: mockServerTimestamp,
+                firestoreDb: /** @type {any} */ ({}),
+            },
+        );
+
+        expect(ok).toBe(true);
+        expect(mockCollection).toHaveBeenCalledWith({}, 'app_logs');
+        expect(mockAddDoc).toHaveBeenCalledWith('app_logs_ref', {
+            level: 'error',
+            errorCode: 'ui/error-boundary',
+            errorMessage: 'Fallo para [EMAIL] en render',
+            route: '/progreso',
+            componentStack: 'in MateriaCard (created by [EMAIL])',
+            planActivo: '17.14',
+            uid: null,
+            context: { scope: 'page', route: '/progreso' },
+            createdAt: 'SERVER_TS',
+        });
+
+        expect(sanitizeComponentStack('in Component tel +54 11 4444-5555')).toBe(
+            'in Component tel [PHONE]',
+        );
     });
 });

@@ -101,8 +101,49 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
         await assertSucceeds(getDoc(doc(dbA, 'roles', 'uid-A')));
         await assertFails(setDoc(doc(dbA, 'roles', 'uid-A'), { role: 'admin' }));
 
-        // app_logs: bloqueado para clientes autenticados
+        // app_logs: rechaza payloads malformados o con spoofing de uid, acepta el esquema válido de ErrorBoundary,
+        // y solo permite lectura/listado/borrado a usuarios con roles/{uid}.role == 'admin'
         await assertFails(addDoc(collection(dbA, 'app_logs'), { level: 'error', msg: 'test' }));
+        await assertFails(
+            addDoc(collection(dbA, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Intento de spoofing de uid',
+                route: '/progreso',
+                uid: 'uid-B', // Spoofing! dbA es uid-A
+                createdAt: serverTimestamp(),
+            }),
+        );
+
+        const createdLogRef = await assertSucceeds(
+            addDoc(collection(unauthDb, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Fallo capturado en producción (sesión anónima)',
+                route: '/progreso',
+                componentStack: 'in Progreso',
+                planActivo: '17.14',
+                uid: null,
+                context: { scope: 'page' },
+                createdAt: serverTimestamp(),
+            }),
+        );
+
+        // Usuario normal y anónimo NO pueden leer ni listar app_logs
+        await assertFails(getDoc(doc(unauthDb, 'app_logs', createdLogRef.id)));
+        await assertFails(getDoc(doc(dbA, 'app_logs', createdLogRef.id)));
+        await assertFails(getDocs(collection(dbA, 'app_logs')));
+
+        // Usuario con rol admin SÍ puede leer, listar y eliminar logs desde el Panel Admin
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await setDoc(doc(ctx.firestore(), 'roles', 'uid-admin'), { role: 'admin' });
+        });
+        const dbAdmin = testEnv
+            .authenticatedContext('uid-admin', { email: 'admin@unlu.edu.ar' })
+            .firestore();
+        await assertSucceeds(getDoc(doc(dbAdmin, 'app_logs', createdLogRef.id)));
+        await assertSucceeds(getDocs(collection(dbAdmin, 'app_logs')));
+        await assertSucceeds(deleteDoc(doc(dbAdmin, 'app_logs', createdLogRef.id)));
     });
 
     it('rechaza inyección de campos no permitidos, mutación de uid/createdAt, config inválida y salto de syncRevision', async () => {
