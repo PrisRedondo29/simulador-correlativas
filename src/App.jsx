@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import NavBar, { TopUtilityBar } from './components/NavBar';
-import { BrowserRouter } from 'react-router-dom';
+import { BrowserRouter, useLocation } from 'react-router-dom';
 import Rutas from './routes/Rutas';
 import ScrollToTop from './components/Shared/ScrollToTop';
 import AutoScrollTop from './components/Shared/AutoScrollTop';
@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PlanProvider, useActivePlan } from './context/PlanContext';
 import { usePageTracking } from './hooks/usePageTracking';
 import ServerError from './components/Shared/ServerError';
+import ErrorBoundary from './components/Shared/ErrorBoundary';
 
 const Footer = lazy(() => import('./components/Footer'));
 const SyncModal = lazy(() => import('./components/SyncModal'));
@@ -15,6 +16,7 @@ const SyncModal = lazy(() => import('./components/SyncModal'));
 function AppContent() {
     const { isCriticalError } = useAuth();
     const { plan, setPlan } = useActivePlan();
+    const location = useLocation();
     const [isCollapsed, setIsCollapsed] = useState(() => {
         const saved = localStorage.getItem('sidebar_collapsed:v1');
         return saved ? JSON.parse(saved) : false;
@@ -36,7 +38,9 @@ function AppContent() {
             <main className={`flex-1 min-w-0 min-h-screen flex flex-col relative pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
                 <TopUtilityBar plan={plan} />
                 <div className="flex-1">
-                    <Rutas plan={plan} setPlan={setPlan} />
+                    <ErrorBoundary scope="page" resetKey={location.pathname}>
+                        <Rutas plan={plan} setPlan={setPlan} />
+                    </ErrorBoundary>
                 </div>
                 <Suspense fallback={null}>
                     <Footer />
@@ -49,17 +53,19 @@ function AppContent() {
 
 function App() {
     return (
-        <AuthProvider>
-            <PlanProvider>
-                <BrowserRouter>
-                    <AutoScrollTop />
-                    <Suspense fallback={null}>
-                        <SyncModal />
-                    </Suspense>
-                    <AppContent />
-                </BrowserRouter>
-            </PlanProvider>
-        </AuthProvider>
+        <ErrorBoundary scope="app">
+            <AuthProvider>
+                <PlanProvider>
+                    <BrowserRouter>
+                        <AutoScrollTop />
+                        <Suspense fallback={null}>
+                            <SyncModal />
+                        </Suspense>
+                        <AppContent />
+                    </BrowserRouter>
+                </PlanProvider>
+            </AuthProvider>
+        </ErrorBoundary>
     );
 }
 
