@@ -1,41 +1,159 @@
-import { saveUserProgreso, saveUserCursada, getUserData } from './dbService';
+import {
+    saveUserProgreso,
+    saveUserCursada,
+    getUserData,
+    commitAcademicBundleTransaction,
+} from './dbService';
 import storageRepository from './storageRepository';
+import {
+    SYNC_STATUS,
+    SYNC_UNITS,
+    canonicalizeAcademicBundle,
+    computeBundleHash,
+    createEmptyAcademicBundle,
+    extractAcademicBundleFromCloudDoc,
+    getSafeSyncRevision,
+    isAcademicBundleEmpty,
+    normalizeNestedPlanMap,
+} from '../utils/Sync/syncStateMachine';
+
+/** @typedef {import('../types/domain').AcademicSyncBundle} AcademicSyncBundle */
+/** @typedef {import('../types/domain').FetchCloudBundleResult} FetchCloudBundleResult */
+/** @typedef {import('../types/domain').UploadAcademicSnapshotResult} UploadAcademicSnapshotResult */
+/** @typedef {import('../types/domain').SyncUnitId} SyncUnitId */
+
+export { normalizeNestedPlanMap, extractAcademicBundleFromCloudDoc };
 
 /**
- * Aplana mapas anidados que Firestore pudo generar cuando un ID de plan contiene punto
- * (ej: { "17": { "14": { "11071": "Aprobado" } } } -> { "17.14": { "11071": "Aprobado" } }).
- * Funciona de forma genérica para cualquier prefijo de carrera (17.14, 20.08, etc.).
- * @param {Record<string, any>} [rawMap]
- * @returns {Record<string, any>}
+ * Lee el documento remoto del usuario y devuelve su bloque académico normalizado
+ * SIN ejecutar ningún efecto secundario sobre `localStorage`.
+ * Compatible con documentos legacy (sin `syncRevision`, mapas anidados o claves literales con punto).
+ *
+ * @param {string} uid
+ * @param {{ fetchUserDoc?: (uid: string) => Promise<Record<string, any> | null> }} [deps]
+ * @returns {Promise<FetchCloudBundleResult>}
  */
-export function normalizeNestedPlanMap(rawMap = {}) {
-    if (!rawMap || typeof rawMap !== 'object') return {};
+export const fetchCloudBundle = async (uid, deps = {}) => {
+    const fetchUserDoc = deps.fetchUserDoc ?? getUserData;
+    const rawDoc = await fetchUserDoc(uid);
 
-    /** @type {Record<string, any>} */
-    const normalized = { ...rawMap };
-
-    for (const [key, value] of Object.entries(rawMap)) {
-        if (!/^\d+$/.test(key) || !value || typeof value !== 'object' || Array.isArray(value)) {
-            continue;
-        }
-
-        const nestedNumericEntries = Object.entries(value).filter(
-            ([subKey, subVal]) => /^\d+$/.test(subKey) && subVal && typeof subVal === 'object',
-        );
-
-        if (nestedNumericEntries.length > 0) {
-            for (const [subKey, subVal] of nestedNumericEntries) {
-                const flatPlanKey = `${key}.${subKey}`;
-                if (!normalized[flatPlanKey]) {
-                    normalized[flatPlanKey] = subVal;
-                }
-            }
-            delete normalized[key];
-        }
+    if (!rawDoc) {
+        const emptyBundle = createEmptyAcademicBundle();
+        return {
+            exists: false,
+            syncRevision: 0,
+            bundle: emptyBundle,
+            hash: computeBundleHash(emptyBundle),
+            isEmpty: true,
+            config: null,
+            rawDoc: null,
+        };
     }
 
-    return normalized;
-}
+    const bundle = extractAcademicBundleFromCloudDoc(rawDoc);
+    const syncRevision = getSafeSyncRevision(rawDoc);
+
+    return {
+        exists: true,
+        syncRevision,
+        bundle,
+        hash: computeBundleHash(bundle),
+        isEmpty: isAcademicBundleEmpty(bundle),
+        config: rawDoc.config && typeof rawDoc.config === 'object' ? rawDoc.config : null,
+        rawDoc,
+    };
+};
+
+/**
+ * Sube una instantánea completa del bloque académico local usando control optimista
+ * de concurrencia (`syncRevision` dentro de `runTransaction()`).
+ *
+ * Garantías:
+ *  - Captura el snapshot exacto al iniciar la subida y re-evalúa el hash local al finalizar:
+ *    si hubo ediciones locales concurrentes durante la subida, devuelve `nextStatus: 'pending'`.
+ *  - Solo actualiza `SyncMeta` cuando Firestore confirma la transacción.
+ *  - Nunca modifica ni borra datos locales ante conflicto, error de permisos o exceso de tamaño.
+ *
+ * @param {string} uid
+ * @param {{
+ *   expectedRevision?: number | null,
+ *   forceOverwrite?: boolean,
+ *   syncUnit?: SyncUnitId,
+ *   email?: string | null,
+ *   storage?: typeof storageRepository,
+ *   commitFn?: typeof commitAcademicBundleTransaction,
+ * }} [options]
+ * @returns {Promise<UploadAcademicSnapshotResult>}
+ */
+export const uploadAcademicSnapshot = async (uid, options = {}) => {
+    const {
+        expectedRevision = null,
+        forceOverwrite = false,
+        syncUnit = SYNC_UNITS.ACADEMIC,
+        email = null,
+        storage = storageRepository,
+        commitFn = commitAcademicBundleTransaction,
+    } = options;
+
+    const snapshotBundle = canonicalizeAcademicBundle(storage.readAcademicBundle());
+    const snapshotHash = computeBundleHash(snapshotBundle);
+
+    const txResult = await commitFn(uid, snapshotBundle, {
+        expectedRevision,
+        forceOverwrite,
+        syncUnit,
+        email,
+    });
+
+    // Re-evaluamos el contenido local real tras el retorno de la transacción para detectar
+    // modificaciones concurrentes realizadas mientras la subida estaba en vuelo.
+    const currentLocalHash = computeBundleHash(storage.readAcademicBundle());
+    const hasConcurrentLocalEdits = currentLocalHash !== snapshotHash;
+
+    if (txResult.status === 'synced' && typeof txResult.syncRevision === 'number') {
+        const uploadedHash = txResult.uploadedHash ?? snapshotHash;
+        const syncedAt = txResult.syncedAt ?? new Date().toISOString();
+
+        storage.setSyncMeta(
+            {
+                syncRevision: txResult.syncRevision,
+                lastSyncedHash: uploadedHash,
+                lastSyncedUid: uid,
+                lastSyncedAt: syncedAt,
+                unit: syncUnit,
+            },
+            { silent: true },
+        );
+
+        return {
+            ...txResult,
+            uploadedHash,
+            syncedAt,
+            snapshotHash,
+            currentLocalHash,
+            hasConcurrentLocalEdits,
+            nextStatus: hasConcurrentLocalEdits ? SYNC_STATUS.PENDING : SYNC_STATUS.SYNCED,
+        };
+    }
+
+    if (txResult.status === 'conflict') {
+        return {
+            ...txResult,
+            snapshotHash,
+            currentLocalHash,
+            hasConcurrentLocalEdits,
+            nextStatus: SYNC_STATUS.CONFLICT,
+        };
+    }
+
+    return {
+        ...txResult,
+        snapshotHash,
+        currentLocalHash,
+        hasConcurrentLocalEdits,
+        nextStatus: SYNC_STATUS.ERROR,
+    };
+};
 
 /**
  * Sube el progreso actual de un plan a la nube de forma manual.

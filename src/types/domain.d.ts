@@ -423,3 +423,237 @@ export interface CalendarCell {
     inCurrentMonth: boolean;
 }
 
+// ─── Sincronización Segura y Control de Concurrencia (Etapa 6A) ───────────────
+
+export type SyncUnitId = 'academic';
+
+export interface AcademicSyncBundle {
+    progreso: Record<string, ProgresoMap>;
+    progresoDetalles: Record<string, ProgresoDetallesMap>;
+    cursada: Record<string, CursadaPlanData>;
+    simulaciones: Record<string, unknown>;
+}
+
+export type SyncStatus =
+    | 'local'
+    | 'synced'
+    | 'pending'
+    | 'syncing'
+    | 'conflict'
+    | 'account_mismatch'
+    | 'error';
+
+export interface SyncBundleSummary {
+    planes: string[];
+    materiasAprobadas: number;
+    materiasActivas: number;
+    materiasLibres: number;
+    eventosCursada: number;
+    horariosCursada: number;
+    entradasBitacora: number;
+    simulaciones: number;
+    totalItems: number;
+    isEmpty: boolean;
+}
+
+export type SyncConflictReason =
+    | 'divergent_login'
+    | 'revision_conflict'
+    | 'account_mismatch';
+
+export interface SyncConflictContext {
+    reason: SyncConflictReason;
+    localHash: string;
+    remoteHash: string | null;
+    localSummary: SyncBundleSummary;
+    remoteSummary: SyncBundleSummary | null;
+    remoteRevision: number | null;
+    remoteBundle: AcademicSyncBundle | null;
+    previousUid?: string | null;
+    currentUid?: string | null;
+}
+
+export interface SyncMeta {
+    syncRevision: number | null;
+    lastSyncedHash: string | null;
+    lastSyncedUid: string | null;
+    lastSyncedAt: string | null;
+    unit?: SyncUnitId;
+}
+
+export interface SyncState {
+    status: SyncStatus;
+    isOnline: boolean;
+    syncRevision: number | null;
+    lastSyncedHash: string | null;
+    lastSyncedUid: string | null;
+    lastSyncedAt: string | null;
+    pendingUploadHash: string | null;
+    errorCode: string | null;
+    errorMessage: string | null;
+    conflict: SyncConflictContext | null;
+}
+
+export type SyncConciliationOutcome =
+    | 'in_sync'
+    | 'adopt_remote'
+    | 'keep_local_pending'
+    | 'conflict'
+    | 'account_mismatch';
+
+export interface SyncConciliationResult {
+    outcome: SyncConciliationOutcome;
+    localHash: string;
+    remoteHash: string;
+    localSummary: SyncBundleSummary;
+    remoteSummary: SyncBundleSummary;
+    remoteRevision: number;
+    remoteBundle: AcademicSyncBundle;
+    previousUid: string | null;
+    currentUid: string | null;
+}
+
+export interface RecoveryBackup {
+    version: number;
+    savedAt: string;
+    reason: string;
+    sourceUid: string | null;
+    hash: string;
+    summary: SyncBundleSummary;
+    bundle: AcademicSyncBundle;
+}
+
+export interface RecoveryBackupResult {
+    ok: boolean;
+    skippedEmpty?: boolean;
+    preservedExisting?: boolean;
+    backup?: RecoveryBackup | null;
+    error?: string;
+    message?: string;
+}
+
+export interface ApplyRemoteBundleResult {
+    ok: boolean;
+    backedUp: boolean;
+    hash?: string;
+    error?: string;
+    message?: string;
+}
+
+export interface RestoreRecoveryBackupResult {
+    ok: boolean;
+    bundle?: AcademicSyncBundle;
+    backup?: RecoveryBackup;
+    error?: string;
+    message?: string;
+}
+
+export interface ExportBackupPayload {
+    app: 'simulador-correlativas-unlu';
+    version: number;
+    exportedAt: string;
+    planActivo: string | null;
+    sourceUid: string | null;
+    hash: string;
+    summary: SyncBundleSummary;
+    bundle: AcademicSyncBundle;
+}
+
+export interface ParseImportBackupResult {
+    ok: boolean;
+    bundle?: AcademicSyncBundle;
+    planActivo?: string | null;
+    exportedAt?: string | null;
+    error?: string;
+}
+
+export interface FetchCloudBundleResult {
+    exists: boolean;
+    syncRevision: number;
+    bundle: AcademicSyncBundle;
+    hash: string;
+    isEmpty: boolean;
+    config: UserCloudConfig | null;
+    rawDoc: Record<string, any> | null;
+}
+
+export interface CommitSyncTransactionResult {
+    status: 'synced' | 'conflict' | 'error';
+    syncRevision?: number;
+    uploadedHash?: string;
+    syncedAt?: string;
+    payloadBytes?: number;
+    reason?: 'revision_conflict';
+    remoteRevision?: number;
+    remoteBundle?: AcademicSyncBundle;
+    remoteHash?: string;
+    code?: string;
+    message?: string;
+    originalError?: unknown;
+}
+
+export interface UploadAcademicSnapshotResult extends CommitSyncTransactionResult {
+    snapshotHash: string;
+    currentLocalHash: string;
+    hasConcurrentLocalEdits: boolean;
+    nextStatus: SyncStatus;
+}
+
+export type SyncAction =
+    | {
+          type: 'LOCAL_MUTATED';
+          localHash: string;
+          isAuthenticated: boolean;
+      }
+    | {
+          type: 'CONNECTIVITY_CHANGED';
+          isOnline: boolean;
+      }
+    | {
+          type: 'CONCILIATION_EVALUATED';
+          conciliation: SyncConciliationResult;
+          syncedAt?: string | null;
+      }
+    | {
+          type: 'UPLOAD_STARTED';
+          uploadingHash: string;
+      }
+    | {
+          type: 'UPLOAD_SUCCEEDED';
+          uploadedHash: string;
+          currentLocalHash: string;
+          newRevision: number;
+          syncedAt: string;
+          uid: string;
+      }
+    | {
+          type: 'UPLOAD_CONFLICT';
+          conflict: SyncConflictContext;
+      }
+    | {
+          type: 'UPLOAD_FAILED';
+          errorCode: string;
+          errorMessage: string;
+      }
+    | {
+          type: 'CONFLICT_RESOLVED_REMOTE';
+          remoteHash: string;
+          remoteRevision: number;
+          uid: string;
+          syncedAt: string;
+      }
+    | {
+          type: 'CONFLICT_RESOLVED_LOCAL';
+          localHash: string;
+          baseRevision?: number | null;
+      }
+    | {
+          type: 'SIGNED_OUT';
+      }
+    | {
+          type: 'REHYDRATED_FROM_STORAGE';
+          currentUid: string | null;
+          localBundle: AcademicSyncBundle;
+          meta: SyncMeta | null;
+      };
+

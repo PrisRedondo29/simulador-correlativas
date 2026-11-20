@@ -77,4 +77,132 @@ describe('storageRepository - Persistencia centralizada y versionada', () => {
         expect(repo.ensureSchemaVersion()).toBe(STORAGE_SCHEMA_VERSION);
         expect(Number(mem.getItem(STORAGE_KEYS.SCHEMA_VERSION))).toBe(STORAGE_SCHEMA_VERSION);
     });
+
+    it('lee y escribe el bloque académico completo (readAcademicBundle / writeAcademicBundle)', () => {
+        const mem = createMemoryStorage();
+        const repo = createStorageRepository(mem);
+
+        const ok = repo.writeAcademicBundle({
+            progreso: { '17.14': { '11071': 'Aprobado' }, '20.08': { '20001': 'Cursando' } },
+            progresoDetalles: { '17.14': { '11071': { notaFinal: 10 } } },
+            cursada: {
+                '17.14': {
+                    horarios: [],
+                    eventos: [{ id: 'e1', titulo: 'Final', tipo: 'final', fecha: '2026-12-01' }],
+                    bitacora: [],
+                },
+            },
+            simulaciones: { '17.14': { anio: 2026 } },
+        });
+
+        expect(ok).toBe(true);
+        const bundle = repo.readAcademicBundle();
+        expect(bundle.progreso['17.14']).toEqual({ '11071': 'Aprobado' });
+        expect(bundle.progreso['20.08']).toEqual({ '20001': 'Cursando' });
+        expect(bundle.progresoDetalles['17.14']?.['11071']).toEqual({ notaFinal: 10 });
+        expect(bundle.cursada['17.14']?.eventos).toHaveLength(1);
+        expect(bundle.simulaciones['17.14']).toEqual({ anio: 2026 });
+    });
+
+    it('saveRecoveryBackup nunca sobrescribe un respaldo válido con una instantánea vacía', () => {
+        const mem = createMemoryStorage();
+        const repo = createStorageRepository(mem);
+
+        const validBundle = {
+            progreso: { '17.14': { '11071': 'Aprobado' } },
+            progresoDetalles: {},
+            cursada: {},
+            simulaciones: {},
+        };
+
+        const first = repo.saveRecoveryBackup(validBundle, {
+            reason: 'before_remote_load',
+            sourceUid: 'uid-1',
+        });
+        expect(first.ok).toBe(true);
+        expect(first.skippedEmpty).toBe(false);
+
+        // Intentar guardar un bundle vacío o solo con estados por defecto NO debe destruir el respaldo previo
+        const second = repo.saveRecoveryBackup(
+            {
+                progreso: { '17.14': { '11071': 'Disponible', '11072': 'Bloqueado' } },
+                progresoDetalles: {},
+                cursada: {},
+                simulaciones: {},
+            },
+            { reason: 'empty_attempt' },
+        );
+
+        expect(second.ok).toBe(true);
+        expect(second.skippedEmpty).toBe(true);
+        expect(second.preservedExisting).toBe(true);
+        expect(repo.getRecoveryBackup()?.bundle.progreso['17.14']).toEqual({ '11071': 'Aprobado' });
+    });
+
+    it('applyRemoteBundleSafely respalda estado local y permite restaurarlo con restoreRecoveryBackup', () => {
+        const mem = createMemoryStorage();
+        const repo = createStorageRepository(mem);
+
+        repo.setProgreso('17.14', { '11071': 'Aprobado' });
+
+        const applyRes = repo.applyRemoteBundleSafely(
+            {
+                progreso: { '17.14': { '11071': 'Aprobado', '11072': 'Promocionado' } },
+                progresoDetalles: {},
+                cursada: {},
+                simulaciones: {},
+            },
+            { reason: 'conflict_choose_remote', sourceUid: 'uid-1', silent: true },
+        );
+
+        expect(applyRes.ok).toBe(true);
+        expect(applyRes.backedUp).toBe(true);
+        expect(repo.getProgreso('17.14')).toEqual({
+            '11071': 'Aprobado',
+            '11072': 'Promocionado',
+        });
+
+        // Restaurar respaldo vuelve exactamente al estado previo
+        const restoreRes = repo.restoreRecoveryBackup({ silent: true });
+        expect(restoreRes.ok).toBe(true);
+        expect(repo.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
+    });
+
+    it('bloquea la sobrescritura destructiva si falla la creación del backup (ej: QuotaExceededError)', () => {
+        const map = new Map();
+        const quotaFailingStorage = {
+            get length() {
+                return map.size;
+            },
+            key: (index) => Array.from(map.keys())[index] ?? null,
+            getItem: (key) => (map.has(key) ? map.get(key) : null),
+            setItem: (key, val) => {
+                if (key === STORAGE_KEYS.SYNC_RECOVERY_BACKUP) {
+                    throw new Error('QuotaExceededError');
+                }
+                map.set(key, String(val));
+            },
+            removeItem: (key) => {
+                map.delete(key);
+            },
+        };
+
+        const repo = createStorageRepository(quotaFailingStorage);
+        repo.setProgreso('17.14', { '11071': 'Aprobado' });
+
+        const applyRes = repo.applyRemoteBundleSafely(
+            {
+                progreso: { '17.14': { '11072': 'Regular' } },
+                progresoDetalles: {},
+                cursada: {},
+                simulaciones: {},
+            },
+            { reason: 'conflict_choose_remote', sourceUid: 'uid-1', silent: true },
+        );
+
+        expect(applyRes.ok).toBe(false);
+        expect(applyRes.error).toBe('backup_failed');
+        // El progreso local previo permanece 100% intacto (no se ejecutó clearAcademicCache)
+        expect(repo.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
+    });
 });
