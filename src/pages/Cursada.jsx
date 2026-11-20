@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
+import { Link } from 'react-router-dom';
 import { Tabs, Tab, Spinner, Chip } from '@heroui/react';
 import { CalendarDays, Clock, BookOpen } from 'lucide-react';
 import { usePlanCapabilities } from '../context/PlanContext';
@@ -23,6 +24,7 @@ export default function Cursada({ plan }) {
         eventosProximos7Dias,
         bitacora,
         addEvento,
+        updateEvento,
         deleteEvento,
         addHorario,
         deleteHorario,
@@ -40,6 +42,10 @@ export default function Cursada({ plan }) {
     }
 
     const cantCursando = materiasAgrupadas.cursando.length;
+    const sinMateriasActivas =
+        cantCursando === 0 &&
+        materiasAgrupadas.regulares.length === 0 &&
+        materiasAgrupadas.libres.length === 0;
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 pb-16 flex flex-col gap-5 animate-in fade-in duration-300">
@@ -63,6 +69,17 @@ export default function Cursada({ plan }) {
                     </h1>
                     <p className="text-xs sm:text-sm text-[#475569] dark:text-[#94A3B8]">
                         Organizá tus evaluaciones, horarios semanales y el registro de temas vistos en clase.
+                        {sinMateriasActivas && (
+                            <>
+                                {' '}
+                                <Link
+                                    to="/progreso"
+                                    className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline"
+                                >
+                                    Marcá tus materias en curso en Mi Progreso →
+                                </Link>
+                            </>
+                        )}
                     </p>
                 </div>
 
@@ -137,10 +154,12 @@ export default function Cursada({ plan }) {
             {activeTab === 'agenda' && (
                 <AgendaCalendarioTab
                     eventos={eventos}
+                    horarios={horarios}
                     bitacora={bitacora}
                     materiasAgrupadas={materiasAgrupadas}
                     materiasPorCodigo={materiasPorCodigo}
                     onAddEvento={addEvento}
+                    onUpdateEvento={updateEvento}
                     onDeleteEvento={deleteEvento}
                 />
             )}

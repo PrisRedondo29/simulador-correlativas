@@ -88,6 +88,33 @@ export default function useCursada(planProp) {
         [persistCursada],
     );
 
+    const updateEvento = useCallback(
+        (eventoId, cambios) => {
+            persistCursada((prev) => ({
+                ...prev,
+                eventos: ordenarEventos(
+                    prev.eventos.map((e) =>
+                        e.id === eventoId
+                            ? {
+                                  ...e,
+                                  titulo: (cambios.titulo ?? e.titulo).trim(),
+                                  tipo: cambios.tipo ?? e.tipo,
+                                  fecha: cambios.fecha ?? e.fecha,
+                                  hora: (cambios.hora ?? e.hora ?? '').trim(),
+                                  codigoMateria:
+                                      cambios.codigoMateria !== undefined
+                                          ? cambios.codigoMateria || null
+                                          : e.codigoMateria,
+                                  nota: (cambios.nota ?? e.nota ?? '').trim(),
+                              }
+                            : e,
+                    ),
+                ),
+            }));
+        },
+        [persistCursada],
+    );
+
     // ─── CRUD Horarios ────────────────────────────────────────────────────────
     const addHorario = useCallback(
         (horarioInput) => {
@@ -211,6 +238,7 @@ export default function useCursada(planProp) {
         eventosProximos7Dias,
         bitacora: cursada.bitacora,
         addEvento,
+        updateEvento,
         deleteEvento,
         addHorario,
         deleteHorario,

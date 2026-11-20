@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import {
     getPlanPolicy,
@@ -10,8 +10,7 @@ import {
 } from '../config/planPolicies';
 import { getAvailableCareers, getAvailablePlans } from '../config/careersRegistry';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
-
-const PlanContext = createContext(null);
+import { PlanContext } from './planContextInstance';
 
 export function PlanProvider({ children }) {
     const [plan, setPlanState] = useState(() => storageRepository.getPlanActivo());

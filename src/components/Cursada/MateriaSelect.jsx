@@ -1,9 +1,13 @@
 import PropTypes from 'prop-types';
 
 /**
- * Selector nativo accesible de materias agrupado por estado en Mi Progreso:
- * prioriza En curso (Cursando) y Regulares (final pendiente), permitiendo elegir
- * cualquier otra materia del plan activo o un evento general sin materia.
+ * Selector nativo accesible de materias agrupado por estado en Mi Progreso
+ * y ordenado por cuatrimestre:
+ * - En curso (Cursando)
+ * - Regulares (final pendiente)
+ * - Libres (recursar o rendir libre)
+ * - Pendientes del plan agrupadas por año y cuatrimestre
+ * - Ya aprobadas (al final para no estorbar la carga diaria)
  */
 export default function MateriaSelect({
     id,
@@ -19,18 +23,31 @@ export default function MateriaSelect({
     errorMessage = '',
     inputRef = null,
 }) {
-    const { cursando = [], regulares = [], otras = [] } = materiasAgrupadas || {};
+    const {
+        cursando = [],
+        regulares = [],
+        libres = [],
+        pendientesPorCuatrimestre = [],
+        aprobadas = [],
+    } = materiasAgrupadas || {};
     const errorId = `${id}-error`;
 
     const primaryGroups = prioritizeRegular
         ? [
               { label: 'Regulares (final pendiente)', items: regulares },
+              { label: 'Libres (recursar o rendir libre)', items: libres },
               { label: 'En curso (Cursando)', items: cursando },
           ]
         : [
               { label: 'En curso (Cursando)', items: cursando },
               { label: 'Regulares (final pendiente)', items: regulares },
+              { label: 'Libres (recursar o rendir libre)', items: libres },
           ];
+
+    const formatPriorityOption = (m) => {
+        const cuatriTag = m.cuatrimestre ? ` · ${m.cuatrimestre}°C` : '';
+        return `${m.nombre} (${m.codigo})${cuatriTag}`;
+    };
 
     return (
         <div className="flex flex-col gap-1.5">
@@ -72,18 +89,28 @@ export default function MateriaSelect({
                             <optgroup key={group.label} label={group.label}>
                                 {group.items.map((m) => (
                                     <option key={m.codigo} value={m.codigo}>
-                                        {m.nombre} ({m.codigo})
+                                        {formatPriorityOption(m)}
                                     </option>
                                 ))}
                             </optgroup>
                         ),
                 )}
 
-                {otras.length > 0 && (
-                    <optgroup label="Otras materias del plan">
-                        {otras.map((m) => (
+                {pendientesPorCuatrimestre.map((grupo) => (
+                    <optgroup key={grupo.key} label={grupo.label}>
+                        {grupo.items.map((m) => (
                             <option key={m.codigo} value={m.codigo}>
                                 {m.nombre} ({m.codigo})
+                            </option>
+                        ))}
+                    </optgroup>
+                ))}
+
+                {aprobadas.length > 0 && (
+                    <optgroup label="Ya aprobadas">
+                        {aprobadas.map((m) => (
+                            <option key={m.codigo} value={m.codigo}>
+                                ✓ {formatPriorityOption(m)}
                             </option>
                         ))}
                     </optgroup>
@@ -107,7 +134,9 @@ MateriaSelect.propTypes = {
     materiasAgrupadas: PropTypes.shape({
         cursando: PropTypes.array,
         regulares: PropTypes.array,
-        otras: PropTypes.array,
+        libres: PropTypes.array,
+        pendientesPorCuatrimestre: PropTypes.array,
+        aprobadas: PropTypes.array,
     }),
     allowGeneral: PropTypes.bool,
     generalLabel: PropTypes.string,

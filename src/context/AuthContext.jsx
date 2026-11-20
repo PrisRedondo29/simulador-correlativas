@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { useContext, useEffect, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
@@ -6,10 +6,10 @@ import { loginConGoogle, logout } from '../services/authService';
 import { isIntentionalAuthCancel } from '../utils/errorCodes';
 import { logError } from '../services/logService';
 import { trackLogin, trackLogout } from '../services/analyticsService';
-import { getUserData, saveUserSimulacion, getUserRole } from '../services/dbService';
+import { saveUserSimulacion, getUserRole } from '../services/dbService';
 import { uploadPlanProgress, downloadAllProgress } from '../services/syncService';
 import storageRepository from '../services/storageRepository';
-import { addToast } from '@heroui/react';
+import { AuthContext } from './authContextInstance';
 
 // ============================================================================
 // CONSTANTES Y HELPERS
@@ -46,12 +46,11 @@ const isSessionExpired = () => {
 // CONTEXTO
 // ============================================================================
 
-const AuthContext = createContext(null);
-
 /**
  * Hook público para consumir el AuthContext.
  * Provee acceso al estado de autenticación, datos del usuario y funciones de login/logout/sync.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
     const ctx = useContext(AuthContext);
     if (!ctx) {
@@ -116,6 +115,9 @@ export function AuthProvider({ children }) {
 
     // --- Funciones de Autenticación ---
 
+    const clearAuthError = useCallback(() => setAuthError(null), []);
+    const clearFirestoreWarning = useCallback(() => setFirestoreWarning(null), []);
+
     const signIn = useCallback(async (rememberMe = false) => {
         clearAuthError();
         clearFirestoreWarning();
@@ -140,7 +142,7 @@ export function AuthProvider({ children }) {
             setAuthError(err?.message ?? 'No se pudo iniciar sesión. Intentá de nuevo.');
             throw err;
         }
-    }, []);
+    }, [clearAuthError, clearFirestoreWarning]);
 
     const signOut = useCallback(async () => {
         clearAuthError();
@@ -155,7 +157,7 @@ export function AuthProvider({ children }) {
             setUserRole('user');
             // El onAuthStateChanged se encargará de poner el user a null.
         }
-    }, []);
+    }, [clearAuthError, clearFirestoreWarning]);
 
     // --- Funciones de Datos y Sincronización ---
 
@@ -186,9 +188,6 @@ export function AuthProvider({ children }) {
         setIsCriticalError(false);
         setLoading(false);
     }, []);
-
-    const clearAuthError = useCallback(() => setAuthError(null), []);
-    const clearFirestoreWarning = useCallback(() => setFirestoreWarning(null), []);
 
     // --- Helpers para acceder al almacenamiento local vía storageRepository ---
     const getProgresoLocal = useCallback((plan) => {

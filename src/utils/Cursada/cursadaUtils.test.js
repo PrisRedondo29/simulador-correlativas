@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     parseISODateParts,
     diffDaysISO,
+    getWeekdayFromISODate,
     buildCalendarMonthGrid,
     detectarSuperposicionesHorarios,
     obtenerEventosProximos,
@@ -74,23 +75,35 @@ describe('cursadaUtils - Calendario, Horarios y Bitácora', () => {
         expect(buscandoSinTilde.map((e) => e.id)).toEqual(['b1']);
     });
 
-    it('agrupa materias del selector priorizando Cursando y Regular sobre el resto del plan', () => {
+    it('agrupa materias priorizando Cursando, Regular y Libre, ordena por cuatrimestre y separa Ya aprobadas', () => {
         const materias = [
-            { codigo: 'M1', nombre: 'BD I' },
-            { codigo: 'M2', nombre: 'Redes' },
-            { codigo: 'M3', nombre: 'Álgebra' },
-            { codigo: 'M4', nombre: 'SO' },
+            { codigo: 'M4', nombre: 'SO', anio: '3', cuatrimestre: '5' },
+            { codigo: 'M1', nombre: 'BD I', anio: '2', cuatrimestre: '3' },
+            { codigo: 'M2', nombre: 'Redes', anio: '2', cuatrimestre: '4' },
+            { codigo: 'M3', nombre: 'Álgebra', anio: '1', cuatrimestre: '1' },
+            { codigo: 'M5', nombre: 'Análisis I', anio: '1', cuatrimestre: '2' },
+            { codigo: 'M6', nombre: 'Prog I', anio: '1', cuatrimestre: '2' },
         ];
         const progreso = {
             M1: 'Cursando',
             M2: 'Regular',
             M3: 'Aprobado',
             M4: 'Disponible',
+            M5: 'Libre',
+            M6: 'Bloqueado',
         };
 
         const grupos = agruparMateriasSelector(materias, progreso);
         expect(grupos.cursando.map((m) => m.codigo)).toEqual(['M1']);
         expect(grupos.regulares.map((m) => m.codigo)).toEqual(['M2']);
-        expect(grupos.otras.map((m) => m.codigo)).toEqual(['M3', 'M4']);
+        expect(grupos.libres.map((m) => m.codigo)).toEqual(['M5']);
+        expect(grupos.aprobadas.map((m) => m.codigo)).toEqual(['M3']);
+        expect(grupos.pendientesPorCuatrimestre.map((g) => g.cuatrimestre)).toEqual([2, 5]);
+        expect(grupos.pendientesPorCuatrimestre[0].label).toBe('1° Año · 2° Cuatrimestre');
+        expect(grupos.pendientesPorCuatrimestre[0].items.map((m) => m.codigo)).toEqual(['M6']);
+
+        // 2026-06-01 es lunes (1) y 2026-06-07 es domingo (7)
+        expect(getWeekdayFromISODate('2026-06-01')).toBe(1);
+        expect(getWeekdayFromISODate('2026-06-07')).toBe(7);
     });
 });

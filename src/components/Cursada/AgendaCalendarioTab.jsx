@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Button, addToast } from '@heroui/react';
-import { ChevronLeft, ChevronRight, Plus, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Pencil, Trash2, Calendar as CalendarIcon, Clock, X } from 'lucide-react';
 import MateriaSelect from './MateriaSelect';
 import {
     TIPOS_EVENTO,
@@ -12,6 +12,7 @@ import {
     formatMesAnio,
     formatCuentaRegresiva,
     buildCalendarMonthGrid,
+    getWeekdayFromISODate,
 } from '../../utils/Cursada/cursadaUtils';
 
 const WEEKDAY_HEADERS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -19,10 +20,12 @@ const TIPO_KEYS = Object.keys(TIPOS_EVENTO);
 
 export default function AgendaCalendarioTab({
     eventos,
+    horarios,
     bitacora,
     materiasAgrupadas,
     materiasPorCodigo,
     onAddEvento,
+    onUpdateEvento,
     onDeleteEvento,
 }) {
     const todayISO = useMemo(() => getTodayISODate(), []);
@@ -32,7 +35,8 @@ export default function AgendaCalendarioTab({
     const [viewMonth, setViewMonth] = useState(() => todayParts?.month || new Date().getMonth() + 1);
     const [selectedDate, setSelectedDate] = useState(() => todayISO);
 
-    // Estado del formulario "Nuevo evento"
+    // Estado del formulario "Nuevo / Editar evento"
+    const [editingId, setEditingId] = useState(null);
     const [titulo, setTitulo] = useState('');
     const [tipo, setTipo] = useState('parcial');
     const [fecha, setFecha] = useState(() => todayISO);
@@ -77,6 +81,12 @@ export default function AgendaCalendarioTab({
         [bitacoraPorFecha, selectedDate],
     );
 
+    const clasesDelDia = useMemo(() => {
+        const weekday = getWeekdayFromISODate(selectedDate);
+        if (!weekday || weekday > 6) return [];
+        return (horarios || []).filter((h) => h.dia === weekday);
+    }, [horarios, selectedDate]);
+
     const proximosEventos = useMemo(() => {
         return eventos
             .map((ev) => ({ ...ev, diasRestantes: diffDaysISO(todayISO, ev.fecha) }))
@@ -116,6 +126,29 @@ export default function AgendaCalendarioTab({
         }
     };
 
+    const resetEventForm = (nextFecha = selectedDate) => {
+        setEditingId(null);
+        setTitulo('');
+        setTipo('parcial');
+        setFecha(nextFecha);
+        setHora('');
+        setCodigoMateria('');
+        setNota('');
+        setErrors({});
+    };
+
+    const handleStartEditEvento = (ev) => {
+        setEditingId(ev.id);
+        setTitulo(ev.titulo);
+        setTipo(ev.tipo);
+        setFecha(ev.fecha);
+        setHora(ev.hora || '');
+        setCodigoMateria(ev.codigoMateria || '');
+        setNota(ev.nota || '');
+        setErrors({});
+        tituloInputRef.current?.focus();
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         const nextErrors = {};
@@ -133,14 +166,30 @@ export default function AgendaCalendarioTab({
             return;
         }
 
-        onAddEvento({
+        const payload = {
             titulo,
             tipo,
             fecha,
             hora,
             codigoMateria: codigoMateria || null,
             nota,
-        });
+        };
+
+        if (editingId) {
+            onUpdateEvento(editingId, payload);
+            addToast({
+                title: 'Evento actualizado',
+                description: `Se actualizó "${titulo.trim()}" para el ${formatFechaCorta(fecha)}.`,
+                color: 'success',
+            });
+        } else {
+            onAddEvento(payload);
+            addToast({
+                title: 'Evento agendado',
+                description: `Se guardó "${titulo.trim()}" para el ${formatFechaCorta(fecha)}.`,
+                color: 'success',
+            });
+        }
 
         setSelectedDate(fecha);
         const parts = parseISODateParts(fecha);
@@ -149,15 +198,7 @@ export default function AgendaCalendarioTab({
             setViewMonth(parts.month);
         }
 
-        setTitulo('');
-        setHora('');
-        setNota('');
-        setErrors({});
-        addToast({
-            title: 'Evento agendado',
-            description: `Se guardó "${titulo.trim()}" para el ${formatFechaCorta(fecha)}.`,
-            color: 'success',
-        });
+        resetEventForm(fecha);
     };
 
     return (
@@ -286,9 +327,9 @@ export default function AgendaCalendarioTab({
                         )}
                     </div>
 
-                    {eventosDelDia.length === 0 && bitacoraDelDia.length === 0 ? (
+                    {eventosDelDia.length === 0 && bitacoraDelDia.length === 0 && clasesDelDia.length === 0 ? (
                         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] py-3">
-                            No hay eventos ni entradas de bitácora registradas para este día. Podés agendar uno desde el formulario.
+                            No hay eventos, clases ni entradas de bitácora registradas para este día. Podés agendar uno desde el formulario.
                         </p>
                     ) : (
                         <div className="space-y-2.5">
@@ -327,17 +368,54 @@ export default function AgendaCalendarioTab({
                                                 </p>
                                             )}
                                         </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => onDeleteEvento(ev.id)}
-                                            aria-label={`Eliminar evento ${ev.titulo}`}
-                                            className="min-w-9 min-h-9 rounded-lg flex items-center justify-center text-[#64748B] hover:text-[#991B1B] hover:bg-[#FEE2E2]/60 dark:hover:text-[#FCA5A5] dark:hover:bg-[#2D1619] transition-colors cursor-pointer shrink-0"
-                                        >
-                                            <Trash2 size={15} aria-hidden="true" />
-                                        </button>
+                                        <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() => handleStartEditEvento(ev)}
+                                                aria-label={`Editar evento ${ev.titulo}`}
+                                                className="min-w-9 min-h-9 rounded-lg flex items-center justify-center text-[#64748B] hover:text-[#005A36] hover:bg-[#ECFDF5] dark:hover:text-[#86EFAC] dark:hover:bg-[#102A20] transition-colors cursor-pointer"
+                                            >
+                                                <Pencil size={14} aria-hidden="true" />
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (editingId === ev.id) resetEventForm(selectedDate);
+                                                    onDeleteEvento(ev.id);
+                                                }}
+                                                aria-label={`Eliminar evento ${ev.titulo}`}
+                                                className="min-w-9 min-h-9 rounded-lg flex items-center justify-center text-[#64748B] hover:text-[#991B1B] hover:bg-[#FEE2E2]/60 dark:hover:text-[#FCA5A5] dark:hover:bg-[#2D1619] transition-colors cursor-pointer"
+                                            >
+                                                <Trash2 size={15} aria-hidden="true" />
+                                            </button>
+                                        </div>
                                     </div>
                                 );
                             })}
+
+                            {clasesDelDia.length > 0 && (
+                                <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#2A3540] space-y-1.5">
+                                    <span className="text-[11px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] block">
+                                        Cursada habitual de este día
+                                    </span>
+                                    <ul className="space-y-1">
+                                        {clasesDelDia.map((bloque) => {
+                                            const materia = materiasPorCodigo.get(bloque.codigoMateria);
+                                            return (
+                                                <li key={bloque.id} className="flex items-center justify-between gap-2 text-xs text-[#334155] dark:text-[#E2E8F0]">
+                                                    <span className="font-medium truncate">
+                                                        {materia?.nombre || bloque.codigoMateria}
+                                                        {bloque.aula ? ` · ${bloque.aula}` : ''}
+                                                    </span>
+                                                    <span className="font-semibold text-[#005A36] dark:text-[#86EFAC] tabular-nums shrink-0">
+                                                        {bloque.horaInicio} – {bloque.horaFin}
+                                                    </span>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            )}
 
                             {bitacoraDelDia.map((entry) => {
                                 const materia = materiasPorCodigo.get(entry.codigoMateria);
@@ -363,10 +441,26 @@ export default function AgendaCalendarioTab({
             {/* Columna derecha: Formulario nuevo evento + Próximos eventos */}
             <div className="lg:col-span-5 flex flex-col gap-5">
                 <section className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-4 sm:p-5">
-                    <h2 id="form-evento-heading" className="text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9] mb-3.5 flex items-center gap-2">
-                        <Plus size={16} className="text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
-                        <span>Agendar evaluación o entrega</span>
-                    </h2>
+                    <div className="flex items-center justify-between gap-2 mb-3.5">
+                        <h2 id="form-evento-heading" className="text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2">
+                            {editingId ? (
+                                <Pencil size={15} className="text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+                            ) : (
+                                <Plus size={16} className="text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+                            )}
+                            <span>{editingId ? 'Editar fecha agendada' : 'Agendar evaluación o entrega'}</span>
+                        </h2>
+                        {editingId && (
+                            <button
+                                type="button"
+                                onClick={() => resetEventForm(selectedDate)}
+                                className="inline-flex items-center gap-1 text-xs font-medium text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] dark:hover:text-[#F1F5F9] cursor-pointer"
+                            >
+                                <X size={14} aria-hidden="true" />
+                                Cancelar
+                            </button>
+                        )}
+                    </div>
 
                     <form onSubmit={handleSubmit} aria-labelledby="form-evento-heading" noValidate className="space-y-3.5">
                         <fieldset className="space-y-1.5">
@@ -505,9 +599,9 @@ export default function AgendaCalendarioTab({
                         <Button
                             type="submit"
                             className="w-full bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#247250] text-white font-semibold rounded-xl h-11"
-                            startContent={<Plus size={16} />}
+                            startContent={editingId ? <Pencil size={15} /> : <Plus size={16} />}
                         >
-                            Guardar fecha
+                            {editingId ? 'Guardar cambios' : 'Guardar fecha'}
                         </Button>
                     </form>
                 </section>
@@ -582,9 +676,11 @@ export default function AgendaCalendarioTab({
 
 AgendaCalendarioTab.propTypes = {
     eventos: PropTypes.array.isRequired,
+    horarios: PropTypes.array.isRequired,
     bitacora: PropTypes.array.isRequired,
     materiasAgrupadas: PropTypes.object.isRequired,
     materiasPorCodigo: PropTypes.instanceOf(Map).isRequired,
     onAddEvento: PropTypes.func.isRequired,
+    onUpdateEvento: PropTypes.func.isRequired,
     onDeleteEvento: PropTypes.func.isRequired,
 };

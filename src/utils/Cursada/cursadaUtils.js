@@ -358,11 +358,46 @@ export function filtrarBitacora(entradas = [], { codigoMateria = 'todas', busque
 }
 
 /**
+ * Devuelve el día de la semana ISO (1 = Lunes .. 6 = Sábado, 7 = Domingo) para una fecha YYYY-MM-DD.
+ * @param {string} isoDate
+ * @returns {number | null}
+ */
+export function getWeekdayFromISODate(isoDate) {
+    const parts = parseISODateParts(isoDate);
+    if (!parts) return null;
+    const dayUTC = new Date(Date.UTC(parts.year, parts.month - 1, parts.day)).getUTCDay(); // 0=Dom..6=Sab
+    return dayUTC === 0 ? 7 : dayUTC;
+}
+
+/**
+ * Ordena materias por cuatrimestre ascendente y luego alfabéticamente por nombre.
+ * @param {Materia[]} materias
+ * @returns {Materia[]}
+ */
+function ordenarMateriasPorCuatrimestre(materias) {
+    return [...materias].sort((a, b) => {
+        const cuatriA = Number(a.cuatrimestre) || 99;
+        const cuatriB = Number(b.cuatrimestre) || 99;
+        if (cuatriA !== cuatriB) return cuatriA - cuatriB;
+        return (a.nombre || '').localeCompare(b.nombre || '', 'es');
+    });
+}
+
+/**
  * Agrupa las materias del plan para selectores de Mi Cursada:
- * prioriza Cursando, luego Regular (para finales), y finalmente el resto del plan.
+ * - Prioriza Cursando, Regular (final pendiente) y Libre (recursar o rendir libre), ordenadas por cuatrimestre.
+ * - Agrupa las pendientes restantes por cuatrimestre (1° Año · 1° Cuatrimestre, etc.).
+ * - Deja las Aprobadas / Promocionadas al final para no estorbar la selección diaria.
  * @param {Materia[]} [materias]
  * @param {ProgresoMap} [progreso]
- * @returns {{ cursando: Materia[], regulares: Materia[], otras: Materia[] }}
+ * @returns {{
+ *   cursando: Materia[],
+ *   regulares: Materia[],
+ *   libres: Materia[],
+ *   pendientesPorCuatrimestre: Array<{ key: string, cuatrimestre: number, label: string, items: Materia[] }>,
+ *   aprobadas: Materia[],
+ *   otras: Materia[],
+ * }}
  */
 export function agruparMateriasSelector(materias = [], progreso = {}) {
     /** @type {Materia[]} */
@@ -370,7 +405,11 @@ export function agruparMateriasSelector(materias = [], progreso = {}) {
     /** @type {Materia[]} */
     const regulares = [];
     /** @type {Materia[]} */
-    const otras = [];
+    const libres = [];
+    /** @type {Materia[]} */
+    const pendientes = [];
+    /** @type {Materia[]} */
+    const aprobadas = [];
 
     for (const m of materias) {
         const estado = progreso[m.codigo];
@@ -378,12 +417,47 @@ export function agruparMateriasSelector(materias = [], progreso = {}) {
             cursando.push(m);
         } else if (estado === 'Regular') {
             regulares.push(m);
+        } else if (estado === 'Libre') {
+            libres.push(m);
+        } else if (estado === 'Aprobado' || estado === 'Promocionado') {
+            aprobadas.push(m);
         } else {
-            otras.push(m);
+            pendientes.push(m);
         }
     }
 
-    return { cursando, regulares, otras };
+    const pendientesOrdenadas = ordenarMateriasPorCuatrimestre(pendientes);
+    /** @type {Map<number, { key: string, cuatrimestre: number, label: string, items: Materia[] }>} */
+    const gruposPorCuatri = new Map();
+
+    for (const m of pendientesOrdenadas) {
+        const cuatri = Number(m.cuatrimestre) || 0;
+        const anio = Number(m.anio) || (cuatri > 0 ? Math.ceil(cuatri / 2) : 0);
+        if (!gruposPorCuatri.has(cuatri)) {
+            const label =
+                cuatri > 0
+                    ? `${anio}° Año · ${cuatri}° Cuatrimestre`
+                    : 'Otras materias del plan';
+            gruposPorCuatri.set(cuatri, {
+                key: `cuatri-${cuatri}`,
+                cuatrimestre: cuatri,
+                label,
+                items: [],
+            });
+        }
+        gruposPorCuatri.get(cuatri)?.items.push(m);
+    }
+
+    const aprobadasOrdenadas = ordenarMateriasPorCuatrimestre(aprobadas);
+
+    return {
+        cursando: ordenarMateriasPorCuatrimestre(cursando),
+        regulares: ordenarMateriasPorCuatrimestre(regulares),
+        libres: ordenarMateriasPorCuatrimestre(libres),
+        pendientesPorCuatrimestre: Array.from(gruposPorCuatri.values()),
+        aprobadas: aprobadasOrdenadas,
+        otras: [...pendientesOrdenadas, ...aprobadasOrdenadas],
+    };
 }
 
 /**
