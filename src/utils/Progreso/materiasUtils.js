@@ -96,6 +96,12 @@ export const esMateriaIncompleta = (materia, estado, detalles) => {
         return (detalles?.notaRegularizacion ?? detalles?.notaFinal) == null;
     }
     if (estado === 'Aprobado') {
+        if (
+            detalles?.esEquivalencia &&
+            Boolean(detalles?.fechaAprobacion || detalles?.anioExamen != null || detalles?.notaFinal != null)
+        ) {
+            return false;
+        }
         return !detalles?.notaFinal;
     }
     return false;

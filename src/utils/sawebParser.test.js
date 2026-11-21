@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeSawebImportWithExisting, parseSawebTexts } from './sawebParser';
+import { esMateriaIncompleta } from './Progreso/materiasUtils';
 import sistemasPlanes from '../data/sistemas.json';
 
 const MOCK_PLAN_1713 = [
@@ -295,7 +296,7 @@ Plan 1713:
         });
     });
 
-    it('homologa materias aprobadas de Plan 17.13 a Plan 17.14 como Equivalencia (Opción A) manteniendo materias de código común', () => {
+    it('homologa materias aprobadas de Plan 17.13 a Plan 17.14 preservando notas, cursada, intentos y sin marcarlas Incompleta', () => {
         const analiticoCambioPlan = `
 Universidad Nacional de Luján
 CERTIFICADO ANALITICO DE ACTIVIDADES ACADEMICAS RENDIDAS
@@ -328,32 +329,68 @@ ACTIVIDADES ACADEMICAS RECONOCIDAS POR EQUIVALENCIA O EXIMIDAS
 
         expect(result.detectedPlan).toBe('17.14');
         expect(result.anioIngreso).toBe(2023);
-        expect(result.counts.Promocionado).toBe(1); // 41407 común a ambos planes
-        expect(result.counts.Equivalencia).toBe(10); // 13021 + 9 equivalencias 17.13 -> 17.14
+        // Promocionadas en 17.14: 41407 (común), 11271 (desde 11071) y 41426 (desde 41406)
+        expect(result.counts.Promocionado).toBe(3);
+        // Equivalencia oficial de página 3: 13021
+        expect(result.counts.Equivalencia).toBe(1);
+        // Aprobadas por final R-/L- o equivalencia combinada: 19054, 39553, 14026, 13014, 21256, 11274, 14028
+        expect(result.counts.Aprobado).toBe(7);
+        // Conserva todos los aplazos del historial (41407: 3, 11071: 1, 21056: 2, 11074: 1)
+        expect(result.counts.Aplazos).toBe(7);
         expect(result.counts.Omitidas).toBe(0);
         expect(result.totalMatched).toBe(11);
 
-        expect(result.progreso['41407']).toBe('Promocionado');
-        expect(result.progresoDetalles['41407'].notaFinal).toBe(7);
-        expect(result.progresoDetalles['41407'].esEquivalencia).toBe(false);
+        // 11271 (desde 11071 Promocionado 7) conserva estado, nota, cursada e intento Libre previo
+        expect(result.progreso['11271']).toBe('Promocionado');
+        expect(result.progresoDetalles['11271']).toMatchObject({
+            notaFinal: 7,
+            notaRegularizacion: 7,
+            esEquivalencia: false,
+            fechaRegularidad: { anio: 2023, cuatrimestre: 2 },
+        });
+        expect(result.progresoDetalles['11271']?.intentosFinal).toHaveLength(1);
 
-        const codigosEquivalentes = [
-            '19054',
-            '39553',
-            '14026',
-            '11271',
-            '13014',
-            '21256',
-            '11274',
-            '13021',
-            '41426',
-            '14028',
-        ];
-        for (const cod of codigosEquivalentes) {
-            expect(result.progreso[cod]).toBe('Aprobado');
-            expect(result.progresoDetalles[cod]?.esEquivalencia).toBe(true);
+        // 21256 (desde 21056 Regular con 2 aplazos y aprobado 4 en 2025-09-30)
+        expect(result.progreso['21256']).toBe('Aprobado');
+        expect(result.progresoDetalles['21256']).toMatchObject({
+            notaFinal: 4,
+            esEquivalencia: false,
+            rendidaLibre: false,
+            fechaRegularidad: { anio: 2023, cuatrimestre: 2 },
+        });
+        expect(result.progresoDetalles['21256']?.intentosFinal).toHaveLength(3);
+
+        // 11274 (desde 11074 Libre 8 con 1 aplazo previo)
+        expect(result.progreso['11274']).toBe('Aprobado');
+        expect(result.progresoDetalles['11274']).toMatchObject({
+            notaFinal: 8,
+            esEquivalencia: false,
+            rendidaLibre: true,
+        });
+        expect(result.progresoDetalles['11274']?.intentosFinal).toHaveLength(2);
+
+        // 13021 (Equivalencia de Página 3 enriquecida con notas de 11072 y 11073)
+        expect(result.progreso['13021']).toBe('Aprobado');
+        expect(result.progresoDetalles['13021']?.esEquivalencia).toBe(true);
+        expect(result.progresoDetalles['13021']?.fechaAprobacion).toBe('2026-08-21');
+        expect(result.progresoDetalles['13021']?.notaFinal).toBe(7);
+
+        // 14028 (homologada desde 11072 + 11073) conserva nota promedio, cursada e intentos
+        expect(result.progreso['14028']).toBe('Aprobado');
+        expect(result.progresoDetalles['14028']).toMatchObject({
+            notaFinal: 7,
+            fechaRegularidad: { anio: 2024, cuatrimestre: 2 },
+        });
+
+        // Ninguna de las 11 materias importadas debe quedar marcada como Incompleta
+        for (const materia of plan1714Materias) {
+            expect(
+                esMateriaIncompleta(
+                    materia,
+                    result.progreso[materia.codigo],
+                    result.progresoDetalles[materia.codigo],
+                ),
+            ).toBe(false);
         }
-        expect(result.progresoDetalles['11271']?.fechaAprobacion).toBe('2023-11-01');
-        expect(result.progresoDetalles['11271']?.anioExamen).toBe(2023);
     });
 });

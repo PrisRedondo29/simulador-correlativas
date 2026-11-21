@@ -6,10 +6,12 @@ import {
 import equivalencias1714 from '../data/equivalencias.json';
 
 /** @typedef {import('../types/domain').Materia} Materia */
+/** @typedef {import('../types/domain').EstadoMateria} EstadoMateria */
 /** @typedef {import('../types/domain').FechaRegularidad} FechaRegularidad */
 /** @typedef {import('../types/domain').ProgresoMap} ProgresoMap */
 /** @typedef {import('../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
 /** @typedef {import('../types/domain').IntentoFinal} IntentoFinal */
+/** @typedef {import('../types/domain').MateriaDetalle} MateriaDetalle */
 
 const ANALITICO_ROW_REGEX =
     /^(\d{4,6})\s+([PRL])-([^\r\n]+?)\s+(\d{1,2})\([A-ZÁÉÍÓÚÑ\s]+\)\s+(\d{3,5}-\d{2,4})\s+(\d{2}-\d{2}-\d{4})\s*$/i;
@@ -146,6 +148,183 @@ function normalizeLine(line) {
  */
 function isPiiLine(line) {
     return /(?:DNI\s*:|N[º°]\s*de\s*Legajo|Legajo\s*:|Apellido\s*y\s*Nombre\s*:)/i.test(line);
+}
+
+/**
+ * Evalúa los registros crudos de una materia (Analítico, Equivalencias, Cursadas y Finales)
+ * devolviendo su tipo de resolución, estado, detalles completos y cantidad de aplazos.
+ *
+ * @param {{
+ *   nombre: string,
+ *   intentos: Array<{ tipo: 'P'|'R'|'L', nota: number, fecha: string }>,
+ *   ausentes: Array<{ fecha: string }>,
+ *   equivalencia: { tipo: 'E'|'X', fecha: string } | null,
+ *   cursadas: Array<{ anio: number, cuatrimestre: number, condicion: string, nota: number | null }>
+ * }} rec
+ * @returns {{
+ *   kind: 'Equivalencia' | 'Promocionado' | 'Aprobado' | 'Regular' | 'Libre',
+ *   estado: EstadoMateria,
+ *   detalles: MateriaDetalle,
+ *   aplazosCount: number
+ * } | null}
+ */
+function evaluateRecordSummary(rec) {
+    const intentosOrdenados = [...rec.intentos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const ausentesOrdenados = [...rec.ausentes].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const cursadasOrdenadas = [...rec.cursadas].sort(
+        (a, b) => a.anio - b.anio || a.cuatrimestre - b.cuatrimestre,
+    );
+
+    const ultimaRegular = [...cursadasOrdenadas]
+        .reverse()
+        .find((c) => c.condicion === 'Regular');
+    const ultimaPromovidaCursada = [...cursadasOrdenadas]
+        .reverse()
+        .find((c) => c.condicion === 'Promovido');
+
+    /** @type {IntentoFinal[]} */
+    const intentosFinal = [
+        ...intentosOrdenados
+            .filter((i) => i.tipo !== 'P')
+            .map((i) => ({
+                nota: i.nota,
+                estado: /** @type {'aprobado'|'reprobado'} */ (i.nota >= 4 ? 'aprobado' : 'reprobado'),
+                fecha: i.fecha,
+                condicion: /** @type {'Regular'|'Libre'} */ (i.tipo === 'L' ? 'Libre' : 'Regular'),
+            })),
+        ...ausentesOrdenados.map((a) => ({
+            nota: null,
+            estado: /** @type {'ausente'} */ ('ausente'),
+            fecha: a.fecha,
+        })),
+    ].sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+    const aplazosCount = intentosFinal.filter((i) => i.estado === 'reprobado').length;
+
+    const fechaRegularidad = ultimaRegular
+        ? {
+              anio: ultimaRegular.anio,
+              cuatrimestre: /** @type {1 | 2} */ (ultimaRegular.cuatrimestre === 2 ? 2 : 1),
+          }
+        : null;
+    const notaRegularizacion = ultimaRegular?.nota ?? null;
+
+    // 1. Equivalencia / Eximida en cambio de plan
+    if (rec.equivalencia) {
+        const anioExamenEq =
+            rec.equivalencia.fecha && /^\d{4}/.test(rec.equivalencia.fecha)
+                ? Number(rec.equivalencia.fecha.slice(0, 4))
+                : null;
+        return {
+            kind: 'Equivalencia',
+            estado: ESTADOS_MATERIA.APROBADO,
+            detalles: {
+                intentosFinal: [],
+                notaFinal: null,
+                esEquivalencia: true,
+                rendidaLibre: false,
+                fechaAprobacion: rec.equivalencia.fecha,
+                ...(anioExamenEq ? { anioExamen: anioExamenEq } : {}),
+                fechaRegularidad: null,
+                notaRegularizacion: null,
+            },
+            aplazosCount,
+        };
+    }
+
+    // 2. Promocionada (prioridad sobre intentos previos)
+    const promoAnalitico = [...intentosOrdenados].reverse().find((i) => i.tipo === 'P' && i.nota >= 4);
+    if (promoAnalitico || ultimaPromovidaCursada) {
+        const notaPromo = promoAnalitico?.nota ?? ultimaPromovidaCursada?.nota ?? null;
+        /** @type {{ anio: number, cuatrimestre: 1 | 2 } | null} */
+        const fechaPromo = ultimaPromovidaCursada
+            ? {
+                  anio: ultimaPromovidaCursada.anio,
+                  cuatrimestre: ultimaPromovidaCursada.cuatrimestre === 2 ? 2 : 1,
+              }
+            : promoAnalitico?.fecha
+              ? inferFechaCursadaFromIso(promoAnalitico.fecha)
+              : null;
+        return {
+            kind: 'Promocionado',
+            estado: ESTADOS_MATERIA.PROMOCIONADO,
+            detalles: {
+                intentosFinal,
+                notaFinal: notaPromo,
+                esEquivalencia: false,
+                rendidaLibre: false,
+                ...(promoAnalitico?.fecha && { fechaAprobacion: promoAnalitico.fecha }),
+                fechaRegularidad: fechaPromo ?? fechaRegularidad,
+                notaRegularizacion: notaPromo ?? notaRegularizacion,
+            },
+            aplazosCount,
+        };
+    }
+
+    // 3. Final aprobado (Regular o Libre)
+    const finalAprobado = [...intentosOrdenados].reverse().find((i) => i.nota >= 4);
+    if (finalAprobado) {
+        const fechaRegInferida =
+            finalAprobado.tipo === 'L'
+                ? null
+                : (fechaRegularidad ??
+                  inferFechaRegularidadFromIntentos(intentosOrdenados, finalAprobado));
+        return {
+            kind: 'Aprobado',
+            estado: ESTADOS_MATERIA.APROBADO,
+            detalles: {
+                intentosFinal,
+                notaFinal: finalAprobado.nota,
+                esEquivalencia: false,
+                rendidaLibre: finalAprobado.tipo === 'L',
+                fechaAprobacion: finalAprobado.fecha,
+                fechaRegularidad: fechaRegInferida,
+                notaRegularizacion,
+            },
+            aplazosCount,
+        };
+    }
+
+    // 4. Regular vigente o vencida (desde tabla Cursadas)
+    if (fechaRegularidad) {
+        const estadoConsolidado = regularidadUtils.calcularEstadoConsolidado(
+            ESTADOS_MATERIA.REGULAR,
+            fechaRegularidad,
+            intentosFinal,
+        );
+        return {
+            kind: estadoConsolidado === ESTADOS_MATERIA.REGULAR ? 'Regular' : 'Libre',
+            estado: estadoConsolidado,
+            detalles: {
+                intentosFinal,
+                notaFinal: null,
+                esEquivalencia: false,
+                rendidaLibre: false,
+                fechaRegularidad,
+                notaRegularizacion,
+            },
+            aplazosCount,
+        };
+    }
+
+    // 5. Solo aplazos sin regularidad vigente ni aprobación posterior
+    if (intentosFinal.length > 0 || cursadasOrdenadas.some((c) => c.condicion === 'Libre')) {
+        return {
+            kind: 'Libre',
+            estado: ESTADOS_MATERIA.LIBRE,
+            detalles: {
+                intentosFinal,
+                notaFinal: null,
+                esEquivalencia: false,
+                rendidaLibre: false,
+                fechaRegularidad: null,
+                notaRegularizacion: null,
+            },
+            aplazosCount,
+        };
+    }
+
+    return null;
 }
 
 /**
@@ -325,202 +504,64 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
 
     /** @type {Array<{ codigo: string, nombre: string }>} */
     const omittedCodes = [];
-    /** @type {Map<string, { fecha: string | null, nombre: string }>} */
-    const approvedExternalByCode = new Map();
+    /** @type {Map<string, NonNullable<ReturnType<typeof evaluateRecordSummary>>>} */
+    const evaluatedExternalByCode = new Map();
     /** @type {Array<{ codigo: string, nombre: string }>} */
     const externalRecords = [];
 
     for (const [codigo, rec] of recordsByCode.entries()) {
+        const evalRes = evaluateRecordSummary(rec);
+
         if (materiasByCode.size > 0 && !materiasByCode.has(codigo)) {
-            const intentosOrd = [...rec.intentos].sort((a, b) => a.fecha.localeCompare(b.fecha));
-            const cursadasOrd = [...rec.cursadas].sort(
-                (a, b) => a.anio - b.anio || a.cuatrimestre - b.cuatrimestre,
-            );
-            const promoExt = [...intentosOrd].reverse().find((i) => i.tipo === 'P' && i.nota >= 4);
-            const promoCursadaExt = [...cursadasOrd]
-                .reverse()
-                .find((c) => c.condicion === 'Promovido');
-            const finalAprExt = [...intentosOrd].reverse().find((i) => i.nota >= 4);
-
-            if (rec.equivalencia) {
-                approvedExternalByCode.set(codigo, {
-                    fecha: rec.equivalencia.fecha || null,
-                    nombre: rec.nombre,
-                });
-            } else if (promoExt) {
-                approvedExternalByCode.set(codigo, {
-                    fecha: promoExt.fecha || null,
-                    nombre: rec.nombre,
-                });
-            } else if (promoCursadaExt) {
-                approvedExternalByCode.set(codigo, {
-                    fecha: `${promoCursadaExt.anio}-${promoCursadaExt.cuatrimestre === 2 ? '12-01' : '07-01'}`,
-                    nombre: rec.nombre,
-                });
-            } else if (finalAprExt) {
-                approvedExternalByCode.set(codigo, {
-                    fecha: finalAprExt.fecha || null,
-                    nombre: rec.nombre,
-                });
+            if (evalRes) {
+                evaluatedExternalByCode.set(codigo, evalRes);
             }
-
             externalRecords.push({ codigo, nombre: rec.nombre });
             continue;
         }
 
-        const intentosOrdenados = [...rec.intentos].sort((a, b) => a.fecha.localeCompare(b.fecha));
-        const ausentesOrdenados = [...rec.ausentes].sort((a, b) => a.fecha.localeCompare(b.fecha));
-        const cursadasOrdenadas = [...rec.cursadas].sort(
-            (a, b) => a.anio - b.anio || a.cuatrimestre - b.cuatrimestre,
-        );
-
-        const ultimaRegular = [...cursadasOrdenadas]
-            .reverse()
-            .find((c) => c.condicion === 'Regular');
-        const ultimaPromovidaCursada = [...cursadasOrdenadas]
-            .reverse()
-            .find((c) => c.condicion === 'Promovido');
-
-        /** @type {IntentoFinal[]} */
-        const intentosFinal = [
-            ...intentosOrdenados
-                .filter((i) => i.tipo !== 'P')
-                .map((i) => ({
-                    nota: i.nota,
-                    estado: /** @type {'aprobado'|'reprobado'} */ (i.nota >= 4 ? 'aprobado' : 'reprobado'),
-                    fecha: i.fecha,
-                    condicion: /** @type {'Regular'|'Libre'} */ (i.tipo === 'L' ? 'Libre' : 'Regular'),
-                })),
-            ...ausentesOrdenados.map((a) => ({
-                nota: null,
-                estado: /** @type {'ausente'} */ ('ausente'),
-                fecha: a.fecha,
-            })),
-        ].sort((a, b) => a.fecha.localeCompare(b.fecha));
-
-        const aplazosCount = intentosFinal.filter((i) => i.estado === 'reprobado').length;
-        counts.Aplazos += aplazosCount;
-
-        const fechaRegularidad = ultimaRegular
-            ? {
-                  anio: ultimaRegular.anio,
-                  cuatrimestre: /** @type {1 | 2} */ (ultimaRegular.cuatrimestre === 2 ? 2 : 1),
-              }
-            : null;
-        const notaRegularizacion = ultimaRegular?.nota ?? null;
-
-        // 1. Equivalencia / Eximida en cambio de plan
-        if (rec.equivalencia) {
-            const anioExamenEq =
-                rec.equivalencia.fecha && /^\d{4}/.test(rec.equivalencia.fecha)
-                    ? Number(rec.equivalencia.fecha.slice(0, 4))
-                    : null;
-            progreso[codigo] = ESTADOS_MATERIA.APROBADO;
-            progresoDetalles[codigo] = {
-                intentosFinal: [],
-                notaFinal: null,
-                esEquivalencia: true,
-                rendidaLibre: false,
-                fechaAprobacion: rec.equivalencia.fecha,
-                ...(anioExamenEq ? { anioExamen: anioExamenEq } : {}),
-                fechaRegularidad: null,
-                notaRegularizacion: null,
-            };
-            counts.Equivalencia += 1;
-            continue;
-        }
-
-        // 2. Promocionada (prioridad sobre intentos previos)
-        const promoAnalitico = [...intentosOrdenados].reverse().find((i) => i.tipo === 'P' && i.nota >= 4);
-        if (promoAnalitico || ultimaPromovidaCursada) {
-            const notaPromo = promoAnalitico?.nota ?? ultimaPromovidaCursada?.nota ?? null;
-            /** @type {{ anio: number, cuatrimestre: 1 | 2 } | null} */
-            const fechaPromo = ultimaPromovidaCursada
-                ? {
-                      anio: ultimaPromovidaCursada.anio,
-                      cuatrimestre: ultimaPromovidaCursada.cuatrimestre === 2 ? 2 : 1,
-                  }
-                : promoAnalitico?.fecha
-                  ? inferFechaCursadaFromIso(promoAnalitico.fecha)
-                  : null;
-            progreso[codigo] = ESTADOS_MATERIA.PROMOCIONADO;
-            progresoDetalles[codigo] = {
-                intentosFinal,
-                notaFinal: notaPromo,
-                esEquivalencia: false,
-                rendidaLibre: false,
-                ...(promoAnalitico?.fecha && { fechaAprobacion: promoAnalitico.fecha }),
-                fechaRegularidad: fechaPromo ?? fechaRegularidad,
-                notaRegularizacion: notaPromo ?? notaRegularizacion,
-            };
-            counts.Promocionado += 1;
-            continue;
-        }
-
-        // 3. Final aprobado (Regular o Libre)
-        const finalAprobado = [...intentosOrdenados].reverse().find((i) => i.nota >= 4);
-        if (finalAprobado) {
-            const fechaRegInferida =
-                finalAprobado.tipo === 'L'
-                    ? null
-                    : (fechaRegularidad ??
-                      inferFechaRegularidadFromIntentos(intentosOrdenados, finalAprobado));
-            progreso[codigo] = ESTADOS_MATERIA.APROBADO;
-            progresoDetalles[codigo] = {
-                intentosFinal,
-                notaFinal: finalAprobado.nota,
-                esEquivalencia: false,
-                rendidaLibre: finalAprobado.tipo === 'L',
-                fechaAprobacion: finalAprobado.fecha,
-                fechaRegularidad: fechaRegInferida,
-                notaRegularizacion,
-            };
-            counts.Aprobado += 1;
-            continue;
-        }
-
-        // 4. Regular vigente o vencida (desde tabla Cursadas)
-        if (fechaRegularidad) {
-            const estadoConsolidado = regularidadUtils.calcularEstadoConsolidado(
-                ESTADOS_MATERIA.REGULAR,
-                fechaRegularidad,
-                intentosFinal,
-            );
-            progreso[codigo] = estadoConsolidado;
-            progresoDetalles[codigo] = {
-                intentosFinal,
-                notaFinal: null,
-                esEquivalencia: false,
-                rendidaLibre: false,
-                fechaRegularidad,
-                notaRegularizacion,
-            };
-            if (estadoConsolidado === ESTADOS_MATERIA.REGULAR) {
-                counts.Regular += 1;
-            } else {
-                counts.Libre += 1;
-            }
-            continue;
-        }
-
-        // 5. Solo aplazos sin regularidad vigente ni aprobación posterior
-        if (intentosFinal.length > 0 || cursadasOrdenadas.some((c) => c.condicion === 'Libre')) {
-            progreso[codigo] = ESTADOS_MATERIA.LIBRE;
-            progresoDetalles[codigo] = {
-                intentosFinal,
-                notaFinal: null,
-                esEquivalencia: false,
-                rendidaLibre: false,
-                fechaRegularidad: null,
-                notaRegularizacion: null,
-            };
-            counts.Libre += 1;
-        }
+        if (!evalRes) continue;
+        progreso[codigo] = evalRes.estado;
+        progresoDetalles[codigo] = evalRes.detalles;
+        counts[evalRes.kind] += 1;
+        counts.Aplazos += evalRes.aplazosCount;
     }
 
-    // Homologar materias aprobadas del plan anterior (ej. 17.13) al Plan 17.14 como Equivalencia
+    // Homologar materias aprobadas del plan anterior (ej. 17.13) al Plan 17.14 preservando nota, cursada e intentos
     if (materiasByCode.size > 0 && externalRecords.length > 0) {
         const consumedExternalCodes = new Set();
+        const aplazosCountedForExternal = new Set();
+
+        /** @param {ReturnType<typeof evaluateRecordSummary>} evalData */
+        const isEvalApproved = (evalData) =>
+            Boolean(
+                evalData &&
+                    (evalData.estado === ESTADOS_MATERIA.APROBADO ||
+                        evalData.estado === ESTADOS_MATERIA.PROMOCIONADO),
+            );
+
+        /** @param {string} cod */
+        const resolveEvalForCode = (cod) => {
+            if (evaluatedExternalByCode.has(cod)) {
+                return evaluatedExternalByCode.get(cod) || null;
+            }
+            if (progreso[cod] && progresoDetalles[cod]) {
+                /** @type {'Promocionado' | 'Equivalencia' | 'Aprobado'} */
+                const kind =
+                    progreso[cod] === ESTADOS_MATERIA.PROMOCIONADO
+                        ? 'Promocionado'
+                        : progresoDetalles[cod]?.esEquivalencia
+                          ? 'Equivalencia'
+                          : 'Aprobado';
+                return {
+                    kind,
+                    estado: progreso[cod],
+                    detalles: /** @type {MateriaDetalle} */ (progresoDetalles[cod]),
+                    aplazosCount: 0,
+                };
+            }
+            return null;
+        };
 
         for (const [targetCode1714, requiredCodes1713] of Object.entries(equivalencias1714)) {
             if (
@@ -531,53 +572,133 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                 continue;
             }
 
-            const allApproved = requiredCodes1713.every((reqCode) => {
-                if (approvedExternalByCode.has(reqCode)) return true;
-                return (
-                    progreso[reqCode] === ESTADOS_MATERIA.APROBADO ||
-                    progreso[reqCode] === ESTADOS_MATERIA.PROMOCIONADO
-                );
-            });
+            const sourceEntries = requiredCodes1713.map((reqCode) => ({
+                reqCode,
+                isExternal: evaluatedExternalByCode.has(reqCode),
+                evalData: resolveEvalForCode(reqCode),
+            }));
 
-            if (!allApproved) continue;
+            if (!sourceEntries.every(({ evalData }) => isEvalApproved(evalData))) {
+                continue;
+            }
 
-            /** @type {string[]} */
-            const fechas = [];
-            for (const reqCode of requiredCodes1713) {
-                if (approvedExternalByCode.has(reqCode)) {
+            for (const { reqCode, isExternal, evalData } of sourceEntries) {
+                if (isExternal && evalData) {
                     consumedExternalCodes.add(reqCode);
-                    const extInfo = approvedExternalByCode.get(reqCode);
-                    if (extInfo?.fecha) fechas.push(extInfo.fecha);
-                } else if (progresoDetalles[reqCode]?.fechaAprobacion) {
-                    fechas.push(/** @type {string} */ (progresoDetalles[reqCode].fechaAprobacion));
+                    if (!aplazosCountedForExternal.has(reqCode)) {
+                        aplazosCountedForExternal.add(reqCode);
+                        counts.Aplazos += evalData.aplazosCount;
+                    }
                 }
             }
 
-            // Si 39553 consume 31972 (Inglés II), también absorbe 31971 (Inglés I) para no listarla omitida
-            if (requiredCodes1713.includes('31972') && approvedExternalByCode.has('31971')) {
+            // Si 39553 consume 31972 (Inglés II), también absorbe 31971 (Inglés I)
+            if (
+                requiredCodes1713.includes('31972') &&
+                isEvalApproved(evaluatedExternalByCode.get('31971') || null)
+            ) {
                 consumedExternalCodes.add('31971');
+                if (!aplazosCountedForExternal.has('31971')) {
+                    aplazosCountedForExternal.add('31971');
+                    counts.Aplazos += evaluatedExternalByCode.get('31971')?.aplazosCount || 0;
+                }
             }
 
-            if (!progreso[targetCode1714]) {
-                const latestFecha = fechas.sort().pop() || null;
-                const anioExamen =
-                    latestFecha && /^\d{4}/.test(latestFecha)
-                        ? Number(latestFecha.slice(0, 4))
-                        : null;
+            if (progreso[targetCode1714]) {
+                // Si ya vino como Equivalencia oficial sin nota en Página 3, completar nota y cursada desde origen
+                const existingDet = progresoDetalles[targetCode1714];
+                if (existingDet?.esEquivalencia && existingDet.notaFinal == null) {
+                    const notas = sourceEntries
+                        .map(({ evalData }) => evalData?.detalles.notaFinal)
+                        .filter(/** @returns {n is number} */ (n) => typeof n === 'number');
+                    if (notas.length === sourceEntries.length && notas.length > 0) {
+                        const notaProm = Math.round(
+                            notas.reduce((sum, n) => sum + n, 0) / notas.length,
+                        );
+                        const fechasReg = sourceEntries
+                            .map(({ evalData }) => evalData?.detalles.fechaRegularidad)
+                            .filter(Boolean);
+                        progresoDetalles[targetCode1714] = {
+                            ...existingDet,
+                            notaFinal: notaProm,
+                            ...(fechasReg.length > 0 && !existingDet.fechaRegularidad
+                                ? { fechaRegularidad: fechasReg[fechasReg.length - 1] }
+                                : {}),
+                        };
+                    }
+                }
+                continue;
+            }
 
-                progreso[targetCode1714] = ESTADOS_MATERIA.APROBADO;
+            if (sourceEntries.length === 1 && sourceEntries[0].evalData) {
+                const src = sourceEntries[0].evalData;
+                progreso[targetCode1714] = src.estado;
                 progresoDetalles[targetCode1714] = {
-                    intentosFinal: [],
-                    notaFinal: null,
-                    esEquivalencia: true,
-                    rendidaLibre: false,
-                    ...(latestFecha ? { fechaAprobacion: latestFecha } : {}),
-                    ...(anioExamen && !Number.isNaN(anioExamen) ? { anioExamen } : {}),
-                    fechaRegularidad: null,
-                    notaRegularizacion: null,
+                    ...src.detalles,
+                    intentosFinal: [...(src.detalles.intentosFinal || [])],
                 };
-                counts.Equivalencia += 1;
+                counts[src.kind] += 1;
+                continue;
             }
+
+            // Regla con múltiples materias origen (ej. 14028 requiere 11072 y 11073)
+            const evalList = sourceEntries
+                .map(({ evalData }) => evalData)
+                .filter(/** @returns {e is NonNullable<ReturnType<typeof evaluateRecordSummary>>} */ (e) => Boolean(e));
+            const allPromocionado = evalList.every(
+                (e) => e.estado === ESTADOS_MATERIA.PROMOCIONADO,
+            );
+            const notas = evalList
+                .map((e) => e.detalles.notaFinal)
+                .filter(/** @returns {n is number} */ (n) => typeof n === 'number');
+            const notaCombinada =
+                notas.length > 0
+                    ? Math.round(notas.reduce((sum, n) => sum + n, 0) / notas.length)
+                    : null;
+            const fechasAprob = evalList
+                .map((e) => e.detalles.fechaAprobacion)
+                .filter(/** @returns {f is string} */ (f) => typeof f === 'string' && f.length > 0)
+                .sort();
+            const latestFecha = fechasAprob.pop() || null;
+            const anioExamen =
+                latestFecha && /^\d{4}/.test(latestFecha)
+                    ? Number(latestFecha.slice(0, 4))
+                    : null;
+            const fechasReg = evalList
+                .map((e) => e.detalles.fechaRegularidad)
+                .filter(
+                    /** @returns {f is { anio: number, cuatrimestre: number }} */ (f) =>
+                        Boolean(f && typeof f === 'object' && typeof f.anio === 'number'),
+                )
+                .sort((a, b) => a.anio - b.anio || a.cuatrimestre - b.cuatrimestre);
+            const latestFechaReg = fechasReg.pop() || null;
+            const intentosCombinados = evalList
+                .flatMap((e) => e.detalles.intentosFinal || [])
+                .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+            const anyEquivalenciaOnly = notaCombinada == null;
+            const targetKind = anyEquivalenciaOnly
+                ? 'Equivalencia'
+                : allPromocionado
+                  ? 'Promocionado'
+                  : 'Aprobado';
+
+            progreso[targetCode1714] = allPromocionado
+                ? ESTADOS_MATERIA.PROMOCIONADO
+                : ESTADOS_MATERIA.APROBADO;
+            progresoDetalles[targetCode1714] = {
+                intentosFinal: intentosCombinados,
+                notaFinal: notaCombinada,
+                esEquivalencia: anyEquivalenciaOnly,
+                rendidaLibre:
+                    !allPromocionado &&
+                    !anyEquivalenciaOnly &&
+                    evalList.every((e) => Boolean(e.detalles.rendidaLibre)),
+                ...(latestFecha ? { fechaAprobacion: latestFecha } : {}),
+                ...(anyEquivalenciaOnly && anioExamen ? { anioExamen } : {}),
+                fechaRegularidad: latestFechaReg,
+                notaRegularizacion: allPromocionado ? notaCombinada : null,
+            };
+            counts[targetKind] += 1;
         }
 
         for (const ext of externalRecords) {
