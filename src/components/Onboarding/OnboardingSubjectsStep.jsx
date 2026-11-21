@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import {
     ArrowLeft,
     ArrowRight,
+    Check,
     CheckCheck,
     ChevronDown,
     Lock,
     Redo2,
+    RotateCcw,
     Search,
     Sparkles,
     Undo2,
@@ -145,6 +147,7 @@ export default function OnboardingSubjectsStep({
         lastFeedback,
         toggleSubjectState,
         aprobarAnioCompleto,
+        desmarcarAnioCompleto,
         undo,
         redo,
     } = useOnboardingChecklist(materias);
@@ -154,11 +157,34 @@ export default function OnboardingSubjectsStep({
         yearGroups.length > 0 ? [yearGroups[0].key] : [],
     );
     const [searchQuery, setSearchQuery] = useState('');
+    const groupRefs = useRef({});
+
+    const scrollToGroup = (key) => {
+        const schedule = () => {
+            const el = groupRefs.current[key];
+            if (!el || typeof el.scrollIntoView !== 'function') return;
+            const prefersReduced =
+                typeof window !== 'undefined' &&
+                window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            el.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth', block: 'start' });
+        };
+
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(schedule);
+        } else {
+            schedule();
+        }
+    };
 
     const toggleGroup = (key) => {
         setExpandedKeys((prev) =>
             prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
         );
+    };
+
+    const handleJumpToGroup = (key) => {
+        setExpandedKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+        scrollToGroup(key);
     };
 
     const filteredMaterias = useMemo(() => {
@@ -299,6 +325,45 @@ export default function OnboardingSubjectsStep({
                                 </div>
                             )}
                         </div>
+
+                        {!isSearching && yearGroups.length > 1 && (
+                            <nav
+                                aria-label="Saltar a año"
+                                className="flex items-center gap-1.5 overflow-x-auto pt-0.5 pb-1"
+                            >
+                                {yearGroups.map((group) => {
+                                    const codigos = group.materias
+                                        .filter((m) => !m.tesis)
+                                        .map((m) => m.codigo);
+                                    const isComplete =
+                                        codigos.length > 0 &&
+                                        codigos.every((c) =>
+                                            ['Aprobado', 'Promocionado'].includes(progreso[c]),
+                                        );
+                                    const isOpen = expandedKeys.includes(group.key);
+
+                                    return (
+                                        <button
+                                            key={group.key}
+                                            type="button"
+                                            onClick={() => handleJumpToGroup(group.key)}
+                                            className={`min-h-9 px-2.5 rounded-lg text-xs font-semibold whitespace-nowrap inline-flex items-center gap-1 border transition-colors cursor-pointer shrink-0 ${
+                                                isComplete
+                                                    ? 'bg-[#ECFDF5] dark:bg-[#102A20] border-[#A7F3D0] dark:border-[#1E4D38] text-[#005A36] dark:text-[#86EFAC]'
+                                                    : isOpen
+                                                      ? 'bg-[#1E293B] dark:bg-[#E2E8F0] border-[#1E293B] dark:border-[#E2E8F0] text-white dark:text-[#0F1419]'
+                                                      : 'bg-white dark:bg-[#161D24] border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] hover:border-[#94A3B8]'
+                                            }`}
+                                        >
+                                            {isComplete && (
+                                                <Check className="w-3 h-3 shrink-0" aria-hidden="true" />
+                                            )}
+                                            <span>{group.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                        )}
                     </div>
 
                     {isSearching ? (
@@ -320,7 +385,7 @@ export default function OnboardingSubjectsStep({
                         </div>
                     ) : (
                         <div className="space-y-3">
-                            {yearGroups.map((group) => {
+                            {yearGroups.map((group, groupIdx) => {
                                 const isExpanded = expandedKeys.includes(group.key);
                                 const markedInGroup = group.materias.filter((m) =>
                                     ['Cursando', 'Regular', 'Aprobado', 'Promocionado'].includes(
@@ -330,11 +395,42 @@ export default function OnboardingSubjectsStep({
                                 const codigosNoTesis = group.materias
                                     .filter((m) => !m.tesis)
                                     .map((m) => m.codigo);
+                                const allApproved =
+                                    codigosNoTesis.length > 0 &&
+                                    codigosNoTesis.every((cod) =>
+                                        ['Aprobado', 'Promocionado'].includes(progreso[cod]),
+                                    );
+                                const nextGroup = yearGroups[groupIdx + 1] || null;
+
+                                const handleGroupToggle = () => {
+                                    if (allApproved) {
+                                        desmarcarAnioCompleto(codigosNoTesis, group.label);
+                                        setExpandedKeys((prev) =>
+                                            prev.includes(group.key) ? prev : [...prev, group.key],
+                                        );
+                                        return;
+                                    }
+
+                                    aprobarAnioCompleto(codigosNoTesis, group.label);
+                                    setExpandedKeys((prev) => {
+                                        const withoutCurrent = prev.filter((k) => k !== group.key);
+                                        if (nextGroup && !withoutCurrent.includes(nextGroup.key)) {
+                                            return [...withoutCurrent, nextGroup.key];
+                                        }
+                                        return withoutCurrent;
+                                    });
+                                    if (nextGroup) {
+                                        scrollToGroup(nextGroup.key);
+                                    }
+                                };
 
                                 return (
                                     <section
                                         key={group.key}
-                                        className="rounded-2xl bg-[#F1F5F9]/70 dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] overflow-hidden"
+                                        ref={(el) => {
+                                            groupRefs.current[group.key] = el;
+                                        }}
+                                        className="scroll-mt-40 rounded-2xl bg-[#F1F5F9]/70 dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] overflow-hidden"
                                     >
                                         <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-white dark:bg-[#161D24] border-b border-[#E2E8F0] dark:border-[#24303C]">
                                             <button
@@ -350,7 +446,13 @@ export default function OnboardingSubjectsStep({
                                                     }`}
                                                     aria-hidden="true"
                                                 />
-                                                <span className="text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                                                <span className="text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9] inline-flex items-center gap-1.5">
+                                                    {allApproved && (
+                                                        <Check
+                                                            className="w-4 h-4 text-[#005A36] dark:text-[#6EE7B7] shrink-0"
+                                                            aria-hidden="true"
+                                                        />
+                                                    )}
                                                     {group.label}
                                                 </span>
                                                 <span className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8] tabular-nums">
@@ -361,19 +463,30 @@ export default function OnboardingSubjectsStep({
                                             {codigosNoTesis.length > 0 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() =>
-                                                        aprobarAnioCompleto(
-                                                            codigosNoTesis,
-                                                            group.label,
-                                                        )
-                                                    }
-                                                    className="min-h-11 sm:min-h-9 px-3 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold text-[#005A36] dark:text-[#86EFAC] hover:opacity-90 inline-flex items-center gap-1.5 shrink-0 cursor-pointer"
+                                                    onClick={handleGroupToggle}
+                                                    className={`min-h-11 sm:min-h-9 px-3 rounded-xl border text-xs font-semibold hover:opacity-90 inline-flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                                                        allApproved
+                                                            ? 'bg-[#F8FAFC] dark:bg-[#1E2730] border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1]'
+                                                            : 'bg-[#ECFDF5] dark:bg-[#102A20] border-[#A7F3D0] dark:border-[#1E4D38] text-[#005A36] dark:text-[#86EFAC]'
+                                                    }`}
                                                 >
-                                                    <CheckCheck
-                                                        className="w-3.5 h-3.5 shrink-0"
-                                                        aria-hidden="true"
-                                                    />
-                                                    <span>Aprobar todo {group.label}</span>
+                                                    {allApproved ? (
+                                                        <>
+                                                            <RotateCcw
+                                                                className="w-3.5 h-3.5 shrink-0"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span>Desmarcar {group.label}</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <CheckCheck
+                                                                className="w-3.5 h-3.5 shrink-0"
+                                                                aria-hidden="true"
+                                                            />
+                                                            <span>Aprobar todo {group.label}</span>
+                                                        </>
+                                                    )}
                                                 </button>
                                             )}
                                         </div>

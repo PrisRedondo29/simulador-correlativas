@@ -125,4 +125,32 @@ describe('useOnboardingChecklist - Checklist rápida con auto-cascada y Deshacer
         });
         expect(result.current.progreso.M1).toBe('Regular');
     });
+
+    it('desmarcarAnioCompleto limpia el bloque recalculando dependencias y es reversible con 1 undo()', () => {
+        const { result } = renderHook(() => useOnboardingChecklist(MATERIAS_MOCK));
+
+        act(() => {
+            result.current.aprobarAnioCompleto(['M1', 'M2'], '1° Año');
+        });
+        expect(result.current.progreso.M1).toBe('Aprobado');
+        expect(result.current.progreso.M2).toBe('Aprobado');
+        expect(result.current.progreso.M3).toBe('Disponible');
+
+        act(() => {
+            result.current.desmarcarAnioCompleto(['M1', 'M2'], '1° Año');
+        });
+        expect(result.current.progreso.M1).toBe('Disponible');
+        expect(result.current.progreso.M2).toBe('Bloqueado');
+        expect(result.current.progreso.M3).toBe('Bloqueado');
+        expect(result.current.counts.aprobadas).toBe(0);
+        expect(result.current.lastFeedback?.text).toContain('1° Año');
+
+        // Un solo Deshacer restaura todo el bloque aprobado
+        act(() => {
+            result.current.undo();
+        });
+        expect(result.current.progreso.M1).toBe('Aprobado');
+        expect(result.current.progreso.M2).toBe('Aprobado');
+        expect(result.current.progreso.M3).toBe('Disponible');
+    });
 });

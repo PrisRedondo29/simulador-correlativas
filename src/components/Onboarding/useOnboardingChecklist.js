@@ -141,6 +141,49 @@ export default function useOnboardingChecklist(materias = []) {
         [materias],
     );
 
+    const desmarcarAnioCompleto = useCallback(
+        (codigosAnio = [], labelAnio = 'el bloque') => {
+            setState((prev) => {
+                let nextProgreso = { ...prev.present };
+                const estadosActivos = new Set([
+                    ESTADOS_MATERIA.CURSANDO,
+                    ESTADOS_MATERIA.REGULAR,
+                    ESTADOS_MATERIA.APROBADO,
+                    ESTADOS_MATERIA.PROMOCIONADO,
+                    ESTADOS_MATERIA.LIBRE,
+                ]);
+
+                codigosAnio.forEach((codigo) => {
+                    const materia = materias.find((m) => m.codigo === codigo);
+                    if (!materia || materia.tesis || !estadosActivos.has(nextProgreso[codigo])) {
+                        return;
+                    }
+                    const temp = { ...nextProgreso, [codigo]: ESTADOS_MATERIA.DISPONIBLE };
+                    const baseState = calcularEstadoBaseMateria(temp, materia, materias);
+                    const res = aplicarCambioEstado(nextProgreso, materias, codigo, baseState);
+                    nextProgreso = res.nuevoProgreso;
+                });
+
+                const huboCambios = Object.keys(nextProgreso).some(
+                    (cod) => nextProgreso[cod] !== prev.present[cod],
+                );
+                if (!huboCambios) return prev;
+
+                const nextPast = [...prev.past, prev.present].slice(-MAX_HISTORY_STEPS);
+                return {
+                    past: nextPast,
+                    present: nextProgreso,
+                    future: [],
+                    lastFeedback: {
+                        type: 'unmark',
+                        text: `Se desmarcaron las materias de ${labelAnio}.`,
+                    },
+                };
+            });
+        },
+        [materias],
+    );
+
     const undo = useCallback(() => {
         setState((prev) => {
             if (prev.past.length === 0) return prev;
@@ -227,6 +270,7 @@ export default function useOnboardingChecklist(materias = []) {
         clearFeedback,
         toggleSubjectState,
         aprobarAnioCompleto,
+        desmarcarAnioCompleto,
         undo,
         redo,
     };

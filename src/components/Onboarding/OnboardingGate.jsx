@@ -22,6 +22,7 @@ import LoginModal from '../Auth/LoginModal';
 import { GoogleIcon } from '../Shared/BrandIcons';
 import OnboardingPlanStep from './OnboardingPlanStep';
 import OnboardingSubjectsStep from './OnboardingSubjectsStep';
+import { DEV_SIMULATE_NEWCOMER_EVENT } from './onboardingEvents';
 
 const FREE_ROUTES = ['/como-usar', '/contacto'];
 
@@ -52,7 +53,28 @@ export default function OnboardingGate({ children }) {
     const [materias, setMaterias] = useState([]);
     const [loadingPlan, setLoadingPlan] = useState(false);
     const [loadError, setLoadError] = useState(null);
+    const [devSimulateNewcomer, setDevSimulateNewcomer] = useState(false);
     const awaitingCloudLoginRef = useRef(false);
+
+    useEffect(() => {
+        if (!import.meta.env.DEV) return undefined;
+
+        const handleSimulateNewcomer = () => {
+            if (storageRepository.hasExistingAcademicData()) {
+                storageRepository.saveRecoveryBackup(storageRepository.readAcademicBundle(), {
+                    reason: 'pre_dev_simulate_newcomer',
+                });
+            }
+            setStep(1);
+            setSelectedPlan(null);
+            setMaterias([]);
+            setLoadError(null);
+            setDevSimulateNewcomer(true);
+        };
+
+        window.addEventListener(DEV_SIMULATE_NEWCOMER_EVENT, handleSimulateNewcomer);
+        return () => window.removeEventListener(DEV_SIMULATE_NEWCOMER_EVENT, handleSimulateNewcomer);
+    }, []);
 
     useEffect(() => {
         const syncFromStorage = () => {
@@ -92,9 +114,10 @@ export default function OnboardingGate({ children }) {
     }, [isAuthenticated, hasExistingData, onboardingVersion]);
 
     const isFreeRoute = FREE_ROUTES.includes(location.pathname);
+    const effectiveHasExistingData = devSimulateNewcomer ? false : hasExistingData;
     const shouldShowOnboarding =
         !authLoading &&
-        onboardingVersion < CURRENT_ONBOARDING_VERSION &&
+        (devSimulateNewcomer || onboardingVersion < CURRENT_ONBOARDING_VERSION) &&
         !isFreeRoute;
 
     const handleSignIn = async (rememberMe) => {
@@ -177,6 +200,7 @@ export default function OnboardingGate({ children }) {
         });
 
         setStep(1);
+        setDevSimulateNewcomer(false);
 
         if (supportsTransition && counts.totalMarcadas > 0) {
             navigate(transitionMeta?.route || '/cambio-plan', {
@@ -220,7 +244,7 @@ export default function OnboardingGate({ children }) {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {!isAuthenticated && (
+                        {(!isAuthenticated || devSimulateNewcomer) && (
                             <Button
                                 size="sm"
                                 variant="flat"
@@ -232,7 +256,7 @@ export default function OnboardingGate({ children }) {
                             </Button>
                         )}
 
-                        {hasExistingData && (
+                        {effectiveHasExistingData && (
                             <Button
                                 size="sm"
                                 variant="light"
@@ -240,6 +264,17 @@ export default function OnboardingGate({ children }) {
                                 className="min-h-11 sm:min-h-9 font-semibold text-xs text-[#64748B] dark:text-[#CBD5E1]"
                             >
                                 Omitir
+                            </Button>
+                        )}
+
+                        {import.meta.env.DEV && devSimulateNewcomer && (
+                            <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={() => setDevSimulateNewcomer(false)}
+                                className="min-h-11 sm:min-h-9 font-semibold text-xs rounded-xl bg-[#FEF3C7] dark:bg-[#2D2210] text-[#92400E] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]"
+                            >
+                                DEV · Salir
                             </Button>
                         )}
 
@@ -258,8 +293,8 @@ export default function OnboardingGate({ children }) {
                     <OnboardingPlanStep
                         availableCareers={availableCareers}
                         catalogCareers={catalogCareers}
-                        initialPlan={plan}
-                        hasExistingData={hasExistingData}
+                        initialPlan={devSimulateNewcomer ? null : plan}
+                        hasExistingData={effectiveHasExistingData}
                         onSelectPlan={loadSubjectsForPlan}
                         onSkip={handleSkipExisting}
                     />

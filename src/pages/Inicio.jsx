@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePlanCapabilities } from '../context/PlanContext';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
+import { triggerDevSimulateNewcomer } from '../components/Onboarding/onboardingEvents';
 
 function Inicio() {
     const navigate = useNavigate();
@@ -331,6 +332,23 @@ function Inicio() {
                     Ir a Contacto
                 </Button>
             </div>
+
+            {import.meta.env.DEV && (
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 rounded-2xl bg-[#FFFBEB] dark:bg-[#2D2210]/70 border border-dashed border-[#F59E0B]/50 text-xs">
+                    <span className="font-medium text-[#92400E] dark:text-[#FCD34D]">
+                        <i className="fa-solid fa-flask mr-1.5" aria-hidden="true" />
+                        Modo local (DEV): probá el alta inicial como ingresante nuevo sin perder tus datos guardados.
+                    </span>
+                    <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={triggerDevSimulateNewcomer}
+                        className="bg-white dark:bg-[#161D24] border border-[#FDE68A] dark:border-[#5C4318] text-[#92400E] dark:text-[#FCD34D] font-semibold text-xs rounded-xl shrink-0"
+                    >
+                        Simular ingresante
+                    </Button>
+                </div>
+            )}
         </div>
     );
 }

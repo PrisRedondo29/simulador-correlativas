@@ -182,7 +182,7 @@ export default function OnboardingPlanStep({
                             <ChevronDown className="w-4 h-4 shrink-0" aria-hidden="true" />
                         </summary>
                         <p className="mt-2 leading-relaxed text-pretty">
-                            Si te inscribiste en {activeCareer.name} a partir de 2024 te corresponde automáticamente el <strong>Plan {defaultPlan.planNumero}</strong>. Si ingresaste antes, en tu historial académico del SIU figuran tus materias bajo <strong>{transitionPlan.planNumero}</strong> o <strong>{defaultPlan.planNumero}</strong>. Siempre podés cambiar de plan después en Configuración.
+                            Si te inscribiste en {activeCareer.name} a partir de 2024 te corresponde automáticamente el <strong>Plan {defaultPlan.planNumero}</strong>. Si ingresaste antes, en tu historial académico de la plataforma de autogestión de la universidad (SAWeb) figuran tus materias bajo <strong>{transitionPlan.planNumero}</strong> o <strong>{defaultPlan.planNumero}</strong>. Siempre podés cambiar de plan después en Configuración.
                         </p>
                     </details>
                 </div>

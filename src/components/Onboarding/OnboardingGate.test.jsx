@@ -1,10 +1,11 @@
 // @vitest-environment happy-dom
 import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import storageRepository, { CURRENT_ONBOARDING_VERSION } from '../../services/storageRepository';
 import { PlanProvider } from '../../context/PlanContext';
+import { triggerDevSimulateNewcomer } from './onboardingEvents';
 
 const mockSignIn = vi.fn();
 const mockUpdateAuthProgreso = vi.fn((plan, progreso, detalles) => {
@@ -81,6 +82,7 @@ import OnboardingGate from './OnboardingGate';
 const MATERIAS_MOCK = [
     { codigo: '11071', nombre: 'Introducción a la Programación', anio: 1, cuatrimestre: 1, correlativas: [] },
     { codigo: '11072', nombre: 'Álgebra', anio: 1, cuatrimestre: 2, correlativas: [] },
+    { codigo: '11073', nombre: 'Bases de Datos', anio: 2, cuatrimestre: 1, correlativas: ['11071'] },
 ];
 
 function LocationMonitor() {
@@ -118,7 +120,7 @@ describe('OnboardingGate - Asistente inicial obligatorio, usuarios existentes y 
         cleanup();
     });
 
-    it('usuario nuevo en / ve el asistente obligatorio sin botón Omitir ni warning de sobrescritura', () => {
+    it('usuario nuevo en / ve el asistente obligatorio con texto SAWeb (sin SIU) y sin botón Omitir', () => {
         renderGate('/');
 
         expect(screen.getByText(/¿En qué año ingresaste a la carrera\?/i)).toBeTruthy();
@@ -126,6 +128,10 @@ describe('OnboardingGate - Asistente inicial obligatorio, usuarios existentes y 
         expect(screen.queryByRole('button', { name: /Omitir/i })).toBeNull();
         expect(screen.queryByText(/Ya tenés materias guardadas/i)).toBeNull();
         expect(screen.queryByText('Contenido App')).toBeNull();
+
+        fireEvent.click(screen.getByText(/¿No estás seguro en qué plan estás\?/i));
+        expect(screen.getByText(/SAWeb/i)).toBeTruthy();
+        expect(screen.queryByText(/\bSIU\b/i)).toBeNull();
     });
 
     it.each(['/como-usar', '/contacto'])(
@@ -222,5 +228,52 @@ describe('OnboardingGate - Asistente inicial obligatorio, usuarios existentes y 
                 title: '¡Bienvenido de vuelta!',
             }),
         );
+    });
+
+    it('al pulsar "Aprobar todo 1° Año" colapsa 1° Año, abre 2° Año y cambia el botón a "Desmarcar 1° Año"', async () => {
+        renderGate('/');
+
+        fireEvent.click(screen.getByRole('button', { name: /Ingresé en 2024 o después/i }));
+
+        await waitFor(() => {
+            expect(screen.getByText(/Introducción a la Programación/i)).toBeTruthy();
+        });
+        expect(screen.queryByText('Bases de Datos')).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: /Aprobar todo 1° Año/i }));
+
+        // 1° Año se colapsa y 2° Año se despliega automáticamente
+        expect(screen.queryByText(/Introducción a la Programación/i)).toBeNull();
+        expect(screen.getByText('Bases de Datos')).toBeTruthy();
+        expect(screen.getByText(/2 aprobadas/i)).toBeTruthy();
+
+        const desmarcarBtn = screen.getByRole('button', { name: /Desmarcar 1° Año/i });
+        fireEvent.click(desmarcarBtn);
+
+        expect(screen.getByText(/0 aprobadas/i)).toBeTruthy();
+        expect(screen.getByText(/Introducción a la Programación/i)).toBeTruthy();
+    });
+
+    it('triggerDevSimulateNewcomer permite probar el alta como ingresante nuevo en DEV y salir sin perder datos', () => {
+        storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION, { silent: true });
+        storageRepository.setPlanActivo('17.14', { silent: true });
+        storageRepository.setProgreso('17.14', { '11071': 'Aprobado' }, { silent: true });
+
+        renderGate('/');
+        expect(screen.getByText('Contenido App')).toBeTruthy();
+
+        act(() => {
+            triggerDevSimulateNewcomer();
+        });
+
+        // Se muestra como ingresante nuevo sin warning de sobrescritura ni Omitir
+        expect(screen.getByText(/¿En qué año ingresaste a la carrera\?/i)).toBeTruthy();
+        expect(screen.queryByText(/Ya tenés materias guardadas/i)).toBeNull();
+        expect(screen.queryByRole('button', { name: /^Omitir$/i })).toBeNull();
+
+        fireEvent.click(screen.getByRole('button', { name: /DEV · Salir/i }));
+
+        expect(screen.getByText('Contenido App')).toBeTruthy();
+        expect(storageRepository.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
     });
 });
