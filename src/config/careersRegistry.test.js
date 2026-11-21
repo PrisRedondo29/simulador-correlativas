@@ -11,6 +11,7 @@ import {
     getPlansSupportingFeature,
     mergeDynamicCatalogCareers,
 } from './careersRegistry';
+import sistemasPlans from '../data/sistemas.json';
 
 const MULTI_CAREER_MOCK = [
     ...CAREERS_REGISTRY,
@@ -118,5 +119,13 @@ describe('careersRegistry - Registro declarativo multi-carrera', () => {
         expect(available.map((c) => c.id)).toEqual(['sistemas', 'civil', 'administracion']);
         expect(getPlanEntry('20.08', merged)?.carrera).toBe('Ingeniería Civil');
         expect(getPlanEntry('30.01', merged)?.careerShortName).toBe('Lic. Admin');
+    });
+
+    it('alinea estimatedSubjects con la cantidad real de materias de cada plan estático de sistemas.json', () => {
+        sistemasPlans.forEach((planData) => {
+            const entry = getPlanEntry(planData.plan_numero);
+            expect(entry).not.toBeNull();
+            expect(entry.estimatedSubjects).toBe(planData.materias.length);
+        });
     });
 });

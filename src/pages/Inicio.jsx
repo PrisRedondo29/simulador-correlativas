@@ -4,14 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlanCapabilities } from '../context/PlanContext';
 import { DEFAULT_PLAN } from '../config/planPolicies';
+import planService from '../services/planService';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { triggerDevSimulateNewcomer } from '../components/Onboarding/onboardingEvents';
+
+/** @typedef {import('../types/domain').Materia} Materia */
 
 function Inicio() {
     const navigate = useNavigate();
     const { user, userData } = useAuth();
     const { plan, tenant, policy, can, canSimulateTransition, transitionInfo, equivalenciasInfo } = usePlanCapabilities();
     const [progresoGlobal, setProgresoGlobal] = useState({});
+    /** @type {[{ plan: string | null, materias: Materia[] | null }, React.Dispatch<React.SetStateAction<{ plan: string | null, materias: Materia[] | null }>>]} */
+    const [loadedPlan, setLoadedPlan] = useState({ plan: null, materias: null });
     const planActivo = plan || DEFAULT_PLAN;
 
     useEffect(() => {
@@ -23,19 +28,68 @@ function Inicio() {
         return subscribeStorageChanges(cargarProgreso);
     }, [planActivo]);
 
+    useEffect(() => {
+        let active = true;
+        planService
+            .getMateriasByPlan(planActivo)
+            .then((list) => {
+                if (active) {
+                    setLoadedPlan({
+                        plan: planActivo,
+                        materias: Array.isArray(list) ? list : null,
+                    });
+                }
+            })
+            .catch(() => {
+                if (active) {
+                    setLoadedPlan({ plan: planActivo, materias: null });
+                }
+            });
+        return () => {
+            active = false;
+        };
+    }, [planActivo]);
+
     const stats = useMemo(() => {
+        const materiasDelPlan =
+            loadedPlan.plan === planActivo && Array.isArray(loadedPlan.materias) && loadedPlan.materias.length > 0
+                ? loadedPlan.materias
+                : null;
+
+        if (materiasDelPlan) {
+            let aprobadas = 0;
+            let regulares = 0;
+            materiasDelPlan.forEach((m) => {
+                const estado = progresoGlobal[m.codigo];
+                if (estado === 'Aprobado' || estado === 'Promocionado') {
+                    aprobadas += 1;
+                } else if (estado === 'Regular' || estado === 'Cursando') {
+                    regulares += 1;
+                }
+            });
+            const totalMaterias = materiasDelPlan.length;
+            const porcentaje =
+                totalMaterias > 0 ? Math.min(100, Math.round((aprobadas * 100) / totalMaterias)) : 0;
+            return {
+                aprobadas,
+                regulares,
+                porcentaje,
+                tieneProgreso: aprobadas > 0 || regulares > 0,
+            };
+        }
+
         const values = Object.values(progresoGlobal);
         const aprobadas = values.filter(v => v === 'Aprobado' || v === 'Promocionado').length;
         const regulares = values.filter(v => v === 'Regular' || v === 'Cursando').length;
         const totalEstimado = policy?.estimatedSubjects || 36;
-        const porcentaje = Math.min(100, Math.round((aprobadas / totalEstimado) * 100));
+        const porcentaje = Math.min(100, Math.round((aprobadas * 100) / totalEstimado));
         return {
             aprobadas,
             regulares,
             porcentaje,
             tieneProgreso: values.length > 0 && (aprobadas > 0 || regulares > 0),
         };
-    }, [progresoGlobal, policy]);
+    }, [progresoGlobal, policy, loadedPlan, planActivo]);
 
     const nombreUsuario = useMemo(() => {
         if (userData?.config?.alias) return userData.config.alias;

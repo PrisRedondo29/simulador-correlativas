@@ -183,7 +183,7 @@ export const TUTORIAL_TOURS = {
                 target: '[data-tour="cambio-plan-evaluacion"]',
                 title: 'Veredicto de transición',
                 description:
-                    'Evaluá en un clic si ya podés pasarte este cuatrimestre según la oferta vigente de la resolución o en qué período te habilita.',
+                    'Consultá directamente si ya podés pasarte este cuatrimestre según la oferta vigente de la resolución o en qué período te habilita.',
             },
             {
                 id: 'cambio_plan_faq',

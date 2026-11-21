@@ -17,7 +17,6 @@ import {
     FileText,
     TrendingDown,
     PhoneCall,
-    Sparkles,
 } from 'lucide-react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import planService from '../services/planService';
@@ -43,8 +42,6 @@ function TransicionPlan() {
 
     const anioActual = useMemo(() => new Date().getFullYear(), []);
     const fromOnboarding = Boolean(location.state?.fromOnboarding);
-    const autoEvaluate = Boolean(location.state?.autoEvaluate);
-    const [evaluadoManual, setEvaluadoManual] = useState(false);
 
     const [progreso, setProgreso] = useState(() =>
         sourcePlan ? storageRepository.getProgreso(sourcePlan, {}) : {},
@@ -91,8 +88,6 @@ function TransicionPlan() {
 
     const tieneProgresoCargado =
         resumenPaso1.cantidadAprobadas > 0 || resumenPaso1.cantidadFuera > 0;
-
-    const evaluado = evaluadoManual || (autoEvaluate && tieneProgresoCargado);
 
     const elegibilidad = useMemo(() => {
         return evaluarElegibilidadActual({
@@ -225,30 +220,6 @@ function TransicionPlan() {
                         >
                             Cargar mis materias
                         </Button>
-                    </section>
-                ) : !evaluado ? (
-                    /* ─── ACCIÓN PRINCIPAL: UN BOTÓN CLARO ─── */
-                    <section className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-6 sm:p-8 text-center space-y-4">
-                        <div className="w-12 h-12 rounded-2xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center mx-auto">
-                            <Sparkles size={22} />
-                        </div>
-                        <div className="space-y-1.5 max-w-lg mx-auto">
-                            <h2 className="text-lg sm:text-xl font-bold text-[#1E293B] dark:text-[#F1F5F9]">
-                                ¿Querés saber si ya podés pasarte al Plan {targetPlan}?
-                            </h2>
-                            <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8]">
-                                Analizamos tus {resumenPaso1.cantidadAprobadas} materias aprobadas con final según la oferta oficial {anioEvaluado}.
-                            </p>
-                        </div>
-                        <div>
-                            <Button
-                                onPress={() => setEvaluadoManual(true)}
-                                className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-sm px-6 h-11 rounded-xl shadow-xs"
-                                endContent={<ArrowRight size={16} />}
-                            >
-                                Evaluar si me corresponde el cambio
-                            </Button>
-                        </div>
                     </section>
                 ) : (
                     /* ─── RESULTADO DIRECTO: SÍ HOY O EN QUÉ AÑO SÍ ─── */

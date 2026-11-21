@@ -31,7 +31,7 @@ export const CAREERS_REGISTRY = [
                 shortTitle: 'Plan Nuevo',
                 statusLabel: 'Vigente',
                 description: 'Recomendado para ingresantes recientes y quienes migraron al nuevo diseño curricular.',
-                estimatedSubjects: 36,
+                estimatedSubjects: 43,
                 isDefault: true,
                 intermediateTitle: {
                     name: 'Título Intermedio (Analista)',
@@ -56,7 +56,7 @@ export const CAREERS_REGISTRY = [
                 shortTitle: 'Plan Anterior',
                 statusLabel: 'Anterior',
                 description: 'Plan de estudios histórico para estudiantes que mantienen su regularidad en el diseño anterior.',
-                estimatedSubjects: 37,
+                estimatedSubjects: 42,
                 isDefault: false,
                 intermediateTitle: {
                     name: 'Título Intermedio (Analista)',
