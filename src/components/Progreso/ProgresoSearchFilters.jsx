@@ -209,16 +209,17 @@ export default function ProgresoSearchFilters({
               </Dropdown>
             )}
 
-            {/* Importar desde SAWeb (solo escritorio) */}
+            {/* Importar desde Analítico SAWeb (disponible en celular y escritorio) */}
             {onOpenSawebImport && (
               <Button
                 size="sm"
                 variant="flat"
                 onPress={onOpenSawebImport}
-                className="hidden md:inline-flex bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-semibold min-h-9 border border-[#A7F3D0]/70 dark:border-[#1E4D38]"
+                className="inline-flex bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-semibold min-h-9 border border-[#A7F3D0]/70 dark:border-[#1E4D38]"
                 startContent={<ClipboardPaste className="w-3.5 h-3.5" />}
               >
-                Importar SAWeb
+                <span className="hidden sm:inline">Importar Analítico</span>
+                <span className="sm:hidden">Analítico</span>
               </Button>
             )}
 

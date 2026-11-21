@@ -57,6 +57,8 @@ export default defineConfig({
         globIgnores: [
           '**/*.map',
           'assets/vendor-utils-*.js',
+          'assets/vendor-pdf-*.js',
+          'assets/pdf.worker*.mjs',
           'imgs/dashboard.png',
           'imgs/Priscila*',
           'imgs/logo_temporal.png',
@@ -139,6 +141,7 @@ export default defineConfig({
             if (id.includes('@xyflow')) return 'vendor-flow';
             
             // Utilidades pesadas (PDF, imágenes)
+            if (id.includes('pdfjs-dist')) return 'vendor-pdf';
             if (id.includes('jspdf') || id.includes('html2canvas') || id.includes('html-to-image')) {
               return 'vendor-utils';
             }

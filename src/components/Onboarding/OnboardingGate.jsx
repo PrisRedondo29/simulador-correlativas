@@ -25,8 +25,36 @@ import { GoogleIcon } from '../Shared/BrandIcons';
 import OnboardingPlanStep from './OnboardingPlanStep';
 import OnboardingSubjectsStep from './OnboardingSubjectsStep';
 import { DEV_SIMULATE_NEWCOMER_EVENT } from './onboardingEvents';
+import { mergeSawebImportWithExisting } from '../../utils/sawebParser';
 
 const FREE_ROUTES = ['/como-usar', '/contacto'];
+const ONBOARDING_DRAFT_KEY = 'onboarding_draft_state';
+
+function readOnboardingDraft() {
+    try {
+        const raw = localStorage.getItem(ONBOARDING_DRAFT_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.step === 2 && typeof parsed.selectedPlan === 'string') {
+            return parsed;
+        }
+    } catch {
+        // ignore storage errors
+    }
+    return null;
+}
+
+function saveOnboardingDraft(draft) {
+    try {
+        if (!draft) {
+            localStorage.removeItem(ONBOARDING_DRAFT_KEY);
+        } else {
+            localStorage.setItem(ONBOARDING_DRAFT_KEY, JSON.stringify(draft));
+        }
+    } catch {
+        // ignore storage errors
+    }
+}
 
 /**
  * Compuerta global de Onboarding inicial para estudiantes:
@@ -55,13 +83,32 @@ export default function OnboardingGate({ children }) {
         storageRepository.hasExistingAcademicData(),
     );
 
-    const [step, setStep] = useState(1);
-    const [selectedPlan, setSelectedPlan] = useState(null);
+    const initialDraft = readOnboardingDraft();
+    const [step, setStep] = useState(initialDraft ? 2 : 1);
+    const [selectedPlan, setSelectedPlan] = useState(initialDraft?.selectedPlan || null);
     const [materias, setMaterias] = useState([]);
-    const [loadingPlan, setLoadingPlan] = useState(false);
+    const [loadingPlan, setLoadingPlan] = useState(Boolean(initialDraft?.selectedPlan));
     const [loadError, setLoadError] = useState(null);
     const [devSimulateNewcomer, setDevSimulateNewcomer] = useState(false);
     const awaitingCloudLoginRef = useRef(false);
+
+    useEffect(() => {
+        if (initialDraft?.selectedPlan && onboardingVersion < CURRENT_ONBOARDING_VERSION) {
+            planService
+                .getMateriasByPlan(initialDraft.selectedPlan)
+                .then((list) => {
+                    setMaterias(Array.isArray(list) ? list : []);
+                })
+                .catch(() => {
+                    setLoadError(`No pudimos cargar las materias del Plan ${initialDraft.selectedPlan}.`);
+                    setMaterias([]);
+                })
+                .finally(() => {
+                    setLoadingPlan(false);
+                });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         if (!import.meta.env.DEV) return undefined;
@@ -162,6 +209,7 @@ export default function OnboardingGate({ children }) {
         setLoadingPlan(true);
         setLoadError(null);
         setStep(2);
+        saveOnboardingDraft({ step: 2, selectedPlan: planNumero });
 
         try {
             const list = await planService.getMateriasByPlan(planNumero);
@@ -175,12 +223,21 @@ export default function OnboardingGate({ children }) {
     };
 
     const handleSkipExisting = () => {
+        saveOnboardingDraft(null);
         storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        addToast({
+            title: 'Tip: podés subir tu Analítico PDF',
+            description:
+                'Desde Mis Materias → Importar Analítico podés actualizar tus intentos de finales y fechas sin perder tus notas de cursada.',
+            color: 'primary',
+            timeout: 8000,
+        });
     };
 
     const handleComplete = (progresoDraft, counts) => {
         if (!selectedPlan) return;
 
+        saveOnboardingDraft(null);
         if (hasExistingData) {
             storageRepository.saveRecoveryBackup(storageRepository.readAcademicBundle(), {
                 reason: 'pre_onboarding_overwrite',
@@ -244,6 +301,7 @@ export default function OnboardingGate({ children }) {
         const targetPlan = parsedResult?.targetPlan || selectedPlan;
         if (!targetPlan) return;
 
+        saveOnboardingDraft(null);
         if (hasExistingData) {
             storageRepository.saveRecoveryBackup(storageRepository.readAcademicBundle(), {
                 reason: 'pre_onboarding_saweb_import',
@@ -258,8 +316,21 @@ export default function OnboardingGate({ children }) {
         );
         const transitionMeta = getPlanTransitionMeta(targetPlan, careersRegistry);
 
-        const nextProgreso = parsedResult.progreso || {};
-        const nextDetalles = parsedResult.progresoDetalles || {};
+        const existingProgreso = devSimulateNewcomer
+            ? {}
+            : storageRepository.getProgreso(targetPlan, {});
+        const existingDetalles = devSimulateNewcomer
+            ? {}
+            : storageRepository.getProgresoDetalles(targetPlan, {});
+        const targetMaterias = parsedResult?.targetMaterias || materias;
+
+        const { progreso: nextProgreso, progresoDetalles: nextDetalles } =
+            mergeSawebImportWithExisting(
+                parsedResult,
+                existingProgreso,
+                existingDetalles,
+                targetMaterias,
+            );
 
         setPlan(targetPlan);
         updateAuthProgreso(targetPlan, nextProgreso, nextDetalles);
@@ -287,8 +358,8 @@ export default function OnboardingGate({ children }) {
         });
 
         addToast({
-            title: 'Progreso importado desde SAWeb',
-            description: `Se cargaron ${parsedResult.totalMatched} materias en el Plan ${targetPlan}.`,
+            title: 'Analítico importado desde SAWeb',
+            description: `Se cargaron ${parsedResult.totalMatched} materias en el Plan ${targetPlan} sin pisar tus notas de cursada.`,
             color: 'success',
         });
 
@@ -444,7 +515,10 @@ export default function OnboardingGate({ children }) {
                         careerName={activePolicy?.carrera}
                         materias={materias}
                         supportsTransition={supportsTransition}
-                        onBack={() => setStep(1)}
+                        onBack={() => {
+                            saveOnboardingDraft(null);
+                            setStep(1);
+                        }}
                         onComplete={handleComplete}
                         onOpenSawebImport={onSawebOpen}
                     />

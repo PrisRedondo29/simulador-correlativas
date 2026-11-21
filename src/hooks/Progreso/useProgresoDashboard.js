@@ -11,6 +11,7 @@ import {
 } from '../../utils/Progreso/materiaStateMachine';
 import { trackSearch, trackCambioVista, trackImportarSaweb } from '../../services/analyticsService';
 import storageRepository, { STORAGE_KEYS } from '../../services/storageRepository';
+import { mergeSawebImportWithExisting } from '../../utils/sawebParser';
 
 /**
  * Centraliza el estado de tablero, filtros, KPIs, acordeones por año,
@@ -442,8 +443,13 @@ export default function useProgresoDashboard({
             });
         }
 
-        const nextProgreso = parsedResult.progreso || {};
-        const nextDetalles = parsedResult.progresoDetalles || {};
+        const { progreso: nextProgreso, progresoDetalles: nextDetalles } =
+            mergeSawebImportWithExisting(
+                parsedResult,
+                progreso,
+                progresoDetalles,
+                materias,
+            );
 
         setProgreso(nextProgreso);
         setProgresoDetalles(nextDetalles);
@@ -458,11 +464,11 @@ export default function useProgresoDashboard({
         });
 
         addToast({
-            title: 'Progreso importado desde SAWeb',
-            description: `Se actualizaron ${parsedResult.totalMatched} materias en el Plan ${plan}.`,
+            title: 'Analítico importado desde SAWeb',
+            description: `Se actualizaron ${parsedResult.totalMatched} materias en el Plan ${plan} sin pisar tus notas de cursada.`,
             color: 'success',
         });
-    }, [plan, setProgreso, setProgresoDetalles, updateAuthProgreso]);
+    }, [plan, materias, progreso, progresoDetalles, setProgreso, setProgresoDetalles, updateAuthProgreso]);
 
     return {
         // Filtros y búsqueda

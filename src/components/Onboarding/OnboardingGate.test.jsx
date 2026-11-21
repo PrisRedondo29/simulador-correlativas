@@ -148,7 +148,7 @@ describe('OnboardingGate - Asistente inicial obligatorio, usuarios existentes y 
 
         fireEvent.click(screen.getByText(/¿No estás seguro en qué plan estás\?/i));
         expect(screen.getAllByText(/SAWeb/i).length).toBeGreaterThan(0);
-        expect(screen.getByRole('button', { name: /Importar SAWeb/i })).toBeTruthy();
+        expect(screen.getByRole('button', { name: /Subir Analítico PDF/i })).toBeTruthy();
         expect(screen.queryByText(/\bSIU\b/i)).toBeNull();
     });
 

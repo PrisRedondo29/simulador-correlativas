@@ -242,15 +242,15 @@ export default function OnboardingSubjectsStep({
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex flex-wrap items-center gap-2 shrink-0">
                             {onOpenSawebImport && (
                                 <button
                                     type="button"
                                     onClick={onOpenSawebImport}
-                                    className="hidden md:inline-flex min-h-11 px-3.5 py-2 rounded-xl bg-[#005A36] hover:bg-[#00462A] text-white text-xs font-semibold items-center justify-center gap-2 shrink-0 transition-colors cursor-pointer"
+                                    className="inline-flex min-h-11 px-3.5 py-2 rounded-xl bg-[#005A36] hover:bg-[#00462A] text-white text-xs font-semibold items-center justify-center gap-2 shrink-0 transition-colors cursor-pointer"
                                 >
                                     <ClipboardPaste className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                                    <span>Importar SAWeb</span>
+                                    <span>Subir Analítico PDF</span>
                                 </button>
                             )}
                             <button

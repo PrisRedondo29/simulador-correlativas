@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseSawebTexts } from './sawebParser';
+import { mergeSawebImportWithExisting, parseSawebTexts } from './sawebParser';
 
 const MOCK_PLAN_1713 = [
     { codigo: '11071', nombre: 'Introducción a la Programación', correlativas: [] },
@@ -142,5 +142,47 @@ describe('sawebParser', () => {
             anio: 2026,
             cuatrimestre: 1,
         });
+    });
+
+    it('mergeSawebImportWithExisting actualiza finales y aprobadas sin pisar nota de cursada ni materias Regular/Cursando previas', () => {
+        const parsed = parseSawebTexts(SAMPLE_ANALITICO_1713, MOCK_PLAN_1713);
+        const existingProgreso = {
+            '11071': 'Regular',
+            '11079': 'Regular',
+            '11081': 'Cursando',
+        };
+        const existingDetalles = {
+            '11071': {
+                notaRegularizacion: 8,
+                fechaRegularidad: { anio: 2019, cuatrimestre: 1 },
+                intentosFinal: [],
+            },
+            '11079': {
+                notaRegularizacion: 7,
+                fechaRegularidad: { anio: 2026, cuatrimestre: 1 },
+                intentosFinal: [],
+            },
+        };
+
+        const merged = mergeSawebImportWithExisting(
+            parsed,
+            existingProgreso,
+            existingDetalles,
+            MOCK_PLAN_1713,
+        );
+
+        // 11071 pasa a Promocionado con notaFinal 7 pero conserva su notaRegularizacion=8 y fechaRegularidad
+        expect(merged.progreso['11071']).toBe('Promocionado');
+        expect(merged.progresoDetalles['11071'].notaFinal).toBe(7);
+        expect(merged.progresoDetalles['11071'].notaRegularizacion).toBe(8);
+        expect(merged.progresoDetalles['11071'].fechaRegularidad).toEqual({
+            anio: 2019,
+            cuatrimestre: 1,
+        });
+
+        // 11079 (Regular) y 11081 (Cursando) no están en el Analítico -> se conservan intactas
+        expect(merged.progreso['11079']).toBe('Regular');
+        expect(merged.progresoDetalles['11079'].notaRegularizacion).toBe(7);
+        expect(merged.progreso['11081']).toBe('Cursando');
     });
 });

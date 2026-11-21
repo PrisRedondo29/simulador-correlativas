@@ -411,3 +411,80 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         progresoDetalles,
     };
 }
+
+/**
+ * Combina el resultado del Analítico oficial con el progreso y detalles existentes del alumno,
+ * actualizando intentos de final, fechas de aprobación, equivalencias y notas finales
+ * SIN pisar `notaRegularizacion`, `fechaRegularidad`, `historial` ni materias `Cursando`/`Regular`
+ * que no figuran en el Analítico.
+ *
+ * @param {ReturnType<typeof parseSawebTexts>} parsedResult
+ * @param {ProgresoMap} existingProgreso
+ * @param {ProgresoDetallesMap} existingDetalles
+ * @param {Materia[]} materiasPlan
+ * @returns {{ progreso: ProgresoMap, progresoDetalles: ProgresoDetallesMap }}
+ */
+export function mergeSawebImportWithExisting(
+    parsedResult,
+    existingProgreso = {},
+    existingDetalles = {},
+    materiasPlan = [],
+) {
+    /** @type {ProgresoMap} */
+    const mergedProgreso = {};
+    /** @type {ProgresoDetallesMap} */
+    const mergedDetalles = {};
+
+    const importedProgreso = parsedResult?.progreso || {};
+    const importedDetalles = parsedResult?.progresoDetalles || {};
+
+    for (const materia of materiasPlan || []) {
+        const codigo = materia.codigo;
+        const importedDet = importedDetalles[codigo];
+        const prevDet = existingDetalles?.[codigo];
+        const prevEstado = existingProgreso?.[codigo];
+        const importedEstado = importedProgreso[codigo];
+
+        if (importedDet && importedEstado) {
+            mergedProgreso[codigo] = importedEstado;
+            mergedDetalles[codigo] = {
+                ...prevDet,
+                ...importedDet,
+                // Nunca pisar nota de cursada ni fecha de regularidad cargadas previamente
+                notaRegularizacion:
+                    prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null,
+                fechaRegularidad:
+                    prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null,
+                ...(prevDet?.historial && { historial: prevDet.historial }),
+            };
+        } else if (
+            prevEstado === ESTADOS_MATERIA.CURSANDO ||
+            prevEstado === ESTADOS_MATERIA.REGULAR ||
+            prevEstado === ESTADOS_MATERIA.APROBADO ||
+            prevEstado === ESTADOS_MATERIA.PROMOCIONADO ||
+            prevEstado === ESTADOS_MATERIA.LIBRE
+        ) {
+            // Conservar materias cursando / regulares / cargadas manualmente que no están en el Analítico
+            mergedProgreso[codigo] = prevEstado;
+            if (prevDet) {
+                mergedDetalles[codigo] = prevDet;
+            }
+        }
+    }
+
+    // Recalcular Disponible / Bloqueado para materias sin estado consolidado
+    for (const materia of materiasPlan || []) {
+        if (!mergedProgreso[materia.codigo]) {
+            mergedProgreso[materia.codigo] = calcularEstadoBaseMateria(
+                mergedProgreso,
+                materia,
+                materiasPlan,
+            );
+        }
+    }
+
+    return {
+        progreso: mergedProgreso,
+        progresoDetalles: mergedDetalles,
+    };
+}
