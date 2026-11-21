@@ -1,9 +1,30 @@
+/**
+ * @typedef {{
+ *   id: string,
+ *   target: string,
+ *   title: string,
+ *   description: string,
+ * }} TutorialStep
+ *
+ * @typedef {{
+ *   id: string,
+ *   version: number,
+ *   route: string,
+ *   title: string,
+ *   requiredFeature?: string,
+ *   steps: TutorialStep[],
+ * }} TutorialTour
+ */
+
 export const TOUR_IDS = {
     MIS_MATERIAS: 'mis_materias',
     MI_AGENDA: 'mi_agenda',
     SIMULADOR: 'simulador',
+    EQUIVALENCIAS: 'equivalencias',
+    CAMBIO_PLAN: 'cambio_plan',
 };
 
+/** @type {Record<string, TutorialTour>} */
 export const TUTORIAL_TOURS = {
     [TOUR_IDS.MIS_MATERIAS]: {
         id: TOUR_IDS.MIS_MATERIAS,
@@ -113,4 +134,77 @@ export const TUTORIAL_TOURS = {
             },
         ],
     },
+    [TOUR_IDS.EQUIVALENCIAS]: {
+        id: TOUR_IDS.EQUIVALENCIAS,
+        version: 1,
+        route: '/equivalencias',
+        title: 'Equivalencias',
+        requiredFeature: 'equivalencias',
+        steps: [
+            {
+                id: 'equivalencias_comparativa',
+                target: '[data-tour="equivalencias-comparativa"]',
+                title: 'Compará carga y avance real',
+                description:
+                    'Arriba ves tu porcentaje y horas restantes en el plan de origen frente al plan destino según las materias ya aprobadas.',
+            },
+            {
+                id: 'equivalencias_filtros',
+                target: '[data-tour="equivalencias-filtros"]',
+                title: 'Buscá y filtrá equivalencias',
+                description:
+                    'Usá el buscador por código o nombre y alterná entre Todas, Aprobadas o Pendientes para revisar lo que te falta.',
+            },
+            {
+                id: 'equivalencias_lista',
+                target: '[data-tour="equivalencias-lista"]',
+                title: 'Mapeo materia a materia',
+                description:
+                    'Cada fila te muestra qué materias del plan origen otorgan la equivalencia directa en el plan nuevo.',
+            },
+        ],
+    },
+    [TOUR_IDS.CAMBIO_PLAN]: {
+        id: TOUR_IDS.CAMBIO_PLAN,
+        version: 1,
+        route: '/cambio-plan',
+        title: 'Cambio de Plan',
+        requiredFeature: 'planTransition',
+        steps: [
+            {
+                id: 'cambio_plan_resumen',
+                target: '[data-tour="cambio-plan-resumen"]',
+                title: 'Partí desde tu progreso real',
+                description:
+                    'Acá ves el conteo de materias con final aprobado y regulares que toma el evaluador desde Mis Materias.',
+            },
+            {
+                id: 'cambio_plan_evaluacion',
+                target: '[data-tour="cambio-plan-evaluacion"]',
+                title: 'Veredicto de transición',
+                description:
+                    'Evaluá en un clic si ya podés pasarte este cuatrimestre según la oferta vigente de la resolución o en qué período te habilita.',
+            },
+            {
+                id: 'cambio_plan_faq',
+                target: '[data-tour="cambio-plan-faq"]',
+                title: 'Reglas de regularidades y trámite',
+                description:
+                    'Consultá qué pasa con las materias regularizadas sin final y cómo gestionar el pase formal ante Alumnos.',
+            },
+        ],
+    },
 };
+
+/**
+ * Devuelve los recorridos habilitados según las capacidades del plan activo.
+ * @param {((featureName: string) => boolean) | null | undefined} [canFn]
+ * @returns {TutorialTour[]}
+ */
+export function getAvailableTours(canFn) {
+    return Object.values(TUTORIAL_TOURS).filter(
+        (tour) =>
+            !tour.requiredFeature ||
+            (typeof canFn === 'function' ? canFn(tour.requiredFeature) : true),
+    );
+}

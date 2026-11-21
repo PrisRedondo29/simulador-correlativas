@@ -11,18 +11,22 @@ import {
     addToast,
     Chip,
     Avatar,
+    Switch,
 } from '@heroui/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Compass, RotateCcw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { usePlanCapabilities } from '../context/PlanContext';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
 import { trackSeleccionCarrera } from '../services/analyticsService';
-import storageRepository from '../services/storageRepository';
+import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
+import { getAvailableTours } from '../config/tutorialTours';
 import usePwaInstall from '../hooks/usePwaInstall';
 
 export default function SettingsPage({ plan, setPlan }) {
+    const navigate = useNavigate();
     const {
         user,
         userData,
@@ -39,9 +43,11 @@ export default function SettingsPage({ plan, setPlan }) {
         career,
         availableCareers,
         catalogCareers,
+        can,
         canSimulateTransition,
         transitionInfo,
     } = usePlanCapabilities();
+    const availableTours = getAvailableTours(can);
     const { theme, setTheme } = useTheme();
     const activePlan = plan || career?.defaultPlan || DEFAULT_PLAN;
     const activeCareer = career || availableCareers[0] || null;
@@ -53,8 +59,15 @@ export default function SettingsPage({ plan, setPlan }) {
 
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
+    const [tutorialPrefs, setTutorialPrefs] = useState(() => storageRepository.getTutorialPrefs());
     const importInputRef = useRef(null);
     const { canInstall, isInstalling, triggerInstall } = usePwaInstall();
+
+    useEffect(() => {
+        return subscribeStorageChanges(() => {
+            setTutorialPrefs(storageRepository.getTutorialPrefs());
+        });
+    }, []);
 
     useEffect(() => {
         if (userData?.config?.alias) {
@@ -549,6 +562,86 @@ export default function SettingsPage({ plan, setPlan }) {
                                 </button>
                             </div>
                         )}
+                    </CardBody>
+                </Card>
+
+                {/* Guías interactivas */}
+                <Card shadow="none" className="md:col-span-2 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
+                    <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] flex items-center justify-center text-[#005A36] dark:text-[#6EE7B7]">
+                            <Compass size={15} aria-hidden="true" />
+                        </div>
+                        <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">
+                                Guías interactivas
+                            </p>
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
+                                Administrá los recorridos guiados por pantalla
+                            </p>
+                        </div>
+                    </CardHeader>
+                    <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
+                    <CardBody className="px-5 pb-5 pt-2 flex flex-col gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540]">
+                            <div className="space-y-0.5">
+                                <p className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                                    Mostrar guías automáticamente al entrar por primera vez
+                                </p>
+                                <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                    También se vuelven a ofrecer si actualizamos el tutorial de una sección.
+                                </p>
+                            </div>
+                            <Switch
+                                size="sm"
+                                color="success"
+                                aria-label="Mostrar guías automáticamente al entrar por primera vez"
+                                isSelected={!tutorialPrefs.autoDisabled}
+                                onValueChange={(enabled) => {
+                                    storageRepository.setTutorialPrefs({ autoDisabled: !enabled });
+                                    setTutorialPrefs(storageRepository.getTutorialPrefs());
+                                }}
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                {availableTours.map((tour) => (
+                                    <Button
+                                        key={tour.id}
+                                        size="sm"
+                                        variant="flat"
+                                        className="bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-semibold text-xs h-8 rounded-xl"
+                                        startContent={<Compass className="w-3.5 h-3.5" aria-hidden="true" />}
+                                        onPress={() =>
+                                            navigate(tour.route, {
+                                                state: { startTour: tour.id },
+                                            })
+                                        }
+                                    >
+                                        Recorrido: {tour.title}
+                                    </Button>
+                                ))}
+                            </div>
+
+                            <Button
+                                size="sm"
+                                variant="bordered"
+                                className="border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] text-xs h-8 rounded-xl shrink-0"
+                                startContent={<RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />}
+                                onPress={() => {
+                                    storageRepository.resetAllTutorials();
+                                    setTutorialPrefs(storageRepository.getTutorialPrefs());
+                                    addToast({
+                                        title: 'Guías restablecidas',
+                                        description:
+                                            'Los recorridos volverán a mostrarse automáticamente en cada sección.',
+                                        color: 'success',
+                                    });
+                                }}
+                            >
+                                Restablecer guías
+                            </Button>
+                        </div>
                     </CardBody>
                 </Card>
             </div>

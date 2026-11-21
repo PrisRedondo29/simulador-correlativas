@@ -63,7 +63,7 @@ function HeaderEquivalencias({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div data-tour="equivalencias-comparativa" className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Plan Origen */}
                 <Card shadow="none" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
                     <CardBody className="gap-2 p-3.5 sm:p-4">

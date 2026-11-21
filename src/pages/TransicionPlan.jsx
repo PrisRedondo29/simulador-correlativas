@@ -23,6 +23,8 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import planService from '../services/planService';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { usePlanCapabilities } from '../context/PlanContext';
+import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverlay';
+import { TOUR_IDS, TUTORIAL_TOURS } from '../config/tutorialTours';
 import {
     OFERTA_RESOLUCION_89_2025,
     obtenerResumenPaso1,
@@ -126,8 +128,13 @@ function TransicionPlan() {
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1419] pb-14">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
+                <InteractiveTourOverlay
+                    tour={TUTORIAL_TOURS[TOUR_IDS.CAMBIO_PLAN]}
+                    ready={Boolean(planOrigen && planDestino && equivalenciasData)}
+                />
+
                 {/* ─── CABECERA ─── */}
-                <header className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <header data-tour="cambio-plan-resumen" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FEF3C7] dark:bg-[#2D2210] text-[#92400E] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]">
@@ -196,8 +203,9 @@ function TransicionPlan() {
                     </section>
                 )}
 
-                {/* ─── SIN PROGRESO CARGADO ─── */}
-                {!tieneProgresoCargado ? (
+                {/* ─── BLOQUE PRINCIPAL DE EVALUACIÓN / RESULTADO ─── */}
+                <div data-tour="cambio-plan-evaluacion" className="space-y-5">
+                    {!tieneProgresoCargado ? (
                     <section className="p-5 sm:p-6 bg-[#FFFBEB] dark:bg-[#2D2210] border border-[#FDE68A] dark:border-[#5C4318] rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div className="flex items-start gap-3">
                             <AlertTriangle size={20} className="text-[#92400E] dark:text-[#FCD34D] shrink-0 mt-0.5" />
@@ -421,9 +429,10 @@ function TransicionPlan() {
                         )}
                     </>
                 )}
+                </div>
 
                 {/* ─── PREGUNTAS FRECUENTES ─── */}
-                <section className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-5 sm:p-6 space-y-4">
+                <section data-tour="cambio-plan-faq" className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-5 sm:p-6 space-y-4">
                     <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center shrink-0">
                             <HelpCircle size={18} />

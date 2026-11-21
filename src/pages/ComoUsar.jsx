@@ -7,12 +7,13 @@ import FeatureGuideCard from '../components/Tutorial/sections/FeatureGuideCard';
 import FAQSection from '../components/Tutorial/sections/FAQSection';
 import InteractiveMateriaDemo from '../components/Tutorial/sections/InteractiveMateriaDemo';
 import { usePlanCapabilities } from '../context/PlanContext';
-import { TUTORIAL_TOURS } from '../config/tutorialTours';
+import { getAvailableTours } from '../config/tutorialTours';
 import storageRepository from '../services/storageRepository';
 
 export default function ComoUsar() {
     const navigate = useNavigate();
-    const { canSimulateTransition, transitionInfo } = usePlanCapabilities();
+    const { can, canSimulateTransition, transitionInfo } = usePlanCapabilities();
+    const availableTours = getAvailableTours(can);
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1419] py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
@@ -45,7 +46,7 @@ export default function ComoUsar() {
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        {Object.values(TUTORIAL_TOURS).map((tour) => (
+                        {availableTours.map((tour) => (
                             <Button
                                 key={tour.id}
                                 size="sm"
