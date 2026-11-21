@@ -47,6 +47,7 @@ export const STORAGE_KEYS = {
     TUTORIAL_VERSIONS: 'unlu_tutorial_versions:v1',
     TUTORIAL_PREFS: 'unlu_tutorial_prefs:v1',
     SIMULADOR_VISTA: 'simulador_vista_preferida',
+    SIMULADOR_MODE_SELECTED: 'unlu_simulador_mode_selected:v1',
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
     CATALOG_META_CACHE: 'unlu_catalog_meta:v1',
@@ -842,6 +843,20 @@ export function createStorageRepository(storage = getBrowserStorage()) {
             remove(STORAGE_KEYS.TUTORIAL_VERSIONS);
             return remove(STORAGE_KEYS.TUTORIAL_PREFS);
         },
+
+        /**
+         * @returns {'planificar' | 'explorar' | null}
+         */
+        getSimuladorModeSelected: () => {
+            const val = getRaw(STORAGE_KEYS.SIMULADOR_MODE_SELECTED, null);
+            return val === 'planificar' || val === 'explorar' ? val : null;
+        },
+
+        /**
+         * @param {'planificar' | 'explorar'} mode
+         */
+        setSimuladorModeSelected: (mode) =>
+            setRaw(STORAGE_KEYS.SIMULADOR_MODE_SELECTED, mode),
     };
 }
 

@@ -1,6 +1,7 @@
 export const TOUR_IDS = {
     MIS_MATERIAS: 'mis_materias',
     MI_AGENDA: 'mi_agenda',
+    SIMULADOR: 'simulador',
 };
 
 export const TUTORIAL_TOURS = {
@@ -66,6 +67,35 @@ export const TUTORIAL_TOURS = {
                 title: 'Agendá parciales, entregas o finales',
                 description:
                     'Elegí el tipo de evento, la fecha y asociá la materia desde este formulario para verlo en tu calendario y alertas.',
+            },
+        ],
+    },
+    [TOUR_IDS.SIMULADOR]: {
+        id: TOUR_IDS.SIMULADOR,
+        version: 1,
+        route: '/simulador',
+        title: 'Simulador de Avance',
+        steps: [
+            {
+                id: 'simulador_modos',
+                target: '[data-tour="simulador-modos"]',
+                title: 'Elegí cómo simular',
+                description:
+                    'Cambiá cuando quieras entre Planificar avance (cuatrimestre a cuatrimestre) y Explorar correlativas (fijar una materia y ver su cadena).',
+            },
+            {
+                id: 'simulador_controles',
+                target: '[data-tour="simulador-controles"]',
+                title: 'Controlá tu simulación',
+                description:
+                    'Desde acá avanzás o retrocedés cuatrimestres, importás tus materias reales o probás aprobar la materia fijada.',
+            },
+            {
+                id: 'simulador_opciones',
+                target: '[data-tour="simulador-opciones"]',
+                title: 'Importar y configurar',
+                description:
+                    'En Opciones podés traer tu progreso desde Mis Materias en 1 clic o cambiar el plan y cuatrimestre de inicio.',
             },
         ],
     },

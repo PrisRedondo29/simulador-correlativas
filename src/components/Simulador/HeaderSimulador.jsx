@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button, ButtonGroup } from '@heroui/react';
-import { CalendarRange, CloudDownload, Columns, GitBranch, Network } from 'lucide-react';
+import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from '@heroui/react';
+import { CalendarRange, CloudDownload, GitBranch, MoreVertical, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function HeaderSimulador({
@@ -11,8 +11,6 @@ function HeaderSimulador({
     cuatriInicio,
     interactionMode,
     onChangeInteractionMode,
-    viewMode,
-    onCambioVista,
     onOpenConfig,
     onImportarProgreso,
     simulacionTerminada,
@@ -56,7 +54,10 @@ function HeaderSimulador({
 
                 <div className="flex flex-wrap items-center gap-2 shrink-0">
                     {/* Selector de Modo Principal: Planificar vs Explorar */}
-                    <div className="flex p-0.5 bg-[#F1F5F9] dark:bg-[#1E2730] rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]">
+                    <div
+                        data-tour="simulador-modos"
+                        className="flex p-0.5 bg-[#F1F5F9] dark:bg-[#1E2730] rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]"
+                    >
                         <ButtonGroup size="sm" variant="flat">
                             <Button
                                 onPress={() => onChangeInteractionMode('planificar')}
@@ -83,56 +84,38 @@ function HeaderSimulador({
                         </ButtonGroup>
                     </div>
 
-                    {/* Toggle visual Malla / Grafo */}
-                    <div className="flex p-0.5 bg-[#F1F5F9] dark:bg-[#1E2730] rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]">
-                        <ButtonGroup size="sm" variant="flat">
+                    {/* Menú compacto de opciones */}
+                    <Dropdown>
+                        <DropdownTrigger>
                             <Button
-                                onPress={() => onCambioVista('malla')}
-                                className={`font-medium text-xs h-8 rounded-lg ${
-                                    viewMode === 'malla'
-                                        ? 'bg-white dark:bg-[#161D24] text-[#005A36] dark:text-[#6EE7B7] font-semibold shadow-2xs'
-                                        : 'bg-transparent text-[#64748B] dark:text-[#94A3B8]'
-                                }`}
-                                startContent={<Columns size={14} />}
-                            >
-                                Malla
-                            </Button>
-                            <Button
-                                onPress={() => onCambioVista('grafo')}
-                                className={`font-medium text-xs h-8 rounded-lg ${
-                                    viewMode === 'grafo'
-                                        ? 'bg-white dark:bg-[#161D24] text-[#005A36] dark:text-[#6EE7B7] font-semibold shadow-2xs'
-                                        : 'bg-transparent text-[#64748B] dark:text-[#94A3B8]'
-                                }`}
-                                startContent={<Network size={14} />}
-                            >
-                                Grafo
-                            </Button>
-                        </ButtonGroup>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                        {onImportarProgreso && (
-                            <Button
+                                data-tour="simulador-opciones"
                                 size="sm"
-                                variant="flat"
-                                onPress={onImportarProgreso}
-                                className="font-medium rounded-xl text-xs h-8 bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0] border border-[#E2E8F0] dark:border-[#2A3540]"
-                                startContent={<CloudDownload size={14} />}
+                                variant="bordered"
+                                className="font-medium rounded-xl text-xs h-9 border-[#E2E8F0] dark:border-[#2A3540] text-[#334155] dark:text-[#E2E8F0]"
+                                startContent={<MoreVertical size={14} />}
                             >
-                                Importar
+                                Opciones
                             </Button>
-                        )}
-                        <Button
-                            size="sm"
-                            variant="flat"
-                            onPress={onOpenConfig}
-                            className="font-semibold rounded-xl text-xs h-8 bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]"
-                            startContent={<i className="fa-solid fa-sliders text-[11px]" />}
-                        >
-                            Configurar
-                        </Button>
-                    </div>
+                        </DropdownTrigger>
+                        <DropdownMenu aria-label="Opciones del simulador">
+                            {onImportarProgreso && (
+                                <DropdownItem
+                                    key="importar"
+                                    startContent={<CloudDownload size={15} />}
+                                    onPress={onImportarProgreso}
+                                >
+                                    Importar desde Mis Materias
+                                </DropdownItem>
+                            )}
+                            <DropdownItem
+                                key="configurar"
+                                startContent={<SlidersHorizontal size={15} />}
+                                onPress={onOpenConfig}
+                            >
+                                Configurar plan e inicio
+                            </DropdownItem>
+                        </DropdownMenu>
+                    </Dropdown>
                 </div>
             </div>
         </header>

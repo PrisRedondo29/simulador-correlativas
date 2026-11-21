@@ -7,6 +7,9 @@ import CarreraFinalizada from '../components/Simulador/CarreraFinalizada';
 import ConfiguracionSimulador from '../components/Simulador/modals/ConfiguracionSimulador';
 import GuardarSimulacion from '../components/Simulador/modals/GuardarSimulacion';
 import ConfirmarImportarModal from '../components/Simulador/modals/ConfirmarImportarModal';
+import SimuladorModeModal from '../components/Simulador/modals/SimuladorModeModal';
+import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverlay';
+import { TOUR_IDS, TUTORIAL_TOURS } from '../config/tutorialTours';
 import MateriasGrafo from '../components/Progreso/MateriasGrafo';
 import MateriasMallaEstatica from '../components/Simulador/MateriasMallaEstatica';
 
@@ -19,7 +22,7 @@ import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
 import { trackCambioVista } from '../services/analyticsService';
-import storageRepository, { STORAGE_KEYS } from '../services/storageRepository';
+import storageRepository from '../services/storageRepository';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 
 function Simulador({ plan: initialPlan }) {
@@ -29,28 +32,30 @@ function Simulador({ plan: initialPlan }) {
 
     const [openedAccordions, setOpenedAccordions] = useState(new Set());
     const [descargandoPDF, setDescargandoPDF] = useState(false);
-    const [interactionMode, setInteractionMode] = useState('planificar');
+    const [interactionMode, setInteractionMode] = useState(
+        () => storageRepository.getSimuladorModeSelected() || 'planificar',
+    );
+    const [isModeModalOpen, setIsModeModalOpen] = useState(
+        () => !storageRepository.getSimuladorModeSelected(),
+    );
     const [selectedCodigo, setSelectedCodigo] = useState(null);
-    const [viewMode, setViewMode] = useState(() => {
-        const guardada = storageRepository.getRaw(STORAGE_KEYS.SIMULADOR_VISTA, null);
-        if (guardada && ['malla', 'grafo'].includes(guardada)) {
-            return guardada;
-        }
+    const [viewMode] = useState(() => {
         if (typeof window !== 'undefined' && window.innerWidth < 768) return 'malla';
         return 'grafo';
     });
 
     const handleChangeInteractionMode = (nextMode) => {
         setInteractionMode(nextMode);
+        storageRepository.setSimuladorModeSelected(nextMode);
         if (nextMode === 'planificar') {
             setSelectedCodigo(null);
         }
+        trackCambioVista({ tipo: 'tipo_simulacion', valor: nextMode });
     };
 
-    const handleCambioVista = (nuevoModo) => {
-        setViewMode(nuevoModo);
-        storageRepository.setRaw(STORAGE_KEYS.SIMULADOR_VISTA, nuevoModo, { silent: true });
-        trackCambioVista({ tipo: 'tipo_simulacion', valor: nuevoModo });
+    const handleSelectInitialMode = (nextMode) => {
+        handleChangeInteractionMode(nextMode);
+        setIsModeModalOpen(false);
     };
 
     const [isFullScreen, setIsFullScreen] = useState(false);
@@ -248,7 +253,10 @@ function Simulador({ plan: initialPlan }) {
     const renderModeControlBar = () => {
         if (interactionMode === 'explorar') {
             return (
-                <div className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl px-4 py-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div
+                    data-tour="simulador-controles"
+                    className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl px-4 py-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
+                >
                     {selectedMateria ? (
                         <>
                             <div className="flex flex-wrap items-center gap-2 min-w-0">
@@ -306,7 +314,10 @@ function Simulador({ plan: initialPlan }) {
         }
 
         return (
-            <div className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl px-3 sm:px-4 py-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
+            <div
+                data-tour="simulador-controles"
+                className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl px-3 sm:px-4 py-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5"
+            >
                 <div className="flex items-center gap-2">
                     <Button
                         onPress={handleAnterior}
@@ -385,6 +396,10 @@ function Simulador({ plan: initialPlan }) {
                 progresoDetalles={progresoDetallesReal}
                 materias={materias}
             />
+            <SimuladorModeModal
+                isOpen={Boolean(plan) && !cargando && isModeModalOpen}
+                onSelectMode={handleSelectInitialMode}
+            />
 
             <Modal isOpen={descargandoPDF} hideCloseButton isDismissable={false} backdrop="opaque" placement="center">
                 <ModalContent>
@@ -433,6 +448,12 @@ function Simulador({ plan: initialPlan }) {
 
             {plan && (
                 <div className="animate-in fade-in duration-300 flex flex-col gap-4">
+                    <InteractiveTourOverlay
+                        tour={TUTORIAL_TOURS[TOUR_IDS.SIMULADOR]}
+                        ready={Boolean(plan) && !cargando && !isModeModalOpen}
+                        triggerPlacement="inline"
+                    />
+
                     <HeaderSimulador
                         plan={plan}
                         anioActual={anioActual}
@@ -441,8 +462,6 @@ function Simulador({ plan: initialPlan }) {
                         cuatriInicio={cuatriInicio}
                         interactionMode={interactionMode}
                         onChangeInteractionMode={handleChangeInteractionMode}
-                        viewMode={viewMode}
-                        onCambioVista={handleCambioVista}
                         onOpenConfig={onConfigOpen}
                         onImportarProgreso={handleImportarProgreso}
                         simulacionTerminada={simulacionTerminada}

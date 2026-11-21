@@ -6,12 +6,13 @@ import {
   useEdgesState,
   MarkerType,
   useReactFlow,
+  useNodesInitialized,
   ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import MateriaNode from './MateriaNode';
 import { Button, ButtonGroup } from '@heroui/react';
-import { ArrowRight, ArrowDown, ZoomIn, ZoomOut, Home, Maximize } from 'lucide-react';
+import { ArrowRight, ArrowDown, ZoomIn, ZoomOut, Home } from 'lucide-react';
 
 /**
  * SemesterNode: Encabezados y separadores de cuatrimestre, más grandes y prominentes.
@@ -174,6 +175,8 @@ const FlowInner = ({
 
   const [hoveredNode, setHoveredNode] = useState(null);
   const { zoomIn: rfZoomIn, zoomOut: rfZoomOut, fitView, setViewport } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
+  const hasCenteredRef = React.useRef(false);
 
   const activeNodeId = selectedNodeId || hoveredNode;
 
@@ -248,67 +251,55 @@ const FlowInner = ({
     setEdges(layoutedEdges);
   }, [initialNodes, initialEdges, direction, setNodes, setEdges, projection]);
 
-  useEffect(() => {
-    if (nodes.length === 0) return;
-    const timer = setTimeout(() => {
+  const focusInitialColumns = useCallback(
+    (maxCols = 3) => {
       const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
       if (isMobile) {
         setViewport({ x: 25, y: 40, zoom: 0.85 });
-      } else {
-        const maxInitialCols = direction === 'TB' ? 2 : 3;
-        const focusNodes = nodes.filter(n => {
-          if (n.type === 'semester') {
-            const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
-            return !isNaN(colNum) && colNum <= maxInitialCols;
-          }
-          if (n.data?.materia) {
-            const m = n.data.materia;
-            const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
-            return col <= maxInitialCols;
-          }
-          return false;
-        });
-
-        if (focusNodes.length > 0) {
-          fitView({ nodes: focusNodes, padding: 0.2, duration: 600, maxZoom: 0.85 });
-        } else {
-          fitView({ padding: 0.2, duration: 600, maxZoom: 0.85 });
-        }
+        return;
       }
-    }, 150);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [direction, nodes.length === 0]);
 
-  // Se mantiene la cámara fija donde la posicionó el usuario al interactuar con las materias
-
-  const handleGoHome = () => {
-    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-    if (isMobile) {
-      setViewport({ x: 25, y: 40, zoom: 0.85 });
-    } else {
-      const focusNodes = nodes.filter(n => {
-        if (n.type === 'semester') {
-          const colNum = parseInt(n.id.replace('header-', '').replace('sep-', ''));
-          return !isNaN(colNum) && colNum <= 2;
+      const focusNodes = nodes.filter((n) => {
+        if (n.type === 'semester' && n.id.startsWith('header-')) {
+          const colNum = parseInt(n.id.replace('header-', ''), 10);
+          return !Number.isNaN(colNum) && colNum <= maxCols;
         }
         if (n.data?.materia) {
           const m = n.data.materia;
-          const col = (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
-          return col <= 2;
+          const projCol = projection?.items?.[m.codigo]?.columna;
+          const col = projCol || (Number(m.anio) - 1) * 2 + (Number(m.cuatrimestre) % 2 === 0 ? 2 : 1);
+          return col <= maxCols;
         }
         return false;
       });
-      if (focusNodes.length > 0) {
-        fitView({ nodes: focusNodes, padding: 0.2, duration: 600, maxZoom: 0.85 });
-      } else {
-        fitView({ padding: 0.2, duration: 600, maxZoom: 0.85 });
-      }
-    }
-  };
 
-  const handleFitAll = () => {
-    fitView({ padding: 0.1, duration: 700 });
+      if (focusNodes.length > 0) {
+        fitView({
+          nodes: focusNodes,
+          padding: 0.18,
+          duration: 450,
+          minZoom: 0.65,
+          maxZoom: 0.95,
+        });
+      } else {
+        fitView({ padding: 0.18, duration: 450, minZoom: 0.65, maxZoom: 0.95 });
+      }
+    },
+    [nodes, projection, fitView, setViewport],
+  );
+
+  useEffect(() => {
+    hasCenteredRef.current = false;
+  }, [direction]);
+
+  useEffect(() => {
+    if (!nodesInitialized || nodes.length === 0 || hasCenteredRef.current) return;
+    hasCenteredRef.current = true;
+    focusInitialColumns(direction === 'TB' ? 2 : 3);
+  }, [nodesInitialized, nodes.length, direction, focusInitialColumns]);
+
+  const handleGoHome = () => {
+    focusInitialColumns(direction === 'TB' ? 2 : 3);
   };
 
   const onNodeMouseEnter = useCallback((event, node) => setHoveredNode(node.id), []);
@@ -360,8 +351,7 @@ const FlowInner = ({
           <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
             <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
             <Button isIconOnly onPress={() => rfZoomOut()} aria-label="Alejar" title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={15} /></Button>
-            <Button isIconOnly onPress={handleGoHome} aria-label="Inicio" title="Inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
-            <Button isIconOnly onPress={handleFitAll} aria-label="Ver toda la malla" title="Ver toda la malla" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Maximize size={15} /></Button>
+            <Button isIconOnly onPress={handleGoHome} aria-label="Centrar inicio" title="Centrar inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
           </ButtonGroup>
 
           <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
