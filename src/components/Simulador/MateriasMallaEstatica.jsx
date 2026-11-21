@@ -13,6 +13,8 @@ function MateriasMallaEstatica({
     marcarTodasEnPantalla,
     selectedCodigo = null,
     interactionMode = 'planificar',
+    codigosIntermedio = null,
+    tituloIntermedioNombre = '',
 }) {
     const items = useMemo(() => projection?.items || {}, [projection]);
     const labels = projection?.labels || {};
@@ -234,6 +236,7 @@ function MateriasMallaEstatica({
                                 const { label, icon, badgeClass, borderClass } = getEstadoStyles(materia);
                                 const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
                                 const isDisponibleActiva = items[materia.codigo]?.estado === 'Presente';
+                                const esIntermedio = Boolean(codigosIntermedio?.has(String(materia.codigo)));
 
                                 const isHovered = activeCodigo === materia.codigo;
                                 const isRequeridaPorHovered = hoveredMateria && hoveredMateria.correlativas?.includes(materia.codigo);
@@ -275,6 +278,23 @@ function MateriasMallaEstatica({
                                                 {materia.codigo}
                                             </span>
                                         </div>
+
+                                        {esIntermedio && (
+                                            <div className="mt-1.5">
+                                                <span
+                                                    data-testid={`badge-intermedio-${materia.codigo}`}
+                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#FEF3C7]/90 text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]"
+                                                    title={
+                                                        tituloIntermedioNombre
+                                                            ? `Integra el ${tituloIntermedioNombre}`
+                                                            : 'Materia del Título Intermedio'
+                                                    }
+                                                >
+                                                    <span aria-hidden="true">🎓</span>
+                                                    <span>Intermedio</span>
+                                                </span>
+                                            </div>
+                                        )}
 
                                         {isRequeridaPorHovered && (
                                             <div className="mt-1.5 text-[10px] font-medium text-[#92400E] dark:text-[#FCD34D]">

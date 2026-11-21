@@ -24,8 +24,9 @@ vi.mock('@heroui/react', () => {
     const ModalBody = ({ children }) => <div>{children}</div>;
     const ModalFooter = ({ children }) => <div>{children}</div>;
     const Progress = ({ value }) => <div data-testid="completitud-progress" data-value={value} />;
-    const Button = ({ children, onPress, ...rest }) => (
+    const Button = ({ children, onPress, startContent, ...rest }) => (
         <button type="button" onClick={onPress} {...rest}>
+            {startContent}
             {children}
         </button>
     );
@@ -77,7 +78,9 @@ describe('ConfirmarImportarModal', () => {
         );
 
         expect(screen.getByText(/1 con fecha/i)).toBeTruthy();
-        expect(screen.getByText(/0 sin fecha \(se estimarán\)/i)).toBeTruthy();
+        expect(screen.getByText('0 sin fecha')).toBeTruthy();
+        expect(screen.queryByText(/se estimarán/i)).toBeNull();
+        expect(screen.queryByTestId('btn-completar-fechas')).toBeNull();
         expect(screen.getByText('100%')).toBeTruthy();
     });
 

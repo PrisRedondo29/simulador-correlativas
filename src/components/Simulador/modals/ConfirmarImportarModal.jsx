@@ -1,7 +1,6 @@
 import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Progress } from '@heroui/react'
 import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { esMateriaIncompleta } from '../../../utils/Progreso/materiasUtils'
 
 function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal, progresoDetalles, materias }) {
     const navigate = useNavigate();
@@ -42,14 +41,10 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
             );
         }).length;
 
-        const incompletasCount = materias.filter((m) =>
-            esMateriaIncompleta(m, progresoReal[m.codigo], progresoDetalles?.[m.codigo])
-        ).length;
-
         const sinFecha = total - conFecha;
         const porcentaje = Math.round((conFecha / total) * 100);
 
-        return { total, conFecha, sinFecha, porcentaje, incompletasCount };
+        return { total, conFecha, sinFecha, porcentaje };
     }, [progresoReal, progresoDetalles, materias]);
 
     const completitudBaja = stats && stats.porcentaje < 60;
@@ -104,35 +99,43 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                                                 {stats.conFecha} con fecha
                                             </span>
                                             <span className="flex items-center gap-1">
-                                                <i className="fa-solid fa-question-circle text-warning-500" />
-                                                {stats.sinFecha} sin fecha (se estimarán)
+                                                <i
+                                                    className={`fa-solid ${
+                                                        stats.sinFecha > 0
+                                                            ? 'fa-question-circle text-warning-500'
+                                                            : 'fa-check text-success-500'
+                                                    }`}
+                                                />
+                                                {stats.sinFecha > 0
+                                                    ? `${stats.sinFecha} sin fecha (se estimarán)`
+                                                    : `${stats.sinFecha} sin fecha`}
                                             </span>
                                         </div>
 
-                                        <div className={`pt-2.5 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${completitudBaja ? 'border-warning-200/60 dark:border-warning-500/20' : 'border-success-200/60 dark:border-success-500/20'}`}>
-                                            <p className={`text-[11px] leading-relaxed ${completitudBaja ? 'text-warning-800 dark:text-warning-300' : 'text-foreground/70'}`}>
-                                                {stats.sinFecha > 0 || stats.incompletasCount > 0
-                                                    ? 'Completá las fechas o notas faltantes en Mis Materias para mejorar la reconstrucción.'
-                                                    : '¿Querés revisar tus materias con datos pendientes en Mis Materias?'}
-                                            </p>
-                                            <Button
-                                                size="sm"
-                                                variant="flat"
-                                                data-testid="btn-completar-fechas"
-                                                onPress={() => {
-                                                    onClose();
-                                                    navigate('/mis-materias', { state: { soloIncompletas: true } });
-                                                }}
-                                                className={`shrink-0 font-semibold text-xs ${
-                                                    completitudBaja
-                                                        ? 'bg-warning-500/15 text-warning-800 dark:text-warning-300'
-                                                        : 'bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7]'
-                                                }`}
-                                                startContent={<i className="fa-regular fa-calendar-plus text-[11px]" aria-hidden="true" />}
-                                            >
-                                                Completar fechas
-                                            </Button>
-                                        </div>
+                                        {stats.sinFecha > 0 && (
+                                            <div className={`pt-2.5 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${completitudBaja ? 'border-warning-200/60 dark:border-warning-500/20' : 'border-success-200/60 dark:border-success-500/20'}`}>
+                                                <p className={`text-[11px] leading-relaxed ${completitudBaja ? 'text-warning-800 dark:text-warning-300' : 'text-foreground/70'}`}>
+                                                    Completá las fechas faltantes en Mis Materias para mejorar la reconstrucción.
+                                                </p>
+                                                <Button
+                                                    size="sm"
+                                                    variant="flat"
+                                                    data-testid="btn-completar-fechas"
+                                                    onPress={() => {
+                                                        onClose();
+                                                        navigate('/mis-materias', { state: { soloIncompletas: true } });
+                                                    }}
+                                                    className={`shrink-0 font-semibold text-xs ${
+                                                        completitudBaja
+                                                            ? 'bg-warning-500/15 text-warning-800 dark:text-warning-300'
+                                                            : 'bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7]'
+                                                    }`}
+                                                    startContent={<i className="fa-regular fa-calendar-plus text-[11px]" aria-hidden="true" />}
+                                                >
+                                                    Completar fechas
+                                                </Button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

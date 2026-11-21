@@ -6,7 +6,13 @@ import { Card } from '@heroui/react';
  * MateriaNode: Nodo del grafo unificado con el semáforo calmo UNLu.
  */
 const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Position.Right }) => {
-    const { materia, estado, onClick } = data;
+    const {
+        materia,
+        estado,
+        onClick,
+        esTituloIntermedio = false,
+        tituloIntermedioNombre = '',
+    } = data;
 
     const getBadgeInfo = () => {
         switch (estado) {
@@ -105,11 +111,27 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                     </span>
                 </div>
 
-                <div className="mt-1 flex items-center justify-between text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                    <span>{periodoLabel}</span>
-                    {horasLabel && (
-                        <span className="tabular-nums">{horasLabel}</span>
-                    )}
+                <div className="mt-1 flex items-center justify-between gap-1.5 text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                    <span className="truncate">{periodoLabel}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {esTituloIntermedio && (
+                            <span
+                                data-testid={`badge-intermedio-${materia.codigo}`}
+                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-[#FEF3C7]/90 text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318] shrink-0"
+                                title={
+                                    tituloIntermedioNombre
+                                        ? `Integra el ${tituloIntermedioNombre}`
+                                        : 'Materia del Título Intermedio'
+                                }
+                            >
+                                <span aria-hidden="true">🎓</span>
+                                <span>Intermedio</span>
+                            </span>
+                        )}
+                        {horasLabel && (
+                            <span className="tabular-nums">{horasLabel}</span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="mt-2.5 flex items-center justify-between gap-1.5 flex-wrap pt-2 border-t border-[#E2E8F0]/70 dark:border-[#2A3540]">

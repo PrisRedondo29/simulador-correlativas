@@ -183,6 +183,8 @@ const FlowInner = ({
   topOverlayContent = null,
   bottomRightContent = null,
   rounded = true,
+  codigosIntermedio = null,
+  tituloIntermedioNombre = '',
 }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const { zoomIn: rfZoomIn, zoomOut: rfZoomOut, fitView, setViewport } = useReactFlow();
@@ -213,7 +215,13 @@ const FlowInner = ({
       return {
         id: m.codigo,
         type: 'materia',
-        data: { materia: m, estado: estadoFinal, onClick: onNodeClick },
+        data: {
+          materia: m,
+          estado: estadoFinal,
+          onClick: onNodeClick,
+          esTituloIntermedio: Boolean(codigosIntermedio?.has(String(m.codigo))),
+          tituloIntermedioNombre,
+        },
         position: { x: 0, y: 0 },
       };
     });
@@ -222,13 +230,20 @@ const FlowInner = ({
       baseNodes.push({
         id: `skipped-${skip.codigo}-${skip.columna}-${idx}`,
         type: 'materia',
-        data: { materia: skip.materia, estado: skip.estado, columna: skip.columna, onClick: null },
+        data: {
+          materia: skip.materia,
+          estado: skip.estado,
+          columna: skip.columna,
+          onClick: null,
+          esTituloIntermedio: Boolean(codigosIntermedio?.has(String(skip.codigo))),
+          tituloIntermedioNombre,
+        },
         position: { x: 0, y: 0 },
       });
     });
 
     return baseNodes;
-  }, [materias, progreso, onNodeClick, projection]);
+  }, [materias, progreso, onNodeClick, projection, codigosIntermedio, tituloIntermedioNombre]);
 
   const initialEdges = useMemo(() => {
     const edges = [];

@@ -153,9 +153,15 @@ function Simulador({ plan: initialPlan }) {
         }
     };
 
-    const { tituloIntermedioNombre, progresoIntermedio, isIntermedioCompletado } = React.useMemo(() => {
+    const {
+        tituloIntermedioNombre,
+        codigosIntermedio,
+        progresoIntermedio,
+        isIntermedioCompletado,
+    } = React.useMemo(() => {
         const nombre = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
         const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
+        const codigosSet = new Set(materiasIntermedio.map((m) => String(m.codigo)));
 
         const mappedProgreso = {};
         if (progresoSimulado) {
@@ -167,6 +173,7 @@ function Simulador({ plan: initialPlan }) {
         const progreso = tituloIntermedioUtils.calcularProgresoIntermedio(materiasIntermedio, mappedProgreso);
         return {
             tituloIntermedioNombre: nombre,
+            codigosIntermedio: codigosSet,
             progresoIntermedio: progreso,
             isIntermedioCompletado: progreso.totales > 0 && progreso.completadas === progreso.totales,
         };
@@ -657,6 +664,8 @@ function Simulador({ plan: initialPlan }) {
                                         projection={projection}
                                         interactionMode={interactionMode}
                                         selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
+                                        codigosIntermedio={codigosIntermedio}
+                                        tituloIntermedioNombre={tituloIntermedioNombre}
                                         controlsPosition="top-left"
                                         rounded={true}
                                         topRightContent={
@@ -749,6 +758,8 @@ function Simulador({ plan: initialPlan }) {
                                     projection={projection}
                                     interactionMode={interactionMode}
                                     selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
+                                    codigosIntermedio={codigosIntermedio}
+                                    tituloIntermedioNombre={tituloIntermedioNombre}
                                     controlsPosition="bottom-left"
                                     rounded={false}
                                     topOverlayContent={
@@ -855,6 +866,8 @@ function Simulador({ plan: initialPlan }) {
                                                 marcarTodasEnPantalla={marcarTodasEnPantalla}
                                                 selectedCodigo={interactionMode === 'explorar' ? selectedCodigo : null}
                                                 interactionMode={interactionMode}
+                                                codigosIntermedio={codigosIntermedio}
+                                                tituloIntermedioNombre={tituloIntermedioNombre}
                                             />
                                         </div>
                                     </div>
