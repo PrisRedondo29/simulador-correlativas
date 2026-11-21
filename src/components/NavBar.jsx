@@ -366,7 +366,7 @@ export function TopUtilityBar({ plan }) {
     const activePlan = plan || DEFAULT_PLAN;
 
     return (
-        <header className="hidden lg:flex h-14 sticky top-0 z-40 bg-white dark:bg-[#161D24] border-b border-[#E2E8F0] dark:border-[#2A3540] px-8 items-center justify-between">
+        <header className="hidden lg:flex h-14 sticky top-0 z-30 bg-white dark:bg-[#161D24] border-b border-[#E2E8F0] dark:border-[#2A3540] px-8 items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
                 <span className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] truncate">
                     {pageTitle}
@@ -490,7 +490,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                     radius="full"
                     aria-label={isCollapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
                     onPress={() => setIsCollapsed(!isCollapsed)}
-                    className={`hidden lg:flex absolute -right-3.5 top-10 -translate-y-1/2 bg-[#005A36] dark:bg-[#11221B] text-white border border-white/25 shadow-sm z-[60] hover:bg-[#00472B] transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
+                    className={`hidden lg:flex absolute -right-3.5 top-10 -translate-y-1/2 bg-[#005A36] dark:bg-[#11221B] text-white border border-white/25 shadow-sm z-10 hover:bg-[#00472B] transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
                 >
                     <i className="fa-solid fa-chevron-left text-[10px]" />
                 </Button>
