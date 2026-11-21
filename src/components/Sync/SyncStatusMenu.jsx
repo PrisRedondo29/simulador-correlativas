@@ -267,6 +267,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
             <PopoverTrigger>
                 <button
                     type="button"
+                    data-tour="sync-status-menu"
                     aria-label={meta.ariaLabel}
                     className={`relative inline-flex items-center justify-center gap-1.5 rounded-lg transition-colors cursor-pointer min-h-9 min-w-9 ${
                         isDarkHeader ? 'px-2 h-9' : 'px-2.5 h-8 text-xs font-medium'

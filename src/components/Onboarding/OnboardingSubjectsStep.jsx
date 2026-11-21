@@ -23,7 +23,7 @@ const QUICK_OPTIONS = [
         state: ESTADOS_MATERIA.CURSANDO,
         label: 'Cursando',
         activeClass:
-            'bg-[#0284C7] text-white border-[#0284C7] dark:bg-[#0369A1] dark:border-[#0369A1]',
+            'bg-[#4F46E5] text-white border-[#4F46E5] dark:bg-[#6366F1] dark:border-[#6366F1]',
     },
     {
         state: ESTADOS_MATERIA.REGULAR,

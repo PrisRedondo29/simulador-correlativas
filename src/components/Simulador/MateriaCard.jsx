@@ -13,8 +13,8 @@ function MateriaCard({ materia, actualizarEstados, estado }) {
             name: 'Seleccionada',
             isCursado: true,
             color: 'primary',
-            icon: 'fa-solid fa-check-double text-[#005A36] dark:text-[#6EE7B7]',
-            background: 'bg-[#F0FDF4] dark:bg-[#122D22] border-2 border-[#005A36] dark:border-[#4A9D68]',
+            icon: 'fa-solid fa-check-double text-[#4F46E5] dark:text-[#A5B4FC]',
+            background: 'bg-[#EEF2FF] dark:bg-[#1E1B4B]/80 border-2 border-[#4F46E5] dark:border-[#6366F1]',
         },
     ];
 

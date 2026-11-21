@@ -28,7 +28,7 @@ export const TOUR_IDS = {
 export const TUTORIAL_TOURS = {
     [TOUR_IDS.MIS_MATERIAS]: {
         id: TOUR_IDS.MIS_MATERIAS,
-        version: 1,
+        version: 2,
         route: '/mis-materias',
         title: 'Mis Materias',
         steps: [
@@ -59,6 +59,13 @@ export const TUTORIAL_TOURS = {
                 title: 'Aprobá años completos en 1 clic',
                 description:
                     'Si ya avanzaste bastante, "Aprobar hasta..." te permite marcar años enteros o hasta el título intermedio de una sola vez.',
+            },
+            {
+                id: 'sync_nube',
+                target: '[data-tour="sync-status-menu"]',
+                title: 'Respaldá tu avance en la nube',
+                description:
+                    'Desde el indicador "En la nube" (o "Local") podés guardar manualmente tus cambios en tu cuenta de Google, recuperar tu respaldo o exportar una copia JSON.',
             },
         ],
     },

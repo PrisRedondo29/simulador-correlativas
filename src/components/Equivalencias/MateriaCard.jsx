@@ -5,6 +5,7 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
     const getStatusConfig = () => {
         switch (estado) {
             case 'Aprobado':
+            case 'Promocionado':
                 return {
                     border: 'border-[#A7F3D0] dark:border-[#1E4D38]',
                     sideBar: 'bg-[#478559]',
@@ -13,6 +14,16 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                     badgeClass: 'bg-[#D1FAE5] text-[#166534] dark:bg-[#173A24] dark:text-[#86EFAC]',
                     icon: <CheckCircle2 size={11} strokeWidth={2.5} />,
                     label: 'Aprobada',
+                };
+            case 'Cursando':
+                return {
+                    border: 'border-[#A5B4FC] dark:border-[#4338CA]',
+                    sideBar: 'bg-[#4F46E5]',
+                    bg: 'bg-[#EEF2FF] dark:bg-[#1E1B4B]/75',
+                    accent: 'text-[#3730A3] dark:text-[#C7D2FE]',
+                    badgeClass: 'bg-[#E0E7FF] text-[#3730A3] dark:bg-[#312E81] dark:text-[#C7D2FE]',
+                    icon: <Clock size={11} strokeWidth={2.5} />,
+                    label: 'Cursando',
                 };
             case 'Regular':
                 return {

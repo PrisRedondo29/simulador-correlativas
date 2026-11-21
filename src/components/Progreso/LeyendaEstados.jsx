@@ -5,6 +5,7 @@ function LeyendaEstados({ materias = [] }) {
     const estados = [
         { name: 'Aprobado', desc: 'Materia completada' },
         { name: 'Regular', desc: 'Cursada vigente (final pendiente)' },
+        { name: 'Cursando', desc: 'En curso este cuatrimestre' },
         { name: 'Disponible', desc: 'Lista para cursar' },
         { name: 'Bloqueado', desc: 'Faltan correlativas previas' },
     ];
@@ -38,7 +39,7 @@ function LeyendaEstados({ materias = [] }) {
                 }
             >
                 <div className="flex flex-col gap-5">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                         {estados.map((estado) => {
                             const estilo = materiasUtils.obtenerEstiloPorEstado(estado.name);
                             return (

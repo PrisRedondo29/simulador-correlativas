@@ -124,6 +124,9 @@ export default function ComoUsar() {
                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#E0F2FE] text-[#075985] dark:bg-[#0F2636] dark:text-[#7DD3FC]">
                                         <i className="fa-solid fa-lock-open text-[10px]" /> Disponible
                                     </span>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#E0E7FF] text-[#3730A3] dark:bg-[#312E81] dark:text-[#C7D2FE]">
+                                        <i className="fa-solid fa-pen text-[10px]" /> Cursando
+                                    </span>
                                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#FEF3C7] text-[#92400E] dark:bg-[#2D2210] dark:text-[#FCD34D]">
                                         <i className="fa-regular fa-clock text-[10px]" /> Regular
                                     </span>

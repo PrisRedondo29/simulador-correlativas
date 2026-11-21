@@ -18,7 +18,7 @@ const obtenerEstiloPorEstado = (estado) => {
         case 'Disponible':
             return { icon: 'fa-unlock', accent: 'primary', colorText: 'text-[#075985] dark:text-[#7DD3FC]', bgSoft: 'bg-[#E0F2FE] dark:bg-[#0F2636]' };
         case 'Cursando':
-            return { icon: 'fa-pen', accent: 'primary', colorText: 'text-[#005A36] dark:text-[#6EE7B7]', bgSoft: 'bg-[#F0FDF4] dark:bg-[#122D22]' };
+            return { icon: 'fa-pen', accent: 'primary', colorText: 'text-[#3730A3] dark:text-[#C7D2FE]', bgSoft: 'bg-[#E0E7FF] dark:bg-[#312E81]/80' };
         case 'Regular':
             return { icon: 'fa-clock', accent: 'warning', colorText: 'text-[#92400E] dark:text-[#FCD34D]', bgSoft: 'bg-[#FEF3C7] dark:bg-[#2D2210]' };
         case 'Libre':
