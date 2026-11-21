@@ -309,19 +309,53 @@ export function MateriaContextContent({
   );
   const esRendidaLibre = Boolean(detalles.rendidaLibre);
   const esEquivalencia = Boolean(detalles.esEquivalencia);
-  const fallbackAnioPromo =
-    estadoActual === "Promocionado" &&
-    typeof detalles.fechaAprobacion === "string" &&
-    /^\d{4}/.test(detalles.fechaAprobacion)
-      ? detalles.fechaAprobacion.slice(0, 4)
+  const inferirAnioCursadaDesdeIso = (iso) => {
+    if (typeof iso !== "string") return "";
+    const match = iso.match(/^(\d{4})(?:-(\d{2}))?/);
+    if (!match) return "";
+    const anio = Number(match[1]);
+    const mes = match[2] ? Number(match[2]) : null;
+    if (mes !== null && mes <= 2) return String(anio - 1);
+    return String(anio);
+  };
+  const fechaAprobacionStr =
+    typeof detalles.fechaAprobacion === "string" ? detalles.fechaAprobacion : "";
+  const anioRefAprobacion = /^\d{4}/.test(fechaAprobacionStr)
+    ? Number(fechaAprobacionStr.slice(0, 4))
+    : null;
+  const intentosOrdenadosReg = Array.isArray(detalles.intentosFinal)
+    ? [...detalles.intentosFinal]
+        .filter((i) => typeof i?.fecha === "string" && /^\d{4}/.test(i.fecha))
+        .sort((a, b) => a.fecha.localeCompare(b.fecha))
+    : [];
+  const primerIntentoVigente = intentosOrdenadosReg.find((i) => {
+    if (anioRefAprobacion === null) return true;
+    return anioRefAprobacion - Number(i.fecha.slice(0, 4)) <= 3;
+  });
+  const fallbackFechaCursada =
+    estadoActual === "Promocionado"
+      ? fechaAprobacionStr
+      : estadoActual === "Aprobado"
+        ? primerIntentoVigente?.fecha || fechaAprobacionStr
+        : "";
+  const fallbackAnioCursada =
+    !esRendidaLibre && !esEquivalencia
+      ? inferirAnioCursadaDesdeIso(fallbackFechaCursada)
       : "";
+  const fechaRegAnio =
+    detalles.fechaRegularidad && typeof detalles.fechaRegularidad === "object"
+      ? detalles.fechaRegularidad.anio
+      : typeof detalles.fechaRegularidad === "string" &&
+          /^\d{4}/.test(detalles.fechaRegularidad)
+        ? Number(detalles.fechaRegularidad.slice(0, 4))
+        : null;
   const anioSeleccionado = esEquivalencia
     ? detalles.anioExamen != null
       ? String(detalles.anioExamen)
       : ""
-    : detalles.fechaRegularidad?.anio != null
-      ? String(detalles.fechaRegularidad.anio)
-      : fallbackAnioPromo;
+    : fechaRegAnio != null
+      ? String(fechaRegAnio)
+      : fallbackAnioCursada;
   const notaCursadaVisible =
     detalles.notaRegularizacion ??
     (estadoActual === "Promocionado" ? detalles.notaFinal : null);

@@ -106,10 +106,15 @@ describe('sawebParser', () => {
         expect(result.progreso['11074']).toBe('Aprobado');
         expect(result.progresoDetalles['11074'].rendidaLibre).toBe(true);
         expect(result.progresoDetalles['11074'].notaFinal).toBe(10);
+        expect(result.progresoDetalles['11074'].fechaRegularidad).toBeNull();
 
         expect(result.progreso['11075']).toBe('Aprobado');
         expect(result.progresoDetalles['11075'].rendidaLibre).toBe(false);
         expect(result.progresoDetalles['11075'].notaFinal).toBe(6);
+        expect(result.progresoDetalles['11075'].fechaRegularidad).toEqual({
+            anio: 2023,
+            cuatrimestre: 1,
+        });
         expect(result.progresoDetalles['11075'].intentosFinal).toHaveLength(2);
     });
 
@@ -258,5 +263,30 @@ Plan 1713:
         });
         expect(merged.progresoDetalles['11072'].notaRegularizacion).toBe(7);
         expect(merged.progresoDetalles['11072'].notaFinal).toBe(7);
+    });
+
+    it('infiere año y cuatrimestre de regularidad para aprobadas R- descartando intentos Libres previos y ajustando mesas de febrero', () => {
+        const analiticoAprobadasRegulares = `
+Plan 1713:
+41406 L-ARQUITECTURA DE COMPUTADORAS 2(DOS) 0272-093 13-12-2022
+41406 R-ARQUITECTURA DE COMPUTADORAS 6(SEIS) 0296-034 13-12-2024
+11073 R-MATEMATICA DISCRETA 6(SEIS) 0566-045 12-02-2026
+`;
+        const result = parseSawebTexts(analiticoAprobadasRegulares, MOCK_PLAN_1713);
+
+        // 41406 tuvo un aplazo L- en 2022 y luego regularizó/aprobó R- en dic 2024
+        expect(result.progreso['41406']).toBe('Aprobado');
+        expect(result.progresoDetalles['41406'].rendidaLibre).toBe(false);
+        expect(result.progresoDetalles['41406'].fechaRegularidad).toEqual({
+            anio: 2024,
+            cuatrimestre: 2,
+        });
+
+        // Rendida R- en febrero 2026 -> regularidad del 2° cuatrimestre 2025
+        expect(result.progreso['11073']).toBe('Aprobado');
+        expect(result.progresoDetalles['11073'].fechaRegularidad).toEqual({
+            anio: 2025,
+            cuatrimestre: 2,
+        });
     });
 });

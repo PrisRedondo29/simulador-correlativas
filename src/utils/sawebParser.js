@@ -52,6 +52,8 @@ function toIsoDate(ddmmyyyy) {
 
 /**
  * Infiere el año y cuatrimestre de cursada a partir de una fecha ISO YYYY-MM-DD.
+ * Mesas de ene-feb corresponden al 2° cuatrimestre del año previo; mar-oct al 1° cuatrimestre
+ * y nov-dic al 2° cuatrimestre del año en curso.
  * @param {string | null | undefined} isoDate
  * @returns {{ anio: number, cuatrimestre: 1 | 2 } | null}
  */
@@ -64,10 +66,53 @@ function inferFechaCursadaFromIso(isoDate) {
     if (mes <= 2) {
         return { anio: anio - 1, cuatrimestre: 2 };
     }
-    if (mes <= 8) {
+    if (mes <= 10) {
         return { anio, cuatrimestre: 1 };
     }
     return { anio, cuatrimestre: 2 };
+}
+
+/**
+ * Infiere el año y cuatrimestre de regularidad a partir de los intentos de final
+ * cuando una materia fue aprobada en condición Regular (`R-`).
+ * Descarta intentos previos al último Libre (`L-`) o fuera de la ventana de vigencia.
+ *
+ * @param {Array<{ tipo: 'P'|'R'|'L', nota: number, fecha: string }>} intentosOrdenados
+ * @param {{ tipo: 'P'|'R'|'L', nota: number, fecha: string } | null | undefined} finalAprobado
+ * @returns {{ anio: number, cuatrimestre: 1 | 2 } | null}
+ */
+function inferFechaRegularidadFromIntentos(intentosOrdenados, finalAprobado) {
+    if (!finalAprobado || finalAprobado.tipo !== 'R') return null;
+
+    const idxAprobado = intentosOrdenados.lastIndexOf(finalAprobado);
+    const intentosHastaAprobado =
+        idxAprobado >= 0
+            ? intentosOrdenados.slice(0, idxAprobado + 1)
+            : intentosOrdenados.filter((i) => i.fecha <= finalAprobado.fecha);
+
+    let ultimoLibreIdx = -1;
+    for (let i = 0; i < intentosHastaAprobado.length; i += 1) {
+        if (intentosHastaAprobado[i].tipo === 'L') {
+            ultimoLibreIdx = i;
+        }
+    }
+
+    const candidatosR = intentosHastaAprobado
+        .slice(ultimoLibreIdx + 1)
+        .filter((i) => i.tipo === 'R');
+
+    const anioAprobado = Number(finalAprobado.fecha?.slice(0, 4));
+    const intentoBase =
+        candidatosR.find((i) => {
+            const anioIntento = Number(i.fecha?.slice(0, 4));
+            return (
+                !Number.isNaN(anioAprobado) &&
+                !Number.isNaN(anioIntento) &&
+                anioAprobado - anioIntento <= 3
+            );
+        }) || finalAprobado;
+
+    return inferFechaCursadaFromIso(intentoBase.fecha);
 }
 
 /**
@@ -373,6 +418,11 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         // 3. Final aprobado (Regular o Libre)
         const finalAprobado = [...intentosOrdenados].reverse().find((i) => i.nota >= 4);
         if (finalAprobado) {
+            const fechaRegInferida =
+                finalAprobado.tipo === 'L'
+                    ? null
+                    : (fechaRegularidad ??
+                      inferFechaRegularidadFromIntentos(intentosOrdenados, finalAprobado));
             progreso[codigo] = ESTADOS_MATERIA.APROBADO;
             progresoDetalles[codigo] = {
                 intentosFinal,
@@ -380,7 +430,7 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                 esEquivalencia: false,
                 rendidaLibre: finalAprobado.tipo === 'L',
                 fechaAprobacion: finalAprobado.fecha,
-                fechaRegularidad,
+                fechaRegularidad: fechaRegInferida,
                 notaRegularizacion,
             };
             counts.Aprobado += 1;

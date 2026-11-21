@@ -238,5 +238,37 @@ describe('MateriaContextContent - Reglas v2 en UI e intercepción de cascada al 
         );
 
         expect(screen.queryByText(/Falta info:/i)).toBeNull();
+
+        // Materia Aprobado (Regular, no libre) sin fechaRegularidad explícita muestra el año inferido
+        rerender(
+            <MateriaContextContent
+                materia={MATERIAS_V2[0]}
+                materias={MATERIAS_V2}
+                progreso={{ C1: 'Aprobado' }}
+                progresoDetalles={{
+                    C1: {
+                        notaFinal: 6,
+                        rendidaLibre: false,
+                        esEquivalencia: false,
+                        fechaAprobacion: '2023-12-16',
+                        fechaRegularidad: null,
+                        intentosFinal: [
+                            { nota: 2, estado: 'reprobado', fecha: '2023-09-30' },
+                            { nota: 6, estado: 'aprobado', fecha: '2023-12-16' },
+                        ],
+                    },
+                }}
+                setProgresoDetalles={setProgresoDetalles}
+                plan="17.14"
+                cambioDeEstado={vi.fn()}
+                onChangeEstado={vi.fn()}
+                onSelectMateria={vi.fn()}
+            />,
+        );
+
+        const selectAnio = /** @type {HTMLSelectElement} */ (
+            screen.getByLabelText(/Año regularidad/i)
+        );
+        expect(selectAnio.value).toBe('2023');
     });
 });
