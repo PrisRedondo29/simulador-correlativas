@@ -1,5 +1,6 @@
 export const TOUR_IDS = {
     MIS_MATERIAS: 'mis_materias',
+    MI_AGENDA: 'mi_agenda',
 };
 
 export const TUTORIAL_TOURS = {
@@ -36,6 +37,35 @@ export const TUTORIAL_TOURS = {
                 title: 'Aprobá años completos en 1 clic',
                 description:
                     'Si ya avanzaste bastante, "Aprobar hasta..." te permite marcar años enteros o hasta el título intermedio de una sola vez.',
+            },
+        ],
+    },
+    [TOUR_IDS.MI_AGENDA]: {
+        id: TOUR_IDS.MI_AGENDA,
+        version: 1,
+        route: '/mi-agenda',
+        title: 'Mi Agenda',
+        steps: [
+            {
+                id: 'agenda_indicadores',
+                target: '[data-tour="agenda-indicadores"]',
+                title: 'Tu semana de un vistazo',
+                description:
+                    'Acá ves tus materias en curso, los exámenes o entregas de los próximos 7 días y cuántas clases anotaste en tu bitácora.',
+            },
+            {
+                id: 'agenda_tabs',
+                target: '[data-tour="agenda-tabs"]',
+                title: 'Tres herramientas en un solo lugar',
+                description:
+                    'Alterná entre Calendario (fechas de parciales y finales), Horarios (grilla semanal con alerta de superposiciones) y Bitácora de clases.',
+            },
+            {
+                id: 'agenda_panel',
+                target: '[data-tour="agenda-add-evento"]',
+                title: 'Agendá parciales, entregas o finales',
+                description:
+                    'Elegí el tipo de evento, la fecha y asociá la materia desde este formulario para verlo en tu calendario y alertas.',
             },
         ],
     },

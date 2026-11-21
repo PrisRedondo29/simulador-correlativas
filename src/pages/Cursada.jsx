@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import { Tabs, Tab, Spinner, Chip } from '@heroui/react';
@@ -8,6 +8,8 @@ import useCursada from '../hooks/Cursada/useCursada';
 import AgendaCalendarioTab from '../components/Cursada/AgendaCalendarioTab';
 import HorariosTab from '../components/Cursada/HorariosTab';
 import BitacoraTab from '../components/Cursada/BitacoraTab';
+import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverlay';
+import { TOUR_IDS, TUTORIAL_TOURS } from '../config/tutorialTours';
 
 export default function Cursada({ plan }) {
     const { policy } = usePlanCapabilities();
@@ -33,6 +35,15 @@ export default function Cursada({ plan }) {
         deleteBitacora,
     } = useCursada(plan);
 
+    const handleBeforeTourStep = useCallback(
+        (step) => {
+            if (step?.id === 'agenda_panel' && activeTab !== 'agenda') {
+                setActiveTab('agenda');
+            }
+        },
+        [activeTab],
+    );
+
     if (cargandoPlan) {
         return (
             <div className="min-h-[60vh] flex items-center justify-center">
@@ -49,6 +60,13 @@ export default function Cursada({ plan }) {
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6 pb-16 flex flex-col gap-5 animate-in fade-in duration-300">
+            <InteractiveTourOverlay
+                tour={TUTORIAL_TOURS[TOUR_IDS.MI_AGENDA]}
+                ready={!cargandoPlan}
+                triggerPlacement="inline"
+                onBeforeStep={handleBeforeTourStep}
+            />
+
             {/* Cabecera */}
             <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="space-y-1 min-w-0">
@@ -84,7 +102,7 @@ export default function Cursada({ plan }) {
                 </div>
 
                 {/* Resumen compacto de indicadores */}
-                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <div data-tour="agenda-indicadores" className="flex flex-wrap items-center gap-2 shrink-0">
                     <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-xs font-medium text-[#334155] dark:text-[#E2E8F0] tabular-nums">
                         <span className="w-2 h-2 rounded-full bg-[#005A36] dark:bg-[#34D399]" aria-hidden="true" />
                         {cantCursando} en curso
@@ -105,7 +123,8 @@ export default function Cursada({ plan }) {
             </header>
 
             {/* Navegación interna de 3 vistas */}
-            <Tabs
+            <div data-tour="agenda-tabs">
+                <Tabs
                 aria-label="Secciones de Mi Agenda"
                 variant="bordered"
                 selectedKey={activeTab}
@@ -148,9 +167,11 @@ export default function Cursada({ plan }) {
                         </div>
                     }
                 />
-            </Tabs>
+                </Tabs>
+            </div>
 
             {/* Panel activo */}
+            <div data-tour="agenda-panel">
             {activeTab === 'agenda' && (
                 <AgendaCalendarioTab
                     eventos={eventos}
@@ -185,6 +206,7 @@ export default function Cursada({ plan }) {
                     onDeleteBitacora={deleteBitacora}
                 />
             )}
+            </div>
         </div>
     );
 }

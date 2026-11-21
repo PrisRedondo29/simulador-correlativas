@@ -440,7 +440,10 @@ export default function AgendaCalendarioTab({
 
             {/* Columna derecha: Formulario nuevo evento + Próximos eventos */}
             <div className="lg:col-span-5 flex flex-col gap-5">
-                <section className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-4 sm:p-5">
+                <section
+                    data-tour="agenda-add-evento"
+                    className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-4 sm:p-5 scroll-mt-24"
+                >
                     <div className="flex items-center justify-between gap-2 mb-3.5">
                         <h2 id="form-evento-heading" className="text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2">
                             {editingId ? (
