@@ -249,8 +249,7 @@ function Simulador({ plan: initialPlan }) {
     const { handleDownloadPDF } = useSimuladorPDF({
         historialSemestres,
         plan,
-        openedAccordions,
-        setOpenedAccordions,
+        materias,
         setDescargandoPDF,
     });
 
@@ -537,7 +536,6 @@ function Simulador({ plan: initialPlan }) {
                                     historialSemestres={historialSemestres}
                                     openedAccordions={openedAccordions}
                                     setOpenedAccordions={setOpenedAccordions}
-                                    descargandoPDF={descargandoPDF}
                                     plan={plan}
                                     materias={materias}
                                     embedded={true}
@@ -585,25 +583,12 @@ function Simulador({ plan: initialPlan }) {
                         <div>
                             <h3 className="text-lg font-bold text-[#1E293B] dark:text-[#F1F5F9]">Generando Reporte</h3>
                             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
-                                Preparando tu historial académico y procesando el documento...
+                                Preparando tu planilla académica imprimible...
                             </p>
                         </div>
                     </ModalBody>
                 </ModalContent>
             </Modal>
-
-            {descargandoPDF && isDesktopGrafo && !isHistoryOpen && (
-                <div className="fixed -left-[9999px] top-0 pointer-events-none" aria-hidden="true">
-                    <HistorialAcademico
-                        historialSemestres={historialSemestres}
-                        openedAccordions={openedAccordions}
-                        setOpenedAccordions={setOpenedAccordions}
-                        descargandoPDF={descargandoPDF}
-                        plan={plan}
-                        materias={materias}
-                    />
-                </div>
-            )}
 
             {!plan && !cargando && (
                 <div className="flex flex-col items-center justify-center py-20 gap-5 text-center">
@@ -833,7 +818,6 @@ function Simulador({ plan: initialPlan }) {
                                 historialSemestres={historialSemestres}
                                 openedAccordions={openedAccordions}
                                 setOpenedAccordions={setOpenedAccordions}
-                                descargandoPDF={descargandoPDF}
                                 plan={plan}
                                 materias={materias}
                             />

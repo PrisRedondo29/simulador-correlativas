@@ -9,24 +9,20 @@ import {
     GraduationCap,
 } from 'lucide-react';
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
-import { getPlanPolicy } from '../../config/planPolicies';
 
 /**
  * Muestra el historial de cuatrimestres simulados alineado al sistema visual UNLu.
- * Preserva el contrato DOM requerido por `useSimuladorPDF` (`#historial-container` y `data-html2canvas-ignore`).
  */
 function HistorialAcademico({
     historialSemestres,
     openedAccordions,
     setOpenedAccordions,
-    descargandoPDF,
     plan,
     materias,
     embedded = false,
 }) {
     if (!historialSemestres || historialSemestres.length === 0) return null;
 
-    const planPolicy = getPlanPolicy(plan);
     const tituloIntermedioNombre = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
     const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
 
@@ -70,29 +66,14 @@ function HistorialAcademico({
         }
     };
 
-    const containerClass =
-        embedded && !descargandoPDF
-            ? 'flex flex-col gap-3 w-full'
-            : `flex flex-col gap-4 relative p-4 sm:p-5 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] rounded-2xl ${
-                  descargandoPDF ? 'w-[800px] max-w-none mx-0' : 'w-full mb-4'
-              }`;
+    const containerClass = embedded
+        ? 'flex flex-col gap-3 w-full'
+        : 'flex flex-col gap-4 relative p-4 sm:p-5 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] rounded-2xl w-full mb-4';
 
     return (
         <div id="historial-container" className={containerClass}>
-            {/* Encabezado exclusivo para la captura PDF */}
-            {descargandoPDF && (
-                <div className="w-full text-center py-6 mb-2 border-b-2 border-[#005A36]/20">
-                    <h1 className="text-3xl font-bold text-[#1E293B] tracking-tight">
-                        Registro de Avance Universitario
-                    </h1>
-                    <h2 className="text-base font-medium text-[#005A36] mt-1 uppercase tracking-wider">
-                        {planPolicy.carrera} — Plan {plan}
-                    </h2>
-                </div>
-            )}
-
             {/* Barra de Resumen y Control */}
-            <div className="flex flex-wrap items-center justify-between gap-2" data-html2canvas-ignore>
+            <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                     {!embedded && (
                         <h3 className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] mr-1">
@@ -172,10 +153,7 @@ function HistorialAcademico({
                                 <div className="flex flex-wrap items-center justify-between gap-2 pr-1">
                                     <div className="flex flex-wrap items-center gap-2 min-w-0">
                                         {isMilestone ? (
-                                            <span
-                                                className="w-6 h-6 rounded-lg bg-[#005A36] dark:bg-[#2E8B63] text-white flex items-center justify-center shrink-0"
-                                                data-html2canvas-ignore
-                                            >
+                                            <span className="w-6 h-6 rounded-lg bg-[#005A36] dark:bg-[#2E8B63] text-white flex items-center justify-center shrink-0">
                                                 <GraduationCap size={14} aria-hidden="true" />
                                             </span>
                                         ) : (
@@ -237,7 +215,7 @@ function HistorialAcademico({
                             ) : (
                                 <>
                                     {cursadas.length > 0 ? (
-                                        <div className={`grid ${descargandoPDF ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'} gap-2`}>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                             {cursadas.map((materia) => (
                                                 <div
                                                     key={materia.codigo}
@@ -246,7 +224,6 @@ function HistorialAcademico({
                                                     <CheckCircle2
                                                         size={15}
                                                         className="text-[#005A36] dark:text-[#6EE7B7] mt-0.5 shrink-0"
-                                                        data-html2canvas-ignore
                                                         aria-hidden="true"
                                                     />
                                                     <div className="min-w-0 flex-1 space-y-1">
