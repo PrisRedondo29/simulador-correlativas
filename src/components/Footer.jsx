@@ -4,9 +4,18 @@ import { Link, useLocation } from 'react-router-dom';
 import { usePlanCapabilities } from '../context/PlanContext';
 import { LinkedInIcon } from './Shared/BrandIcons';
 
+const HIDE_FOOTER_ROUTES = new Set(['/simulador']);
+
 function Footer() {
     const location = useLocation();
     const { policy, tenant } = usePlanCapabilities();
+
+    // En herramientas de pantalla completa interactiva como el Simulador,
+    // se omite el footer para que el lienzo ocupe exactamente el 100% del alto sin forzar scroll en ventana.
+    if (HIDE_FOOTER_ROUTES.has(location.pathname)) {
+        return null;
+    }
+
     const showFullAuthorCard = location.pathname === '/contacto';
 
     if (!showFullAuthorCard) {

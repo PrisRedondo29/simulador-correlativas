@@ -40,7 +40,7 @@ function AppContent() {
                 <NavBar plan={plan} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
                 <main className={`flex-1 min-w-0 min-h-screen flex flex-col relative pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
                     <TopUtilityBar plan={plan} />
-                    <div className="flex-1">
+                    <div className={`flex-1 ${location.pathname === '/simulador' ? 'flex flex-col min-h-0' : ''}`}>
                         <ErrorBoundary scope="page" resetKey={location.pathname}>
                             <Rutas plan={plan} setPlan={setPlan} />
                         </ErrorBoundary>
