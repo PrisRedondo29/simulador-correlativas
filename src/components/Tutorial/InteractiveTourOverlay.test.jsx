@@ -100,7 +100,7 @@ describe('InteractiveTourOverlay', () => {
             vi.advanceTimersByTime(600);
         });
         expect(screen.queryByRole('dialog')).toBeNull();
-        expect(screen.getByRole('button', { name: /^Recorrido rápido$/i })).toBeTruthy();
+        expect(screen.getByRole('button', { name: /^Ver tutorial$/i })).toBeTruthy();
 
         unmount();
         renderTour({ ...SAMPLE_TOUR, version: 2 });
@@ -119,7 +119,7 @@ describe('InteractiveTourOverlay', () => {
         fireEvent.click(screen.getByRole('button', { name: /No volver a mostrar/i }));
         expect(screen.queryByRole('dialog')).toBeNull();
         expect(storageRepository.getTutorialPrefs().autoDisabled).toBe(true);
-        expect(screen.queryByRole('button', { name: /^Recorrido rápido$/i })).toBeNull();
+        expect(screen.queryByRole('button', { name: /^Ver tutorial$/i })).toBeNull();
 
         cleanup();
         renderTour(SAMPLE_TOUR, { pathname: '/mis-materias', state: { startTour: 'mis_materias' } });

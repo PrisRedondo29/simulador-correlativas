@@ -11,7 +11,7 @@ function Footer() {
 
     if (!showFullAuthorCard) {
         return (
-            <footer className="w-full border-t border-[#E2E8F0] dark:border-[#2A3540] py-4 px-4 sm:px-8 mt-8">
+            <footer className="w-full border-t border-[#E2E8F0] dark:border-[#2A3540] py-4 pb-16 sm:pb-4 px-4 sm:px-8 sm:pr-20 mt-8">
                 <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[#94A3B8]">
                     <span>
                         Simulador de Correlativas · {policy.carrera} ({tenant?.shortName || 'UNLu'})

@@ -80,7 +80,11 @@ export default function MateriasList({
     const isIncomplete = esMateriaIncompleta(materia, estado, detalles);
 
     return (
-      <div key={materia.codigo} data-tour="progreso-materia-card">
+      <div
+        key={materia.codigo}
+        data-tour="progreso-materia-card"
+        className="scroll-mt-36"
+      >
         <MateriaCard
           materia={materia}
           estado={estado}

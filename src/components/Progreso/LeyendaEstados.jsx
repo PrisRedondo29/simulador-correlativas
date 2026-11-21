@@ -16,7 +16,7 @@ function LeyendaEstados({ materias = [] }) {
 
     return (
         <Accordion
-            variant="bordered"
+            variant="splitted"
             className="px-0"
             itemClasses={{
                 base: 'bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl shadow-none px-4',

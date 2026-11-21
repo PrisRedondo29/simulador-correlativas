@@ -131,7 +131,7 @@ export default function Progreso() {
         </div>
 
         <div
-          className={`lg:col-span-4 min-w-0 lg:sticky lg:top-[72px] ${
+          className={`lg:col-span-4 min-w-0 lg:sticky lg:top-[124px] ${
             dashboard.selectedMateria ? "" : "hidden lg:block"
           }`}
         >

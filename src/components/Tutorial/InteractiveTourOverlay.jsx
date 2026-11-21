@@ -127,11 +127,11 @@ export default function InteractiveTourOverlay({
 
     const targetEl = document.querySelector(currentStep.target);
     if (targetEl && typeof targetEl.scrollIntoView === "function") {
-      targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      targetEl.scrollIntoView({ behavior: "auto", block: "center" });
     }
 
     const rafInit = requestAnimationFrame(updateRect);
-    const rafTimer = setTimeout(updateRect, 220);
+    const rafTimer = setTimeout(updateRect, 80);
 
     window.addEventListener("resize", updateRect);
     window.addEventListener("scroll", updateRect, { passive: true });
@@ -178,12 +178,12 @@ export default function InteractiveTourOverlay({
           className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:opacity-80 cursor-pointer"
         >
           <Compass className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-          <span>Recorrido rápido</span>
+          <span>Ver tutorial</span>
         </button>
         <button
           type="button"
           onClick={handleHidePill}
-          aria-label="Ocultar acceso de recorrido rápido"
+          aria-label="Ocultar acceso de tutorial"
           title="Ocultar"
           className="pr-2.5 pl-1 py-1.5 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] cursor-pointer"
         >
