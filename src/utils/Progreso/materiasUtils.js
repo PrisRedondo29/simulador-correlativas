@@ -92,7 +92,10 @@ export const esMateriaIncompleta = (materia, estado, detalles) => {
     if (estado === 'Regular') {
         return !detalles?.fechaRegularidad || !detalles?.notaRegularizacion;
     }
-    if (estado === 'Aprobado' || estado === 'Promocionado') {
+    if (estado === 'Promocionado') {
+        return (detalles?.notaRegularizacion ?? detalles?.notaFinal) == null;
+    }
+    if (estado === 'Aprobado') {
         return !detalles?.notaFinal;
     }
     return false;

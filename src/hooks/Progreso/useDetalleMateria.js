@@ -84,7 +84,8 @@ export default function useDetalleMateria(infoMateria, progresoDetalles, setProg
         const nota = val === "" ? null : Number(val);
         updateDetalles(currentData => ({
             ...currentData,
-            notaRegularizacion: nota
+            notaRegularizacion: nota,
+            ...(estadoActual === 'Promocionado' ? { notaFinal: nota } : {}),
         }));
     };
 

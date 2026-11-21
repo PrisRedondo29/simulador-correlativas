@@ -174,7 +174,7 @@ describe('MateriaContextContent - Reglas v2 en UI e intercepción de cascada al 
         );
     });
 
-    it('muestra aviso inline "Falta info" en materias incompletas y permite cargar Nota final en Promocionado', () => {
+    it('muestra aviso inline "Falta info" en materias incompletas y permite cargar Nota cursada en Promocionado', () => {
         const { rerender } = render(
             <MateriaContextContent
                 materia={MATERIAS_V2[0]}
@@ -209,19 +209,26 @@ describe('MateriaContextContent - Reglas v2 en UI e intercepción de cascada al 
         );
 
         expect(
-            screen.getByText(/Falta info: completá la nota final de promoción/i),
+            screen.getByText(/Falta info: completá la nota de cursada/i),
         ).toBeTruthy();
-        const inputPromo = screen.getByLabelText(/Nota final \(promoción\)/i);
-        fireEvent.change(inputPromo, { target: { value: '9' } });
+        expect(screen.queryByLabelText(/Nota final \(promoción\)/i)).toBeNull();
+        const inputCursada = screen.getByLabelText(/Nota cursada/i);
+        fireEvent.change(inputCursada, { target: { value: '9' } });
         expect(setProgresoDetalles).toHaveBeenCalled();
+        const updaterFn = setProgresoDetalles.mock.calls[0][0];
+        const nextDetalles = updaterFn({});
+        expect(nextDetalles.C1).toMatchObject({
+            notaRegularizacion: 9,
+            notaFinal: 9,
+        });
 
-        // Al completar notaFinal desaparece el aviso inline
+        // Al completar la nota desaparece el aviso inline
         rerender(
             <MateriaContextContent
                 materia={MATERIAS_V2[0]}
                 materias={MATERIAS_V2}
                 progreso={{ C1: 'Promocionado' }}
-                progresoDetalles={{ C1: { notaFinal: 9 } }}
+                progresoDetalles={{ C1: { notaRegularizacion: 9, notaFinal: 9 } }}
                 setProgresoDetalles={setProgresoDetalles}
                 plan="17.14"
                 cambioDeEstado={vi.fn()}

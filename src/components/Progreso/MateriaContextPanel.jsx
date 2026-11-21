@@ -309,13 +309,22 @@ export function MateriaContextContent({
   );
   const esRendidaLibre = Boolean(detalles.rendidaLibre);
   const esEquivalencia = Boolean(detalles.esEquivalencia);
+  const fallbackAnioPromo =
+    estadoActual === "Promocionado" &&
+    typeof detalles.fechaAprobacion === "string" &&
+    /^\d{4}/.test(detalles.fechaAprobacion)
+      ? detalles.fechaAprobacion.slice(0, 4)
+      : "";
   const anioSeleccionado = esEquivalencia
     ? detalles.anioExamen != null
       ? String(detalles.anioExamen)
       : ""
     : detalles.fechaRegularidad?.anio != null
       ? String(detalles.fechaRegularidad.anio)
-      : "";
+      : fallbackAnioPromo;
+  const notaCursadaVisible =
+    detalles.notaRegularizacion ??
+    (estadoActual === "Promocionado" ? detalles.notaFinal : null);
 
   const statusPlan = regularidadUtils.obtenerPlanificacionInstancias(
     detalles.fechaRegularidad,
@@ -604,7 +613,7 @@ export function MateriaContextContent({
                 {estadoActual === "Regular"
                   ? "Falta info: completá abajo el año y la nota de cursada para calcular tu promedio y vencimiento de regularidad."
                   : estadoActual === "Promocionado"
-                    ? "Falta info: completá la nota final de promoción para incluir esta materia en tu promedio general."
+                    ? "Falta info: completá la nota de cursada para incluir esta promoción en tu promedio general."
                     : esEquivalencia
                       ? "Falta info: completá la nota en «Opciones avanzadas» para incluir esta equivalencia en tu promedio."
                       : "Falta info: registrá tu examen final aprobado abajo para incluir la nota en tu promedio general."}
@@ -636,27 +645,13 @@ export function MateriaContextContent({
                 placeholder="4 a 10"
                 variant="bordered"
                 value={
-                  detalles.notaRegularizacion != null
-                    ? String(detalles.notaRegularizacion)
+                  notaCursadaVisible != null
+                    ? String(notaCursadaVisible)
                     : ""
                 }
                 onValueChange={handleCambioNotaCursada}
               />
             </div>
-          )}
-
-          {estadoActual === "Promocionado" && !esEquivalencia && (
-            <Input
-              size="sm"
-              type="number"
-              min={4}
-              max={10}
-              label="Nota final (promoción)"
-              placeholder="7 a 10"
-              variant="bordered"
-              value={detalles.notaFinal != null ? String(detalles.notaFinal) : ""}
-              onValueChange={handleCambioNotaEquivalencia}
-            />
           )}
 
           {!esEquivalencia && (

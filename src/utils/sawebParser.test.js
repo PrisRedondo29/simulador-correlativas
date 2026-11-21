@@ -83,8 +83,19 @@ describe('sawebParser', () => {
 
         expect(result.progreso['11071']).toBe('Promocionado');
         expect(result.progresoDetalles['11071'].notaFinal).toBe(7);
+        expect(result.progresoDetalles['11071'].notaRegularizacion).toBe(7);
+        expect(result.progresoDetalles['11071'].fechaRegularidad).toEqual({
+            anio: 2019,
+            cuatrimestre: 1,
+        });
 
         expect(result.progreso['11072']).toBe('Promocionado');
+        expect(result.progresoDetalles['11072'].notaFinal).toBe(7);
+        expect(result.progresoDetalles['11072'].notaRegularizacion).toBe(7);
+        expect(result.progresoDetalles['11072'].fechaRegularidad).toEqual({
+            anio: 2022,
+            cuatrimestre: 1,
+        });
         expect(result.progresoDetalles['11072'].intentosFinal).toHaveLength(1);
         expect(result.progresoDetalles['11072'].intentosFinal[0]).toMatchObject({
             estado: 'reprobado',
@@ -215,5 +226,37 @@ Plan 1713:
             estado: 'reprobado',
             nota: 2,
         });
+    });
+
+    it('actualiza año de cursada y nota si regularizó en un año previo y luego recursó y promocionó en un año posterior', () => {
+        const analiticoRecursadaPromo = `
+Plan 1713:
+11072 R-ALGEBRA Y LOGICA COMPUTACIONAL 2(DOS) 0479-074 17-07-2019
+11072 P-ALGEBRA Y LOGICA COMPUTACIONAL 7(SIETE) 0532-076 22-06-2022
+`;
+        const parsed = parseSawebTexts(analiticoRecursadaPromo, MOCK_PLAN_1713);
+        const existingProgreso = { '11072': 'Regular' };
+        const existingDetalles = {
+            '11072': {
+                notaRegularizacion: 5,
+                fechaRegularidad: { anio: 2019, cuatrimestre: 1 },
+                intentosFinal: [],
+            },
+        };
+
+        const merged = mergeSawebImportWithExisting(
+            parsed,
+            existingProgreso,
+            existingDetalles,
+            MOCK_PLAN_1713,
+        );
+
+        expect(merged.progreso['11072']).toBe('Promocionado');
+        expect(merged.progresoDetalles['11072'].fechaRegularidad).toEqual({
+            anio: 2022,
+            cuatrimestre: 1,
+        });
+        expect(merged.progresoDetalles['11072'].notaRegularizacion).toBe(7);
+        expect(merged.progresoDetalles['11072'].notaFinal).toBe(7);
     });
 });

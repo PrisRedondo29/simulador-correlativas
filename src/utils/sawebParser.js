@@ -5,6 +5,7 @@ import {
 } from './Progreso/materiaStateMachine';
 
 /** @typedef {import('../types/domain').Materia} Materia */
+/** @typedef {import('../types/domain').FechaRegularidad} FechaRegularidad */
 /** @typedef {import('../types/domain').ProgresoMap} ProgresoMap */
 /** @typedef {import('../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
 /** @typedef {import('../types/domain').IntentoFinal} IntentoFinal */
@@ -47,6 +48,40 @@ function toIsoDate(ddmmyyyy) {
     const match = ddmmyyyy.match(/^(\d{2})-(\d{2})-(\d{4})$/);
     if (!match) return ddmmyyyy;
     return `${match[3]}-${match[2]}-${match[1]}`;
+}
+
+/**
+ * Infiere el año y cuatrimestre de cursada a partir de una fecha ISO YYYY-MM-DD.
+ * @param {string | null | undefined} isoDate
+ * @returns {{ anio: number, cuatrimestre: 1 | 2 } | null}
+ */
+function inferFechaCursadaFromIso(isoDate) {
+    if (typeof isoDate !== 'string') return null;
+    const match = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    const anio = Number(match[1]);
+    const mes = Number(match[2]);
+    if (mes <= 2) {
+        return { anio: anio - 1, cuatrimestre: 2 };
+    }
+    if (mes <= 8) {
+        return { anio, cuatrimestre: 1 };
+    }
+    return { anio, cuatrimestre: 2 };
+}
+
+/**
+ * Extrae el año numérico de una fecha de regularidad (objeto o string legado).
+ * @param {FechaRegularidad | null | undefined} fechaReg
+ * @returns {number | null}
+ */
+function getAnioFromFechaRegularidad(fechaReg) {
+    if (!fechaReg) return null;
+    if (typeof fechaReg === 'string') {
+        const match = fechaReg.match(/^(\d{4})/);
+        return match ? Number(match[1]) : null;
+    }
+    return typeof fechaReg.anio === 'number' ? fechaReg.anio : null;
 }
 
 /**
@@ -311,16 +346,25 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         // 2. Promocionada (prioridad sobre intentos previos)
         const promoAnalitico = [...intentosOrdenados].reverse().find((i) => i.tipo === 'P' && i.nota >= 4);
         if (promoAnalitico || ultimaPromovidaCursada) {
-            const notaFinal = promoAnalitico?.nota ?? ultimaPromovidaCursada?.nota ?? null;
+            const notaPromo = promoAnalitico?.nota ?? ultimaPromovidaCursada?.nota ?? null;
+            /** @type {{ anio: number, cuatrimestre: 1 | 2 } | null} */
+            const fechaPromo = ultimaPromovidaCursada
+                ? {
+                      anio: ultimaPromovidaCursada.anio,
+                      cuatrimestre: ultimaPromovidaCursada.cuatrimestre === 2 ? 2 : 1,
+                  }
+                : promoAnalitico?.fecha
+                  ? inferFechaCursadaFromIso(promoAnalitico.fecha)
+                  : null;
             progreso[codigo] = ESTADOS_MATERIA.PROMOCIONADO;
             progresoDetalles[codigo] = {
                 intentosFinal,
-                notaFinal,
+                notaFinal: notaPromo,
                 esEquivalencia: false,
                 rendidaLibre: false,
                 ...(promoAnalitico?.fecha && { fechaAprobacion: promoAnalitico.fecha }),
-                fechaRegularidad,
-                notaRegularizacion,
+                fechaRegularidad: fechaPromo ?? fechaRegularidad,
+                notaRegularizacion: notaPromo ?? notaRegularizacion,
             };
             counts.Promocionado += 1;
             continue;
@@ -446,10 +490,20 @@ export function mergeSawebImportWithExisting(
         const importedEstado = importedProgreso[codigo];
 
         if (importedDet && importedEstado) {
-            const nextNotaReg =
-                prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null;
-            const nextFechaReg =
-                prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null;
+            const importedAnioReg = getAnioFromFechaRegularidad(importedDet.fechaRegularidad);
+            const prevAnioReg = getAnioFromFechaRegularidad(prevDet?.fechaRegularidad);
+            const isPromoMasReciente =
+                importedEstado === ESTADOS_MATERIA.PROMOCIONADO &&
+                importedAnioReg !== null &&
+                prevAnioReg !== null &&
+                importedAnioReg > prevAnioReg;
+
+            const nextNotaReg = isPromoMasReciente
+                ? (importedDet.notaRegularizacion ?? prevDet?.notaRegularizacion ?? null)
+                : (prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null);
+            const nextFechaReg = isPromoMasReciente
+                ? importedDet.fechaRegularidad
+                : (prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null);
 
             let finalEstado = importedEstado;
             // Si en el Analítico solo hay aplazos (sin aprobación) y ya estaba Regular en el simulador,
