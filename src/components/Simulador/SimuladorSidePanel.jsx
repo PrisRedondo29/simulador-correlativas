@@ -7,6 +7,7 @@ import {
     CloudDownload,
     Compass,
     GitBranch,
+    GraduationCap,
     History,
     PanelRightClose,
     Pin,
@@ -31,6 +32,8 @@ function SimuladorSidePanel({
     estadoSiguiente,
     onAnterior,
     onSiguiente,
+    simulacionTerminada = false,
+    onOpenFinishModal,
     tituloIntermedioNombre,
     progresoIntermedio,
     isIntermedioCompletado,
@@ -80,7 +83,7 @@ function SimuladorSidePanel({
                 </Button>
             </div>
 
-            {/* Selector de Modo Principal + Descripción Contextual */}
+            {/* Selector de Modo Principal + Descripción Única */}
             <div className="p-3 border-b border-[#E2E8F0] dark:border-[#2A3540] shrink-0">
                 <div
                     data-tour="simulador-modos"
@@ -117,7 +120,7 @@ function SimuladorSidePanel({
                 <p className="mt-2 text-[11px] text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
                     {interactionMode === 'planificar' ? (
                         <>
-                            Elegí qué materias cursar en cada cuatrimestre y avanzá para proyectar cuándo te recibís. No modifica{' '}
+                            Elegí materias por cuatrimestre para proyectar tu egreso. No modifica{' '}
                             <Link
                                 to="/mis-materias"
                                 className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline"
@@ -127,7 +130,7 @@ function SimuladorSidePanel({
                             .
                         </>
                     ) : (
-                        'Hacé clic en cualquier materia del mapa para fijarla, revisar sus requisitos previos (ámbar) y ver qué materias habilita al aprobarla (verde).'
+                        'Fijá una materia del mapa para ver sus requisitos previos (ámbar) y qué materias habilita (verde).'
                     )}
                 </p>
             </div>
@@ -136,19 +139,25 @@ function SimuladorSidePanel({
             <div data-tour="simulador-controles" className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
                 {interactionMode === 'planificar' ? (
                     <>
-                        {/* Tarjeta de Cuatrimestre Actual */}
+                        {/* Tarjeta de Cuatrimestre Actual o Finalizada */}
                         <div className="bg-[#F8FAFC] dark:bg-[#0F1419] border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl p-3 space-y-2.5">
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
-                                    Cuatrimestre actual
+                                    {simulacionTerminada ? 'Proyección' : 'Cuatrimestre actual'}
                                 </span>
-                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#334155] dark:text-[#E2E8F0] tabular-nums">
-                                    {elegidasEsteCuatri} {elegidasEsteCuatri === 1 ? 'elegida' : 'elegidas'}
-                                </span>
+                                {simulacionTerminada ? (
+                                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-[#005A36] dark:text-[#86EFAC]">
+                                        Finalizada
+                                    </span>
+                                ) : (
+                                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#334155] dark:text-[#E2E8F0] tabular-nums">
+                                        {elegidasEsteCuatri} {elegidasEsteCuatri === 1 ? 'elegida' : 'elegidas'}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="text-base font-bold text-[#005A36] dark:text-[#6EE7B7] tabular-nums">
-                                {cuatri}° Cuatri · {anioActual}
+                                {simulacionTerminada ? `Egreso · ${anioActual}` : `${cuatri}° Cuatri · ${anioActual}`}
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
@@ -163,21 +172,29 @@ function SimuladorSidePanel({
                                 >
                                     Anterior
                                 </Button>
-                                <Button
-                                    size="sm"
-                                    isDisabled={!estadoSiguiente}
-                                    onPress={onSiguiente}
-                                    title="Confirmar materias elegidas y avanzar al próximo cuatrimestre"
-                                    endContent={<ChevronRight size={14} />}
-                                    className="font-semibold rounded-xl h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
-                                >
-                                    Siguiente
-                                </Button>
+                                {simulacionTerminada ? (
+                                    <Button
+                                        size="sm"
+                                        onPress={onOpenFinishModal}
+                                        title="Abrir opciones para guardar simulación o descargar PDF"
+                                        startContent={<GraduationCap size={14} />}
+                                        className="font-semibold rounded-xl h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
+                                    >
+                                        Guardar / PDF
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        size="sm"
+                                        isDisabled={!estadoSiguiente}
+                                        onPress={onSiguiente}
+                                        title="Confirmar materias elegidas y avanzar al próximo cuatrimestre"
+                                        endContent={<ChevronRight size={14} />}
+                                        className="font-semibold rounded-xl h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
+                                    >
+                                        Siguiente
+                                    </Button>
+                                )}
                             </div>
-
-                            <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                                Marcá en el mapa las materias disponibles que querés cursar y usá Siguiente para simular el avance al próximo cuatrimestre.
-                            </p>
                         </div>
 
                         {/* Progreso de Título Intermedio */}
@@ -336,26 +353,21 @@ function SimuladorSidePanel({
                         </p>
                     </div>
                 ) : (
-                    <div className="bg-[#F8FAFC] dark:bg-[#0F1419] border border-dashed border-[#CBD5E1] dark:border-[#2A3540] rounded-xl p-4 text-center space-y-2.5">
-                        <div className="w-9 h-9 mx-auto rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#6EE7B7] flex items-center justify-center">
-                            <Pin size={16} aria-hidden="true" />
+                    <div className="bg-[#F8FAFC] dark:bg-[#0F1419] border border-dashed border-[#CBD5E1] dark:border-[#2A3540] rounded-xl p-3.5 text-center space-y-2">
+                        <div className="w-8 h-8 mx-auto rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#6EE7B7] flex items-center justify-center">
+                            <Pin size={15} aria-hidden="true" />
                         </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
-                                Ninguna materia fijada
-                            </p>
-                            <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                                Hacé clic sobre una materia del mapa para ver acá su cadena completa de correlativas y navegar entre ellas.
-                            </p>
-                        </div>
-                        <div className="flex flex-col gap-1.5 pt-1 text-[11px] text-left">
+                        <p className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                            Ninguna materia fijada
+                        </p>
+                        <div className="flex flex-col gap-1.5 text-[11px] text-left">
                             <span className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#FFFBEB] dark:bg-[#2D2210] text-[#92400E] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]">
                                 <span className="w-2 h-2 rounded-full bg-[#D97706] shrink-0" aria-hidden="true" />
-                                <span>Ámbar · Requisitos previos (necesarios para cursarla)</span>
+                                <span>Ámbar · Requisitos previos</span>
                             </span>
                             <span className="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]">
                                 <span className="w-2 h-2 rounded-full bg-[#478559] shrink-0" aria-hidden="true" />
-                                <span>Verde · Materias que habilita al aprobarla</span>
+                                <span>Verde · Materias que habilita</span>
                             </span>
                         </div>
                     </div>
@@ -364,10 +376,6 @@ function SimuladorSidePanel({
 
             {/* Footer Acciones */}
             <div className="p-3 border-t border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC]/80 dark:bg-[#0F1419]/60 space-y-2 shrink-0">
-                <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] leading-snug">
-                    Importá tus materias reales para partir desde tu avance actual, o cambiá plan e inicio desde Configurar.
-                </p>
-
                 {onImportarProgreso && (
                     <Button
                         data-tour="simulador-importar"

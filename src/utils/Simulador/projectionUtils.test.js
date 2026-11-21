@@ -29,10 +29,11 @@ describe('projectionUtils - Proyección de cuatrimestres del Simulador', () => {
         // C1 2027* (col 3): M4 proyectada (cuatri 3 = impar)
         expect(res.items.M4).toEqual({ columna: 3, estado: 'Proyectada' });
 
-        // Tesina (cuatri 11 = impar): no puede cursarse en col 3 junto a M4 porque aún quedaba M4 pendiente,
-        // así que se proyecta en el próximo cuatrimestre impar disponible (C1 2028*, col 5)
+        // Tesina no depende de paridad fija 1°/2° cuatri: en cuanto se completa M4 en C1 2027* (col 3),
+        // se habilita inmediatamente en el próximo cuatrimestre (C2 2027*, col 4) sin dejar un cuatri vacío
         expect(res.items.TES.estado).toBe('Proyectada');
-        expect(res.items.TES.columna).toBeGreaterThan(res.items.M4.columna);
+        expect(res.items.TES.columna).toBe(res.items.M4.columna + 1);
+        expect(res.currentCol).toBe(1);
     });
 
     it('respeta historial pasado y registra materias ofrecidas no cursadas en skippedItems', () => {
@@ -74,5 +75,34 @@ describe('projectionUtils - Proyección de cuatrimestres del Simulador', () => {
 
         expect(res.labels[1]).toBe('C2 2026');
         expect(res.labels[2]).toBe('C1 2027*');
+    });
+
+    it('al completar todas las materias del plan devuelve currentCol null sin columna vacía adicional', () => {
+        const historialCompleto = [
+            {
+                cuatri: '1',
+                anioActual: 2026,
+                materiasDelSemestre: MATERIAS_SIM.slice(0, 2),
+                progresoSnapshot: { M1: 'Cursado', M2: 'Cursado' },
+                progresoBaseSnapshot: { M1: 'No Cursado', M2: 'No Cursado' },
+            },
+            {
+                cuatri: '2',
+                anioActual: 2026,
+                materiasDelSemestre: MATERIAS_SIM.slice(2),
+                progresoSnapshot: { M3: 'Cursado', M4: 'Cursado', TES: 'Cursado' },
+                progresoBaseSnapshot: { M3: 'No Cursado', M4: 'No Cursado', TES: 'No Cursado' },
+            },
+        ];
+
+        const res = calculateProjection({
+            materias: MATERIAS_SIM,
+            historialSemestres: historialCompleto,
+            cuatriActual: '2',
+            anioActual: 2026,
+        });
+
+        expect(res.currentCol).toBeNull();
+        expect(res.maxCol).toBe(historialCompleto.length);
     });
 });

@@ -6,13 +6,14 @@ const useSimuladorMaterias = (materias, progreso, cuatri, setProgreso, progresoB
     const { materiasCursables, materiasBloqueadas } = useMemo(() => {
         if (progresoBase === null || progresoBase === undefined) return { materiasCursables: [], materiasBloqueadas: [] };
 
-        // 1. Filtramos por temporada (paridad de cuatrimestre) y que no estén cursadas
+        // 1. Filtramos por temporada (paridad de cuatrimestre) o actividades flexibles de tramo final, y que no estén cursadas
         const materiasCandidatas = materias.filter(m => {
             const numCuatri = Number(m.cuatrimestre);
             const esImpar = numCuatri % 2 !== 0;
             const esPar = numCuatri % 2 === 0;
+            const esFlexible = Boolean(m.tesis || numCuatri > 10);
 
-            const coincideTemporada = (cuatri === "1" && esImpar) || (cuatri === "2" && esPar);
+            const coincideTemporada = esFlexible || (cuatri === "1" && esImpar) || (cuatri === "2" && esPar);
             const noCursada = progresoBase[m.codigo] === "No Cursado";
 
             return coincideTemporada && noCursada;
@@ -28,7 +29,7 @@ const useSimuladorMaterias = (materias, progreso, cuatri, setProgreso, progresoB
 
             if (esTesina) {
                 const hayPendientes = materias.some(m =>
-                    m.codigo !== materia.codigo && progresoBase[m.codigo] !== "Cursado"
+                    m.codigo !== materia.codigo && !m.tesis && progresoBase[m.codigo] !== "Cursado"
                 );
                 esCursable = !hayPendientes;
                 if (!esCursable) {

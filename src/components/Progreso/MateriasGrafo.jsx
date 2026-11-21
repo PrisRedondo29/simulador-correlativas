@@ -15,7 +15,8 @@ import { Button, ButtonGroup } from '@heroui/react';
 import { ArrowRight, ArrowDown, ZoomIn, ZoomOut, Home } from 'lucide-react';
 
 /**
- * SemesterNode: Encabezados y separadores de cuatrimestre, más grandes y prominentes.
+ * SemesterNode: Encabezados y separadores de cuatrimestre con estado visual claro
+ * (`current` = cuatrimestre siendo simulado, `past` = completado, `future` = proyectado, `neutral` = explorar).
  */
 const SemesterNode = ({ data }) => {
   const isHorizontal = data.direction === 'LR';
@@ -28,9 +29,45 @@ const SemesterNode = ({ data }) => {
     );
   }
 
+  const status = data.status || 'neutral';
+
+  if (status === 'current') {
+    return (
+      <div className="pointer-events-none select-none">
+        <div className="bg-[#005A36] dark:bg-[#2E8B63] text-white font-bold px-4 py-2 rounded-xl text-xs tracking-wide shadow-md ring-4 ring-[#005A36]/20 dark:ring-[#4A9D68]/30 inline-flex items-center justify-center gap-2 uppercase min-w-[170px]">
+          <span className="w-2 h-2 rounded-full bg-[#86EFAC] animate-pulse shrink-0" aria-hidden="true" />
+          <span>{data.label}</span>
+          <span className="text-[10px] font-semibold normal-case px-1.5 py-0.5 rounded-md bg-white/20 text-white">
+            Actual
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'past') {
+    return (
+      <div className="pointer-events-none select-none">
+        <div className="bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] font-semibold px-4 py-2 rounded-xl text-xs tracking-wide text-center uppercase min-w-[140px]">
+          ✓ {data.label}
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'future') {
+    return (
+      <div className="pointer-events-none select-none">
+        <div className="bg-white dark:bg-[#161D24] text-[#64748B] dark:text-[#94A3B8] border border-dashed border-[#CBD5E1] dark:border-[#2A3540] font-semibold px-4 py-2 rounded-xl text-xs tracking-wide text-center uppercase min-w-[140px]">
+          {data.label}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="pointer-events-none select-none">
-      <div className="bg-[#005A36] dark:bg-[#1D5E43] text-white font-semibold px-5 py-2.5 rounded-xl text-xs tracking-wide shadow-xs text-center uppercase min-w-[140px]">
+      <div className="bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0] border border-[#E2E8F0] dark:border-[#2A3540] font-semibold px-4 py-2 rounded-xl text-xs tracking-wide text-center uppercase min-w-[140px]">
         {data.label}
       </div>
     </div>
@@ -45,9 +82,27 @@ const nodeTypes = {
 /**
  * getLayoutedElements: Organiza materias en grilla según dirección.
  */
-const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = null) => {
+const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = null, interactionMode = 'planificar') => {
   const isHorizontal = direction === 'LR';
   const { items, labels, maxCol } = projectionData || { items: {}, labels: {}, maxCol: 0 };
+
+  let currentCol = projectionData?.currentCol ?? null;
+  if (currentCol === null && projectionData && !('currentCol' in projectionData)) {
+    for (const cod in items) {
+      if (items[cod]?.estado === 'Presente') {
+        currentCol = items[cod].columna;
+        break;
+      }
+    }
+  }
+
+  const getHeaderStatus = (col) => {
+    if (interactionMode === 'explorar') return 'neutral';
+    if (currentCol === null) return 'past';
+    if (col === currentCol) return 'current';
+    if (col < currentCol) return 'past';
+    return 'future';
+  };
 
   const materiasPorColumna = {};
   nodes.forEach(node => {
@@ -79,7 +134,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
       newNodes.push({
         id: `header-${col}`,
         type: 'semester',
-        data: { label, direction, variant: 'header' },
+        data: { label, direction, variant: 'header', status: getHeaderStatus(col) },
         position: { x: colIdx * gapX + 40, y: -80 },
         zIndex: -1,
         draggable: false,
@@ -120,7 +175,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
       newNodes.push({
         id: `header-${col}`,
         type: 'semester',
-        data: { label, direction, variant: 'header' },
+        data: { label, direction, variant: 'header', status: getHeaderStatus(col) },
         position: { x: 20, y: currentY },
         zIndex: -1,
         draggable: false,
@@ -167,6 +222,7 @@ const FlowInner = ({
   projection,
   topRightContent,
   selectedNodeId = null,
+  interactionMode = 'planificar',
   controlsPosition = 'top-left',
   topOverlayContent = null,
   bottomRightContent = null,
@@ -249,11 +305,11 @@ const FlowInner = ({
 
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      initialNodes, initialEdges, direction, projection
+      initialNodes, initialEdges, direction, projection, interactionMode
     );
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [initialNodes, initialEdges, direction, setNodes, setEdges, projection]);
+  }, [initialNodes, initialEdges, direction, setNodes, setEdges, projection, interactionMode]);
 
   const focusInitialColumns = useCallback(
     (maxCols = 3) => {

@@ -557,6 +557,7 @@ export interface ProyeccionCarrera {
     skippedItems: ProyeccionSkippedItem[];
     labels: Record<number, string>;
     maxCol: number;
+    currentCol?: number | null;
 }
 
 // ─── Mi Cursada (Calendario, Horarios y Bitácora) ─────────────────────────────

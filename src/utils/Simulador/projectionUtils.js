@@ -35,6 +35,17 @@ function crearProgresoSintetico(materias, codigosAprobados) {
 }
 
 /**
+ * Las actividades de tramo final / Tesina (`tesis === true` o `cuatrimestre > 10`)
+ * no están atadas a paridad fija 1°/2° cuatrimestre: se habilitan en cualquier
+ * cuatrimestre en cuanto se cumplen sus requisitos.
+ * @param {Materia} materia
+ * @returns {boolean}
+ */
+function esActividadFlexible(materia) {
+    return Boolean(materia?.tesis || Number(materia?.cuatrimestre) > 10);
+}
+
+/**
  * Calcula la proyección temporal de cursadas pasadas, presentes y futuras.
  * @param {{
  *   materias: Materia[],
@@ -90,6 +101,17 @@ export const calculateProjection = ({
         });
     });
 
+    // Si ya se completaron todas las materias del plan, no agregamos una columna vacía futura.
+    if (materias.length > 0 && colocadas.size >= materias.length) {
+        return {
+            items,
+            skippedItems,
+            labels,
+            maxCol: Math.max(...Object.keys(labels).map(Number), 0),
+            currentCol: null,
+        };
+    }
+
     const turn = historialSemestres.length + 1;
     const currentCuatri = String(cuatriActual);
     const currentAnio = Number(anioActual);
@@ -104,7 +126,8 @@ export const calculateProjection = ({
         if (colocadas.has(m.codigo)) return;
 
         const elegibilidad = evaluarElegibilidadMateria(m, progresoPresente, materias);
-        const paridadCorrecta = Number(m.cuatrimestre) % 2 === Number(currentCuatri) % 2;
+        const paridadCorrecta =
+            esActividadFlexible(m) || Number(m.cuatrimestre) % 2 === Number(currentCuatri) % 2;
 
         if (elegibilidad.puedeCursar && paridadCorrecta) {
             disponiblesAhora.add(m.codigo);
@@ -133,7 +156,8 @@ export const calculateProjection = ({
             if (items[m.codigo]) return;
 
             const elegibilidad = evaluarElegibilidadMateria(m, progresoTurno, materias);
-            const paridadCorrecta = Number(m.cuatrimestre) % 2 === Number(fCuatri) % 2;
+            const paridadCorrecta =
+                esActividadFlexible(m) || Number(m.cuatrimestre) % 2 === Number(fCuatri) % 2;
 
             if (elegibilidad.puedeCursar && paridadCorrecta) {
                 items[m.codigo] = {
@@ -164,5 +188,11 @@ export const calculateProjection = ({
         }
     });
 
-    return { items, skippedItems, labels, maxCol: Math.max(...Object.keys(labels).map(Number), 0) };
+    return {
+        items,
+        skippedItems,
+        labels,
+        maxCol: Math.max(...Object.keys(labels).map(Number), 0),
+        currentCol: turn,
+    };
 };

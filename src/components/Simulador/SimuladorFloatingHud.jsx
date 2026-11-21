@@ -7,6 +7,7 @@ import {
     CloudDownload,
     Compass,
     GitBranch,
+    GraduationCap,
     History,
     Maximize2,
     Minimize2,
@@ -32,6 +33,8 @@ function SimuladorFloatingHud({
     estadoSiguiente,
     onAnterior,
     onSiguiente,
+    simulacionTerminada = false,
+    onOpenFinishModal,
     historialSemestres,
     onOpenHistory,
     selectedMateria,
@@ -90,24 +93,42 @@ function SimuladorFloatingHud({
                             Anterior
                         </Button>
 
-                        <div className="flex items-center gap-1.5 px-1">
-                            <span className="text-xs font-bold text-[#005A36] dark:text-[#6EE7B7] tabular-nums whitespace-nowrap">
-                                {cuatri}° Cuatri · {anioActual}
-                            </span>
-                            <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] tabular-nums whitespace-nowrap">
-                                {elegidasEsteCuatri} eleg.
-                            </span>
-                        </div>
+                        {simulacionTerminada ? (
+                            <>
+                                <span className="text-xs font-bold text-[#005A36] dark:text-[#6EE7B7] tabular-nums whitespace-nowrap px-1">
+                                    ¡Finalizada · {anioActual}!
+                                </span>
+                                <Button
+                                    size="sm"
+                                    onPress={onOpenFinishModal}
+                                    startContent={<GraduationCap size={14} />}
+                                    className="font-semibold rounded-lg h-8 px-2.5 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white text-xs"
+                                >
+                                    Guardar / PDF
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="flex items-center gap-1.5 px-1">
+                                    <span className="text-xs font-bold text-[#005A36] dark:text-[#6EE7B7] tabular-nums whitespace-nowrap">
+                                        {cuatri}° Cuatri · {anioActual}
+                                    </span>
+                                    <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] tabular-nums whitespace-nowrap">
+                                        {elegidasEsteCuatri} eleg.
+                                    </span>
+                                </div>
 
-                        <Button
-                            size="sm"
-                            isDisabled={!estadoSiguiente}
-                            onPress={onSiguiente}
-                            endContent={<ChevronRight size={14} />}
-                            className="font-semibold rounded-lg h-8 px-2.5 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white text-xs"
-                        >
-                            Siguiente
-                        </Button>
+                                <Button
+                                    size="sm"
+                                    isDisabled={!estadoSiguiente}
+                                    onPress={onSiguiente}
+                                    endContent={<ChevronRight size={14} />}
+                                    className="font-semibold rounded-lg h-8 px-2.5 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white text-xs"
+                                >
+                                    Siguiente
+                                </Button>
+                            </>
+                        )}
 
                         {historialSemestres?.length > 0 && (
                             <>

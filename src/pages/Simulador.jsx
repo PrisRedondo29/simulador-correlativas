@@ -8,6 +8,7 @@ import ConfiguracionSimulador from '../components/Simulador/modals/Configuracion
 import GuardarSimulacion from '../components/Simulador/modals/GuardarSimulacion';
 import ConfirmarImportarModal from '../components/Simulador/modals/ConfirmarImportarModal';
 import SimuladorModeModal from '../components/Simulador/modals/SimuladorModeModal';
+import SimulacionFinalizadaModal from '../components/Simulador/modals/SimulacionFinalizadaModal';
 import SimuladorSidePanel from '../components/Simulador/SimuladorSidePanel';
 import SimuladorFloatingHud from '../components/Simulador/SimuladorFloatingHud';
 import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverlay';
@@ -251,7 +252,18 @@ function Simulador({ plan: initialPlan }) {
         setProgresoSimulado(nuevo);
     };
 
-    const isDesktopGrafo = Boolean(plan) && !cargando && !simulacionTerminada && viewMode === 'grafo';
+    const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
+
+    React.useEffect(() => {
+        if (!simulacionTerminada || viewMode !== 'grafo') {
+            const t = setTimeout(() => setIsFinishModalOpen(false), 0);
+            return () => clearTimeout(t);
+        }
+        const t = setTimeout(() => setIsFinishModalOpen(true), 120);
+        return () => clearTimeout(t);
+    }, [simulacionTerminada, viewMode]);
+
+    const isDesktopGrafo = Boolean(plan) && !cargando && viewMode === 'grafo';
 
     const renderIntermediateBadge = () => (
         <div
@@ -438,6 +450,25 @@ function Simulador({ plan: initialPlan }) {
                 isOpen={Boolean(plan) && !cargando && isModeModalOpen}
                 onSelectMode={handleSelectInitialMode}
             />
+            <SimulacionFinalizadaModal
+                isOpen={isFinishModalOpen}
+                onOpenChange={setIsFinishModalOpen}
+                onClose={() => setIsFinishModalOpen(false)}
+                anioActual={anioActual}
+                cuatri={cuatri}
+                plan={plan}
+                historialSemestres={historialSemestres}
+                progresoSimulado={progresoSimulado}
+                progresoBase={progresoBase}
+                simulacionTerminada={simulacionTerminada}
+                onGuardarOpen={onGuardarOpen}
+                handleDownloadPDF={handleDownloadPDF}
+                descargandoPDF={descargandoPDF}
+                onOpenHistory={() => {
+                    setIsFinishModalOpen(false);
+                    onHistoryOpen();
+                }}
+            />
 
             <Modal isOpen={isHistoryOpen} onOpenChange={onHistoryOpenChange} size="3xl" scrollBehavior="inside">
                 <ModalContent>
@@ -478,6 +509,19 @@ function Simulador({ plan: initialPlan }) {
                     </ModalBody>
                 </ModalContent>
             </Modal>
+
+            {descargandoPDF && isDesktopGrafo && !isHistoryOpen && (
+                <div className="fixed -left-[9999px] top-0 pointer-events-none" aria-hidden="true">
+                    <HistorialAcademico
+                        historialSemestres={historialSemestres}
+                        openedAccordions={openedAccordions}
+                        setOpenedAccordions={setOpenedAccordions}
+                        descargandoPDF={descargandoPDF}
+                        plan={plan}
+                        materias={materias}
+                    />
+                </div>
+            )}
 
             {!plan && !cargando && (
                 <div className="flex flex-col items-center justify-center py-20 gap-5 text-center">
@@ -536,6 +580,7 @@ function Simulador({ plan: initialPlan }) {
                                         progreso={progresoSimulado}
                                         onNodeClick={handleNodeClick}
                                         projection={projection}
+                                        interactionMode={interactionMode}
                                         selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
                                         controlsPosition="top-left"
                                         rounded={true}
@@ -584,6 +629,8 @@ function Simulador({ plan: initialPlan }) {
                                     estadoSiguiente={estadoSiguiente}
                                     onAnterior={handleAnterior}
                                     onSiguiente={() => handleSiguiente(materiasCursables)}
+                                    simulacionTerminada={simulacionTerminada}
+                                    onOpenFinishModal={() => setIsFinishModalOpen(true)}
                                     tituloIntermedioNombre={tituloIntermedioNombre}
                                     progresoIntermedio={progresoIntermedio}
                                     isIntermedioCompletado={isIntermedioCompletado}
@@ -614,6 +661,7 @@ function Simulador({ plan: initialPlan }) {
                                     progreso={progresoSimulado}
                                     onNodeClick={handleNodeClick}
                                     projection={projection}
+                                    interactionMode={interactionMode}
                                     selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
                                     controlsPosition="bottom-left"
                                     rounded={false}
@@ -628,6 +676,8 @@ function Simulador({ plan: initialPlan }) {
                                             estadoSiguiente={estadoSiguiente}
                                             onAnterior={handleAnterior}
                                             onSiguiente={() => handleSiguiente(materiasCursables)}
+                                            simulacionTerminada={simulacionTerminada}
+                                            onOpenFinishModal={() => setIsFinishModalOpen(true)}
                                             historialSemestres={historialSemestres}
                                             onOpenHistory={onHistoryOpen}
                                             selectedMateria={selectedMateria}

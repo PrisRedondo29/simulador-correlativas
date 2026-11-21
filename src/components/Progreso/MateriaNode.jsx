@@ -73,6 +73,18 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
 
     const { label, icon, badgeClass, borderClass } = getBadgeInfo();
     const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
+    const periodoLabel = materia.tesis
+        ? 'Tramo final · Tesina'
+        : Number(materia.anio) >= 6 || Number(materia.cuatrimestre) > 10
+            ? 'Tramo final'
+            : `${materia.anio}° Año · ${materia.cuatrimestre}° Cuatri`;
+    const hsSem = Number(materia.horas_semanales);
+    const hsTot = Number(materia.horas_totales);
+    const horasLabel = Number.isFinite(hsSem) && hsSem > 0
+        ? `${hsSem}h/s`
+        : Number.isFinite(hsTot) && hsTot > 0
+            ? `${hsTot}h tot.`
+            : null;
 
     return (
         <button
@@ -94,11 +106,9 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                 </div>
 
                 <div className="mt-1 flex items-center justify-between text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                    <span>
-                        {materia.anio}° Año · {materia.cuatrimestre}° Cuatri
-                    </span>
-                    {materia.horas_semanales && (
-                        <span className="tabular-nums">{materia.horas_semanales}h/s</span>
+                    <span>{periodoLabel}</span>
+                    {horasLabel && (
+                        <span className="tabular-nums">{horasLabel}</span>
                     )}
                 </div>
 
