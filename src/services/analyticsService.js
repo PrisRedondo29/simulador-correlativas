@@ -245,3 +245,22 @@ export const trackAlertaDesercion = ({ plan, semestres_proyectados, exceso_porce
  */
 export const trackCambioVista = ({ tipo, valor }) =>
     track('cambio_vista', { [tipo]: valor });
+
+/**
+ * Trackea una importación exitosa desde SAWeb (solo conteos agregados, sin PII).
+ * @param {{ plan: string, detectedPlan?: string | null, totalImported: number, usedAnalitico: boolean, usedCursadas: boolean }} params
+ */
+export const trackImportarSaweb = ({
+    plan,
+    detectedPlan = null,
+    totalImported,
+    usedAnalitico,
+    usedCursadas,
+}) =>
+    track('importar_saweb', {
+        plan,
+        ...(detectedPlan && { plan_detectado: detectedPlan }),
+        materias_importadas: totalImported,
+        incluye_analitico: usedAnalitico,
+        incluye_cursadas: usedCursadas,
+    });

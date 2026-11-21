@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useDisclosure } from '@heroui/react';
+import { addToast, useDisclosure } from '@heroui/react';
 import { useAuth } from '../../context/AuthContext';
 import useProgresoMaterias from './useProgresoMaterias';
 import regularidadUtils from '../../utils/Progreso/regularidadUtils';
@@ -9,7 +9,7 @@ import {
     calcularEstadoBaseMateria,
     previsualizarCascadaCambioEstado,
 } from '../../utils/Progreso/materiaStateMachine';
-import { trackSearch, trackCambioVista } from '../../services/analyticsService';
+import { trackSearch, trackCambioVista, trackImportarSaweb } from '../../services/analyticsService';
 import storageRepository, { STORAGE_KEYS } from '../../services/storageRepository';
 
 /**
@@ -47,6 +47,7 @@ export default function useProgresoDashboard({
     const { isOpen: isResetOpen, onOpen: onResetOpen, onOpenChange: onResetOpenChange, onClose: onResetClose } = useDisclosure();
     const { isOpen: isConfirmationOpen, onOpen: onConfirmationOpen, onOpenChange: onConfirmationOpenChange, onClose: onConfirmationClose } = useDisclosure();
     const { isOpen: isAprobarAnioOpen, onOpen: onAprobarAnioOpen, onOpenChange: onAprobarAnioOpenChange, onClose: onAprobarAnioClose } = useDisclosure();
+    const { isOpen: isSawebImportOpen, onOpen: onSawebImportOpen, onOpenChange: onSawebImportOpenChange } = useDisclosure();
 
     const [mostrarConfirmacionCascada, setMostrarConfirmacionCascadaState] = useState(() =>
         storageRepository.getMostrarConfirmacionCascada()
@@ -432,6 +433,37 @@ export default function useProgresoDashboard({
         onAprobarAnioClose();
     }, [grupoAAprobar, cambioDeEstadoMultiple, onAprobarAnioClose]);
 
+    const importarDesdeSaweb = useCallback((parsedResult) => {
+        if (!parsedResult || !plan) return;
+
+        if (storageRepository.hasExistingAcademicData()) {
+            storageRepository.saveRecoveryBackup(storageRepository.readAcademicBundle(), {
+                reason: 'pre_saweb_import',
+            });
+        }
+
+        const nextProgreso = parsedResult.progreso || {};
+        const nextDetalles = parsedResult.progresoDetalles || {};
+
+        setProgreso(nextProgreso);
+        setProgresoDetalles(nextDetalles);
+        updateAuthProgreso(plan, nextProgreso, nextDetalles);
+
+        trackImportarSaweb({
+            plan,
+            detectedPlan: parsedResult.detectedPlan,
+            totalImported: parsedResult.totalMatched,
+            usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
+            usedCursadas: Boolean(parsedResult.sourcesDetected?.cursadas),
+        });
+
+        addToast({
+            title: 'Progreso importado desde SAWeb',
+            description: `Se actualizaron ${parsedResult.totalMatched} materias en el Plan ${plan}.`,
+            color: 'success',
+        });
+    }, [plan, setProgreso, setProgresoDetalles, updateAuthProgreso]);
+
     return {
         // Filtros y búsqueda
         busqueda,
@@ -475,7 +507,7 @@ export default function useProgresoDashboard({
         setMostrarConfirmacionCascada,
         solicitarConfirmacionCascada,
 
-        // Reset y Aprobar hasta
+        // Reset, Aprobar hasta e Importación SAWeb
         isResetOpen,
         onResetOpen,
         onResetOpenChange,
@@ -487,5 +519,9 @@ export default function useProgresoDashboard({
         onAprobarAnioClose,
         requestApproveGroup,
         confirmApproveGroup,
+        isSawebImportOpen,
+        onSawebImportOpen,
+        onSawebImportOpenChange,
+        importarDesdeSaweb,
     };
 }

@@ -231,6 +231,8 @@ export interface MateriaDetalle {
     fechaAprobacion?: string | null;
     notaRegularizacion?: number | string | null;
     notaFinal?: number | string | null;
+    esEquivalencia?: boolean;
+    rendidaLibre?: boolean;
     intentosFinal?: IntentoFinal[];
     historial?: CursadaHistorial[];
 }

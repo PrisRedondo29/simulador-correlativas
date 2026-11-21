@@ -12,6 +12,7 @@ import {
   CheckCheck,
   ChevronsDownUp,
   ChevronsUpDown,
+  ClipboardPaste,
   LayoutGrid,
   List,
   MoreVertical,
@@ -51,6 +52,7 @@ export default function ProgresoSearchFilters({
   plan,
   onRequestApproveGroup,
   onRequestReset,
+  onOpenSawebImport,
 }) {
   const inputRef = useRef(null);
 
@@ -205,6 +207,19 @@ export default function ProgresoSearchFilters({
                   ))}
                 </DropdownMenu>
               </Dropdown>
+            )}
+
+            {/* Importar desde SAWeb (solo escritorio) */}
+            {onOpenSawebImport && (
+              <Button
+                size="sm"
+                variant="flat"
+                onPress={onOpenSawebImport}
+                className="hidden md:inline-flex bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-semibold min-h-9 border border-[#A7F3D0]/70 dark:border-[#1E4D38]"
+                startContent={<ClipboardPaste className="w-3.5 h-3.5" />}
+              >
+                Importar SAWeb
+              </Button>
             )}
 
             {/* Sincronización manual si corresponde */}

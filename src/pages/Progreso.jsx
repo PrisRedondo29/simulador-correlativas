@@ -8,6 +8,7 @@ import MateriasList from "../components/Progreso/MateriasList";
 import MateriaContextPanel from "../components/Progreso/MateriaContextPanel";
 import LeyendaEstados from "../components/Progreso/LeyendaEstados";
 import PlanSelectionModal from "../components/Progreso/modals/PlanSelectionModal";
+import ImportarSawebModal from "../components/Progreso/modals/ImportarSawebModal";
 
 /**
  * Pantalla principal "Mis Materias".
@@ -83,6 +84,7 @@ export default function Progreso() {
         plan={plan}
         onRequestApproveGroup={dashboard.requestApproveGroup}
         onRequestReset={dashboard.onResetOpen}
+        onOpenSawebImport={dashboard.onSawebImportOpen}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -142,6 +144,14 @@ export default function Progreso() {
       </div>
 
       <LeyendaEstados materias={materias} />
+
+      <ImportarSawebModal
+        isOpen={dashboard.isSawebImportOpen}
+        onOpenChange={dashboard.onSawebImportOpenChange}
+        plan={plan}
+        materias={materias}
+        onApplyImport={dashboard.importarDesdeSaweb}
+      />
     </div>
   );
 }
