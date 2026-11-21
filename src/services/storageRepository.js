@@ -30,11 +30,13 @@ import {
 /** @typedef {import('../types/domain').PlanUpdateNotice} PlanUpdateNotice */
 
 export const STORAGE_SCHEMA_VERSION = 3;
+export const CURRENT_ONBOARDING_VERSION = 1;
 export const STORAGE_CHANGE_EVENT = 'unlu-storage-updated';
 const RECOVERY_BACKUP_VERSION = 1;
 
 export const STORAGE_KEYS = {
     SCHEMA_VERSION: 'unlu_storage_schema_version',
+    ONBOARDING_VERSION: 'unlu_onboarding_version:v1',
     PLAN_ACTIVO: 'plan_activo',
     THEME: 'theme',
     SIDEBAR_COLLAPSED: 'sidebar_collapsed:v1',
@@ -679,6 +681,38 @@ export function createStorageRepository(storage = getBrowserStorage()) {
             setRaw(STORAGE_KEYS.OCULTAR_CONFIRMACION_CASCADA, mostrar ? 'false' : 'true', {
                 silent: true,
             }),
+
+        // --- Onboarding inicial versionado ---
+        /**
+         * Devuelve la última versión del onboarding inicial completada o saltada (0 si nunca se completó).
+         * @returns {number}
+         */
+        getOnboardingVersionCompleted: () => {
+            const parsed = Number.parseInt(String(getRaw(STORAGE_KEYS.ONBOARDING_VERSION, '0')), 10);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+        },
+
+        /**
+         * Marca como completada (u omitida) una versión del onboarding inicial.
+         * @param {number} [version]
+         * @param {StorageWriteOptions} [options]
+         * @returns {boolean}
+         */
+        setOnboardingVersionCompleted: (version = CURRENT_ONBOARDING_VERSION, options = {}) =>
+            setRaw(STORAGE_KEYS.ONBOARDING_VERSION, version, options),
+
+        /**
+         * Reinicia el flag de onboarding para volver a abrir el asistente inicial a demanda.
+         * @param {StorageWriteOptions} [options]
+         * @returns {boolean}
+         */
+        resetOnboardingVersion: (options = {}) => remove(STORAGE_KEYS.ONBOARDING_VERSION, options),
+
+        /**
+         * Indica si existen datos académicos reales guardados localmente (progreso activo, notas, Agenda o simulaciones).
+         * @returns {boolean}
+         */
+        hasExistingAcademicData: () => !isAcademicBundleEmpty(readAcademicBundle()),
 
         // --- Catálogo remoto versionado (Stale-While-Revalidate) y avisos de migración ---
         /** @returns {CatalogMetaCache | null} */

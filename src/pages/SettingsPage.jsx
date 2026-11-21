@@ -19,6 +19,7 @@ import { DEFAULT_PLAN } from '../config/planPolicies';
 import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
 import { trackSeleccionCarrera } from '../services/analyticsService';
+import storageRepository from '../services/storageRepository';
 import usePwaInstall from '../hooks/usePwaInstall';
 
 export default function SettingsPage({ plan, setPlan }) {
@@ -390,6 +391,21 @@ export default function SettingsPage({ plan, setPlan }) {
                                 </>
                             )}
                         </p>
+
+                        <div className="pt-2 border-t border-[#F1F5F9] dark:border-[#2A3540] flex items-center justify-between gap-2">
+                            <span className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                                ¿Querés volver a usar el asistente rápido de carga inicial?
+                            </span>
+                            <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={() => storageRepository.resetOnboardingVersion()}
+                                className="min-h-9 font-semibold text-xs rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] shrink-0"
+                                startContent={<i className="fa-solid fa-wand-magic-sparkles text-[11px]" aria-hidden="true" />}
+                            >
+                                Asistente inicial
+                            </Button>
+                        </div>
                     </CardBody>
                 </Card>
 

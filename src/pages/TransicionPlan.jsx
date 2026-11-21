@@ -19,7 +19,7 @@ import {
     PhoneCall,
     Sparkles,
 } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import planService from '../services/planService';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { usePlanCapabilities } from '../context/PlanContext';
@@ -31,6 +31,7 @@ import {
 
 function TransicionPlan() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { plan, transitionInfo } = usePlanCapabilities();
     const sourcePlan = transitionInfo?.sourcePlan || plan;
     const targetPlan = transitionInfo?.targetPlan || null;
@@ -39,7 +40,9 @@ function TransicionPlan() {
     const closingYear = transitionInfo?.closingYear ?? null;
 
     const anioActual = useMemo(() => new Date().getFullYear(), []);
-    const [evaluado, setEvaluado] = useState(false);
+    const fromOnboarding = Boolean(location.state?.fromOnboarding);
+    const autoEvaluate = Boolean(location.state?.autoEvaluate);
+    const [evaluadoManual, setEvaluadoManual] = useState(false);
 
     const [progreso, setProgreso] = useState(() =>
         sourcePlan ? storageRepository.getProgreso(sourcePlan, {}) : {},
@@ -86,6 +89,8 @@ function TransicionPlan() {
 
     const tieneProgresoCargado =
         resumenPaso1.cantidadAprobadas > 0 || resumenPaso1.cantidadFuera > 0;
+
+    const evaluado = evaluadoManual || (autoEvaluate && tieneProgresoCargado);
 
     const elegibilidad = useMemo(() => {
         return evaluarElegibilidadActual({
@@ -167,6 +172,30 @@ function TransicionPlan() {
                     )}
                 </header>
 
+                {fromOnboarding && tieneProgresoCargado && (
+                    <section
+                        role="status"
+                        className="bg-[#ECFDF5] dark:bg-[#102A20]/80 border border-[#A7F3D0] dark:border-[#1E4D38] rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                        <div className="space-y-0.5 min-w-0">
+                            <p className="text-xs sm:text-sm font-bold text-[#005A36] dark:text-[#86EFAC]">
+                                ¡Listo! Cargamos tus materias del Plan {sourcePlan}
+                            </p>
+                            <p className="text-xs text-[#166534] dark:text-[#A7F3D0] text-pretty">
+                                Acá ya podés ver si te corresponde pasarte al Plan {targetPlan}. Cuando termines de revisarlo, podés ir a Mis Materias para cargar notas y vencimientos.
+                            </p>
+                        </div>
+                        <Button
+                            size="sm"
+                            onPress={() => navigate('/mis-materias')}
+                            className="min-h-11 sm:min-h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-xs px-4 rounded-xl shrink-0"
+                            endContent={<ArrowRight size={14} />}
+                        >
+                            Ir a Mis Materias
+                        </Button>
+                    </section>
+                )}
+
                 {/* ─── SIN PROGRESO CARGADO ─── */}
                 {!tieneProgresoCargado ? (
                     <section className="p-5 sm:p-6 bg-[#FFFBEB] dark:bg-[#2D2210] border border-[#FDE68A] dark:border-[#5C4318] rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -205,7 +234,7 @@ function TransicionPlan() {
                         </div>
                         <div>
                             <Button
-                                onPress={() => setEvaluado(true)}
+                                onPress={() => setEvaluadoManual(true)}
                                 className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-sm px-6 h-11 rounded-xl shadow-xs"
                                 endContent={<ArrowRight size={16} />}
                             >

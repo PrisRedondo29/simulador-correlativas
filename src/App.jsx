@@ -9,6 +9,7 @@ import { PlanProvider, useActivePlan } from './context/PlanContext';
 import { usePageTracking } from './hooks/usePageTracking';
 import ServerError from './components/Shared/ServerError';
 import ErrorBoundary from './components/Shared/ErrorBoundary';
+import OnboardingGate from './components/Onboarding/OnboardingGate';
 import storageRepository, { STORAGE_KEYS } from './services/storageRepository';
 
 const Footer = lazy(() => import('./components/Footer'));
@@ -34,21 +35,23 @@ function AppContent() {
     }
 
     return (
-        <div className="flex items-start min-h-screen overflow-x-clip bg-[#F8FAFC] dark:bg-[#0F1419]">
-            <NavBar plan={plan} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-            <main className={`flex-1 min-w-0 min-h-screen flex flex-col relative pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
-                <TopUtilityBar plan={plan} />
-                <div className="flex-1">
-                    <ErrorBoundary scope="page" resetKey={location.pathname}>
-                        <Rutas plan={plan} setPlan={setPlan} />
-                    </ErrorBoundary>
-                </div>
-                <Suspense fallback={null}>
-                    <Footer />
-                </Suspense>
-                <ScrollToTop />
-            </main>
-        </div>
+        <OnboardingGate>
+            <div className="flex items-start min-h-screen overflow-x-clip bg-[#F8FAFC] dark:bg-[#0F1419]">
+                <NavBar plan={plan} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+                <main className={`flex-1 min-w-0 min-h-screen flex flex-col relative pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
+                    <TopUtilityBar plan={plan} />
+                    <div className="flex-1">
+                        <ErrorBoundary scope="page" resetKey={location.pathname}>
+                            <Rutas plan={plan} setPlan={setPlan} />
+                        </ErrorBoundary>
+                    </div>
+                    <Suspense fallback={null}>
+                        <Footer />
+                    </Suspense>
+                    <ScrollToTop />
+                </main>
+            </div>
+        </OnboardingGate>
     );
 }
 

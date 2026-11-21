@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+    CURRENT_ONBOARDING_VERSION,
     STORAGE_KEYS,
     STORAGE_SCHEMA_VERSION,
     createStorageRepository,
@@ -215,5 +216,27 @@ describe('storageRepository - Persistencia centralizada y versionada', () => {
         expect(repo.getMostrarConfirmacionCascada()).toBe(false);
         repo.setMostrarConfirmacionCascada(true);
         expect(repo.getMostrarConfirmacionCascada()).toBe(true);
+    });
+
+    it('gestiona versión de onboarding y detecta datos académicos previos reales', () => {
+        const mem = createMemoryStorage();
+        const repo = createStorageRepository(mem);
+
+        expect(repo.getOnboardingVersionCompleted()).toBe(0);
+        expect(repo.hasExistingAcademicData()).toBe(false);
+
+        // Un progreso inicializado vacío (solo Disponible/Bloqueado) no cuenta como uso previo real
+        repo.setProgreso('17.14', { M1: 'Disponible', M2: 'Bloqueado' });
+        expect(repo.hasExistingAcademicData()).toBe(false);
+
+        // Al registrar una materia en curso/regular/aprobada sí se detecta progreso previo
+        repo.setProgreso('17.14', { M1: 'Aprobado', M2: 'Disponible' });
+        expect(repo.hasExistingAcademicData()).toBe(true);
+
+        repo.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        expect(repo.getOnboardingVersionCompleted()).toBe(CURRENT_ONBOARDING_VERSION);
+
+        repo.resetOnboardingVersion();
+        expect(repo.getOnboardingVersionCompleted()).toBe(0);
     });
 });
