@@ -16,6 +16,7 @@ import {
 } from '../../config/planPolicies';
 import {
     trackImportarSaweb,
+    trackOnboardingComplete,
     trackProgresoInicial,
     trackSeleccionCarrera,
 } from '../../services/analyticsService';
@@ -262,6 +263,12 @@ export default function OnboardingGate({ children }) {
             aprobadas: counts.aprobadas,
             total: materias.length,
         });
+        trackOnboardingComplete({
+            plan: selectedPlan,
+            method: 'manual',
+            totalMarked: counts.totalMarcadas,
+            carrera: policy?.carrera,
+        });
 
         setStep(1);
         setDevSimulateNewcomer(false);
@@ -355,6 +362,12 @@ export default function OnboardingGate({ children }) {
             totalImported: parsedResult.totalMatched || 0,
             usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
             usedCursadas: Boolean(parsedResult.sourcesDetected?.cursadas),
+        });
+        trackOnboardingComplete({
+            plan: targetPlan,
+            method: 'saweb_pdf',
+            totalMarked: parsedResult.totalMatched || 0,
+            carrera: policy?.carrera,
         });
 
         addToast({

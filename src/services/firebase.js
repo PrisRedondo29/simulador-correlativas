@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { isAnalyticsHostAllowed } from '../utils/analyticsAttribution';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,10 +19,10 @@ if (import.meta.env.DEV) console.log('[Firebase] App inicializada. MeasurementID
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// Lazy inicialización de analytics
+// Lazy inicialización de analytics solo en entornos o dominios autorizados
 /** @type {import('firebase/analytics').Analytics | null} */
 export let analytics = null;
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && isAnalyticsHostAllowed(window.location?.hostname)) {
     if (import.meta.env.DEV) console.log('[Firebase] Intentando cargar Analytics...');
     import('firebase/analytics')
         .then(({ getAnalytics }) => {

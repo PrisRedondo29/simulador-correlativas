@@ -36,6 +36,7 @@ vi.mock('../../services/analyticsService', () => ({
     trackSeleccionCarrera: vi.fn(),
     trackProgresoInicial: vi.fn(),
     trackImportarSaweb: vi.fn(),
+    trackOnboardingComplete: vi.fn(),
 }));
 
 const mockAddToast = vi.fn();

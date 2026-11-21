@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/mis-materias</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/mi-agenda</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/simulador</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/equivalencias</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/cambio-plan</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/como-usar</loc>
+  </url>
+  <url>
+    <loc>https://mi-avance-academico.vercel.app/contacto</loc>
+  </url>
+</urlset>

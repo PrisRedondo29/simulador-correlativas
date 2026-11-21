@@ -9,14 +9,25 @@
  */
 
 import { analytics, app } from './firebase';
+import {
+    getTrafficAttributionParams,
+    isAnalyticsHostAllowed,
+} from '../utils/analyticsAttribution';
 
 if (import.meta.env.DEV) console.log('[Analytics] Módulo cargado correctamente');
+
+/**
+ * @returns {boolean}
+ */
+const isCurrentHostAuthorized = () =>
+    isAnalyticsHostAllowed(typeof window !== 'undefined' ? window.location?.hostname : undefined);
 
 /**
  * Función auxiliar para obtener analytics de forma segura.
  * @returns {Promise<import('firebase/analytics').Analytics | null>}
  */
 const getAnalyticsInstance = async () => {
+    if (!isCurrentHostAuthorized()) return null;
     if (analytics) return analytics;
     if (typeof window === 'undefined') return null;
 
@@ -29,12 +40,13 @@ const getAnalyticsInstance = async () => {
 };
 
 /**
- * Guard: en entornos donde analytics no está disponible (SSR, tests), no falla.
+ * Guard: en entornos donde analytics no está disponible o el dominio no está autorizado, no falla.
  * @param {string} eventName
  * @param {Record<string, unknown>} [params]
  * @returns {Promise<void>}
  */
 const track = async (eventName, params = {}) => {
+    if (!isCurrentHostAuthorized()) return;
     if (import.meta.env.DEV) console.log(`[Analytics] Intentando trackear evento: ${eventName}`, params);
     try {
         const instance = await getAnalyticsInstance();
@@ -64,7 +76,7 @@ const track = async (eventName, params = {}) => {
  */
 export const setAnalyticsUser = async (userId) => {
     try {
-        if (!analytics) return;
+        if (!isCurrentHostAuthorized() || !analytics) return;
         const { setUserId } = await import('firebase/analytics');
         setUserId(analytics, userId);
     } catch {
@@ -80,7 +92,7 @@ export const setAnalyticsUser = async (userId) => {
  */
 export const trackLogin = ({ userId }) => {
     setAnalyticsUser(userId);
-    track('login', { method: 'google', uid: userId });
+    track('login', { method: 'google', uid: userId, ...getTrafficAttributionParams() });
 };
 
 /**
@@ -94,11 +106,15 @@ export const trackLogout = () => {
 // ─── Eventos de Navegación ────────────────────────────────────────────────────
 
 /**
- * Trackea una vista de página (page_view) al cambiar de ruta.
+ * Trackea una vista de página (page_view) al cambiar de ruta, adjuntando origen de tráfico y hostname.
  * @param {{ path: string, title?: string }} params
  */
 export const trackPageView = ({ path, title = typeof document !== 'undefined' ? document.title : '' }) =>
-    track('page_view', { page_path: path, page_title: title });
+    track('page_view', {
+        page_path: path,
+        page_title: title,
+        ...getTrafficAttributionParams(),
+    });
 
 // ─── Eventos de Progreso ──────────────────────────────────────────────────────
 
@@ -183,10 +199,33 @@ export const trackDescargaPDF = ({ plan }) =>
 
 /**
  * Trackea cuando el usuario elige o cambia de plan o carrera.
- * @param {{ plan: string, origen_plan: 'settings' | 'settings_career' | 'welcome_modal', carrera?: string }} params
+ * @param {{ plan: string, origen_plan: 'settings' | 'settings_career' | 'welcome_modal' | 'saweb_import_onboarding', carrera?: string }} params
  */
 export const trackSeleccionCarrera = ({ plan, origen_plan, carrera = 'Analista en Sistemas' }) =>
-    track('seleccion_carrera', { plan, origen_plan, carrera });
+    track('seleccion_carrera', {
+        plan,
+        origen_plan,
+        carrera,
+        ...getTrafficAttributionParams(),
+    });
+
+/**
+ * Trackea la finalización del onboarding inicial (carga manual o Analítico SAWeb).
+ * @param {{ plan: string, method: 'manual' | 'saweb_pdf', totalMarked: number, carrera?: string }} params
+ */
+export const trackOnboardingComplete = ({
+    plan,
+    method,
+    totalMarked,
+    carrera = 'Licenciatura en Sistemas de Información',
+}) =>
+    track('onboarding_complete', {
+        plan,
+        method,
+        total_marked: totalMarked,
+        carrera,
+        ...getTrafficAttributionParams(),
+    });
 
 /**
  * Trackea el estado inicial del usuario al guardar por primera vez.
