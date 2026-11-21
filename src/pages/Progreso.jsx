@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { Spinner } from "@heroui/react";
 import { useActivePlan, usePlanCapabilities } from "../context/PlanContext";
 import usePlanData from "../hooks/usePlanData";
@@ -39,6 +40,19 @@ export default function Progreso() {
     setProgresoDetalles,
   });
 
+  const handleBeforeTourStep = useCallback(
+    (step) => {
+      if (
+        step?.id === "lista_materias" &&
+        dashboard.expandedYears.length === 0 &&
+        dashboard.yearGroups.length > 0
+      ) {
+        dashboard.setExpandedYears([dashboard.yearGroups[0].key]);
+      }
+    },
+    [dashboard],
+  );
+
   if (!plan) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-12 text-center space-y-3">
@@ -67,6 +81,7 @@ export default function Progreso() {
         tour={TUTORIAL_TOURS[TOUR_IDS.MIS_MATERIAS]}
         ready={!cargandoPlan && materias.length > 0}
         triggerPlacement="inline"
+        onBeforeStep={handleBeforeTourStep}
       />
 
       <ProgresoTotal

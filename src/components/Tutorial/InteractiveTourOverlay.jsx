@@ -17,6 +17,7 @@ export default function InteractiveTourOverlay({
   tour,
   ready = true,
   triggerPlacement = "inline",
+  onBeforeStep = null,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -110,8 +111,20 @@ export default function InteractiveTourOverlay({
       return undefined;
     }
 
+    onBeforeStep?.(currentStep);
+
+    const findVisibleTarget = () => {
+      const candidates = Array.from(document.querySelectorAll(currentStep.target));
+      return (
+        candidates.find((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        }) || null
+      );
+    };
+
     const updateRect = () => {
-      const el = document.querySelector(currentStep.target);
+      const el = findVisibleTarget();
       if (!el) {
         setTargetRect(null);
         return;
@@ -125,13 +138,16 @@ export default function InteractiveTourOverlay({
       });
     };
 
-    const targetEl = document.querySelector(currentStep.target);
-    if (targetEl && typeof targetEl.scrollIntoView === "function") {
-      targetEl.scrollIntoView({ behavior: "auto", block: "center" });
-    }
+    const focusTarget = () => {
+      const targetEl = findVisibleTarget();
+      if (targetEl && typeof targetEl.scrollIntoView === "function") {
+        targetEl.scrollIntoView({ behavior: "auto", block: "center" });
+      }
+      updateRect();
+    };
 
-    const rafInit = requestAnimationFrame(updateRect);
-    const rafTimer = setTimeout(updateRect, 80);
+    const rafInit = requestAnimationFrame(focusTarget);
+    const rafTimer = setTimeout(focusTarget, 140);
 
     window.addEventListener("resize", updateRect);
     window.addEventListener("scroll", updateRect, { passive: true });
@@ -141,7 +157,7 @@ export default function InteractiveTourOverlay({
       window.removeEventListener("resize", updateRect);
       window.removeEventListener("scroll", updateRect);
     };
-  }, [isOpen, currentStep]);
+  }, [isOpen, currentStep, onBeforeStep]);
 
   // Navegación por teclado
   useEffect(() => {
@@ -252,7 +268,7 @@ export default function InteractiveTourOverlay({
         className={`fixed z-10 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl shadow-xl p-4 space-y-3 ${
           isDesktop && targetRect
             ? "w-[344px]"
-            : "bottom-3 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-[380px] sm:bottom-6"
+            : "bottom-3 left-3 right-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-[380px] sm:top-1/2 sm:-translate-y-1/2 sm:bottom-auto"
         }`}
       >
         <div className="flex items-center justify-between gap-2">
@@ -344,4 +360,5 @@ InteractiveTourOverlay.propTypes = {
   }),
   ready: PropTypes.bool,
   triggerPlacement: PropTypes.oneOf(["inline", "floating"]),
+  onBeforeStep: PropTypes.func,
 };

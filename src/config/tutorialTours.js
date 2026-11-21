@@ -25,7 +25,7 @@ export const TUTORIAL_TOURS = {
             },
             {
                 id: 'lista_materias',
-                target: '[data-tour="progreso-materia-card"], [data-tour="progreso-materias-list"]',
+                target: '[data-tour="progreso-materia-card"]',
                 title: 'Tocá una materia para editarla',
                 description:
                     'Hacé clic en una tarjeta para cambiar su estado en 1 toque, cargar notas de cursada o finales y ver qué correlativas te destraba.',
