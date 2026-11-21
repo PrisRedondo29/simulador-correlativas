@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mergeSawebImportWithExisting, parseSawebTexts } from './sawebParser';
 import { esMateriaIncompleta } from './Progreso/materiasUtils';
+import { calcularPromedioGeneral } from './Progreso/regularidadUtils';
 import sistemasPlanes from '../data/sistemas.json';
 
 const MOCK_PLAN_1713 = [
@@ -166,10 +167,11 @@ describe('sawebParser', () => {
         });
     });
 
-    it('mergeSawebImportWithExisting actualiza finales y aprobadas sin pisar nota de cursada ni materias Regular/Cursando previas', () => {
+    it('mergeSawebImportWithExisting usa el Analítico como fuente de verdad (Promocionado pisa nota de cursada; Final Regular pisa nota final conservando nota de cursada)', () => {
         const parsed = parseSawebTexts(SAMPLE_ANALITICO_1713, MOCK_PLAN_1713);
         const existingProgreso = {
             '11071': 'Regular',
+            '11075': 'Aprobado',
             '11079': 'Regular',
             '11081': 'Cursando',
         };
@@ -178,6 +180,12 @@ describe('sawebParser', () => {
                 notaRegularizacion: 8,
                 fechaRegularidad: { anio: 2019, cuatrimestre: 1 },
                 intentosFinal: [],
+            },
+            '11075': {
+                notaRegularizacion: 8,
+                notaFinal: 4,
+                fechaRegularidad: { anio: 2023, cuatrimestre: 1 },
+                intentosFinal: [{ nota: 4, estado: /** @type {const} */ ('aprobado'), fecha: '2023-12-01' }],
             },
             '11079': {
                 notaRegularizacion: 7,
@@ -193,14 +201,20 @@ describe('sawebParser', () => {
             MOCK_PLAN_1713,
         );
 
-        // 11071 pasa a Promocionado con notaFinal 7 pero conserva su notaRegularizacion=8 y fechaRegularidad
+        // 11071 (Promocionado P-7 en Analítico): el Analítico manda y pisa notaRegularizacion=8 por 7
         expect(merged.progreso['11071']).toBe('Promocionado');
         expect(merged.progresoDetalles['11071'].notaFinal).toBe(7);
-        expect(merged.progresoDetalles['11071'].notaRegularizacion).toBe(8);
+        expect(merged.progresoDetalles['11071'].notaRegularizacion).toBe(7);
         expect(merged.progresoDetalles['11071'].fechaRegularidad).toEqual({
             anio: 2019,
             cuatrimestre: 1,
         });
+
+        // 11075 (Final Regular R-6 en Analítico): el Analítico pisa notaFinal=4 por 6 pero conserva notaRegularizacion=8
+        expect(merged.progreso['11075']).toBe('Aprobado');
+        expect(merged.progresoDetalles['11075'].notaFinal).toBe(6);
+        expect(merged.progresoDetalles['11075'].notaRegularizacion).toBe(8);
+        expect(merged.progresoDetalles['11075'].intentosFinal).toHaveLength(2);
 
         // 11079 (Regular) y 11081 (Cursando) no están en el Analítico -> se conservan intactas
         expect(merged.progreso['11079']).toBe('Regular');
@@ -329,13 +343,13 @@ ACTIVIDADES ACADEMICAS RECONOCIDAS POR EQUIVALENCIA O EXIMIDAS
 
         expect(result.detectedPlan).toBe('17.14');
         expect(result.anioIngreso).toBe(2023);
-        // Promocionadas en 17.14: 41407 (común), 11271 (desde 11071) y 41426 (desde 41406)
-        expect(result.counts.Promocionado).toBe(3);
-        // Equivalencia oficial de página 3: 13021
-        expect(result.counts.Equivalencia).toBe(1);
-        // Aprobadas por final R-/L- o equivalencia combinada: 19054, 39553, 14026, 13014, 21256, 11274, 14028
-        expect(result.counts.Aprobado).toBe(7);
-        // Conserva todos los aplazos del historial (41407: 3, 11071: 1, 21056: 2, 11074: 1)
+        // Promocionadas en 17.14: 41407 (común), 11271 (desde 11071), 41426 (desde 41406) y 14028 (desde 11073)
+        expect(result.counts.Promocionado).toBe(4);
+        // Aprobadas por final con acta primaria: 13014 (11072), 21256 (21056) y 11274 (11074)
+        expect(result.counts.Aprobado).toBe(3);
+        // Equivalencias sin nota duplicada: 13021 (Pág 3), 19054 (taller), 14026 (taller), 39553 (taller)
+        expect(result.counts.Equivalencia).toBe(4);
+        // Conserva cada aplazo del historial una sola vez (41407: 3, 11071: 1, 21056: 2, 11074: 1)
         expect(result.counts.Aplazos).toBe(7);
         expect(result.counts.Omitidas).toBe(0);
         expect(result.totalMatched).toBe(11);
@@ -369,18 +383,45 @@ ACTIVIDADES ACADEMICAS RECONOCIDAS POR EQUIVALENCIA O EXIMIDAS
         });
         expect(result.progresoDetalles['11274']?.intentosFinal).toHaveLength(2);
 
-        // 13021 (Equivalencia de Página 3 enriquecida con notas de 11072 y 11073)
-        expect(result.progreso['13021']).toBe('Aprobado');
-        expect(result.progresoDetalles['13021']?.esEquivalencia).toBe(true);
-        expect(result.progresoDetalles['13021']?.fechaAprobacion).toBe('2026-08-21');
-        expect(result.progresoDetalles['13021']?.notaFinal).toBe(7);
+        // 13014 (troncal 1:1 desde 11072) conserva acta; 14026 (taller) y 19054 (taller) no duplican nota ni aplazos
+        expect(result.progreso['13014']).toBe('Aprobado');
+        expect(result.progresoDetalles['13014']).toMatchObject({
+            notaFinal: 4,
+            esEquivalencia: false,
+        });
+        expect(result.progresoDetalles['14026']).toMatchObject({
+            esEquivalencia: true,
+            notaFinal: null,
+            intentosFinal: [],
+        });
+        expect(result.progresoDetalles['19054']).toMatchObject({
+            esEquivalencia: true,
+            notaFinal: null,
+            intentosFinal: [],
+        });
 
-        // 14028 (homologada desde 11072 + 11073) conserva nota promedio, cursada e intentos
-        expect(result.progreso['14028']).toBe('Aprobado');
+        // 13021 (Equivalencia oficial de Página 3)
+        expect(result.progreso['13021']).toBe('Aprobado');
+        expect(result.progresoDetalles['13021']).toMatchObject({
+            esEquivalencia: true,
+            fechaAprobacion: '2026-08-21',
+            notaFinal: null,
+        });
+
+        // 14028 (homologada con acta restante de 11073 Promocionado 9)
+        expect(result.progreso['14028']).toBe('Promocionado');
         expect(result.progresoDetalles['14028']).toMatchObject({
-            notaFinal: 7,
+            notaFinal: 9,
+            notaRegularizacion: 9,
+            esEquivalencia: false,
             fechaRegularidad: { anio: 2024, cuatrimestre: 2 },
         });
+
+        // El promedio debe contabilizar exactamente 7 actas troncales aprobadas sin duplicar en talleres
+        const promedio = calcularPromedioGeneral(result.progresoDetalles, result.progreso);
+        expect(promedio.materiasContadas).toBe(7);
+        expect(promedio.promedioSinAplazos).toBe(6.57); // (7+7+4+4+8+7+9)/7
+        expect(promedio.promedioConAplazos).toBe(4.29); // (46 + 14)/14
 
         // Ninguna de las 11 materias importadas debe quedar marcada como Incompleta
         for (const materia of plan1714Materias) {

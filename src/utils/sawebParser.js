@@ -151,8 +151,151 @@ function isPiiLine(line) {
 }
 
 /**
- * Evalúa los registros crudos de una materia (Analítico, Equivalencias, Cursadas y Finales)
- * devolviendo su tipo de resolución, estado, detalles completos y cantidad de aplazos.
+ * Etapa 2 (Patrón Strategy): Estrategias de resolución de actas académicas.
+ * Determinan estado, notas (cursada vs final), fecha de regularidad e intentos
+ * según la condición oficial del registro en SAWeb.
+ */
+const ACTA_RESOLUTION_STRATEGIES = {
+    /** Equivalencia o materia eximida explícita (`E` / `X`, Página 3 SAWeb). */
+    equivalenciaExplicita: ({ rec, aplazosCount }) => {
+        const fecha = rec.equivalencia?.fecha || '';
+        const anioExamenEq =
+            fecha && /^\d{4}/.test(fecha) ? Number(fecha.slice(0, 4)) : null;
+        return {
+            kind: /** @type {const} */ ('Equivalencia'),
+            estado: ESTADOS_MATERIA.APROBADO,
+            detalles: {
+                intentosFinal: [],
+                notaFinal: null,
+                esEquivalencia: true,
+                rendidaLibre: false,
+                fechaAprobacion: fecha,
+                ...(anioExamenEq ? { anioExamen: anioExamenEq } : {}),
+                fechaRegularidad: null,
+                notaRegularizacion: null,
+            },
+            aplazosCount,
+        };
+    },
+
+    /** Promoción (`P-` / `Promovido`): la nota del Analítico corresponde a la cursada. */
+    promocion: ({
+        promoAnalitico,
+        ultimaPromovidaCursada,
+        intentosFinal,
+        fechaRegularidad,
+        notaRegularizacion,
+        aplazosCount,
+    }) => {
+        const notaPromo = promoAnalitico?.nota ?? ultimaPromovidaCursada?.nota ?? null;
+        /** @type {{ anio: number, cuatrimestre: 1 | 2 } | null} */
+        const fechaPromo = ultimaPromovidaCursada
+            ? {
+                  anio: ultimaPromovidaCursada.anio,
+                  cuatrimestre: ultimaPromovidaCursada.cuatrimestre === 2 ? 2 : 1,
+              }
+            : promoAnalitico?.fecha
+              ? inferFechaCursadaFromIso(promoAnalitico.fecha)
+              : null;
+        return {
+            kind: /** @type {const} */ ('Promocionado'),
+            estado: ESTADOS_MATERIA.PROMOCIONADO,
+            detalles: {
+                intentosFinal,
+                notaFinal: notaPromo,
+                esEquivalencia: false,
+                rendidaLibre: false,
+                ...(promoAnalitico?.fecha && { fechaAprobacion: promoAnalitico.fecha }),
+                fechaRegularidad: fechaPromo ?? fechaRegularidad,
+                notaRegularizacion: notaPromo ?? notaRegularizacion,
+            },
+            aplazosCount,
+        };
+    },
+
+    /** Examen final aprobado en condición Regular (`R-`): la nota va al final y se preserva la nota de cursada previa. */
+    finalRegular: ({
+        finalAprobado,
+        intentosOrdenados,
+        intentosFinal,
+        fechaRegularidad,
+        notaRegularizacion,
+        aplazosCount,
+    }) => ({
+        kind: /** @type {const} */ ('Aprobado'),
+        estado: ESTADOS_MATERIA.APROBADO,
+        detalles: {
+            intentosFinal,
+            notaFinal: finalAprobado.nota,
+            esEquivalencia: false,
+            rendidaLibre: false,
+            fechaAprobacion: finalAprobado.fecha,
+            fechaRegularidad:
+                fechaRegularidad ??
+                inferFechaRegularidadFromIntentos(intentosOrdenados, finalAprobado),
+            notaRegularizacion,
+        },
+        aplazosCount,
+    }),
+
+    /** Examen final aprobado en condición Libre (`L-`): sin cursada regular ni nota de cursada. */
+    finalLibre: ({ finalAprobado, intentosFinal, aplazosCount }) => ({
+        kind: /** @type {const} */ ('Aprobado'),
+        estado: ESTADOS_MATERIA.APROBADO,
+        detalles: {
+            intentosFinal,
+            notaFinal: finalAprobado.nota,
+            esEquivalencia: false,
+            rendidaLibre: true,
+            fechaAprobacion: finalAprobado.fecha,
+            fechaRegularidad: null,
+            notaRegularizacion: null,
+        },
+        aplazosCount,
+    }),
+
+    /** Regularidad vigente o vencida proveniente de tabla Cursadas sin aprobación posterior. */
+    regularidadVigente: ({ fechaRegularidad, notaRegularizacion, intentosFinal, aplazosCount }) => {
+        const estadoConsolidado = regularidadUtils.calcularEstadoConsolidado(
+            ESTADOS_MATERIA.REGULAR,
+            fechaRegularidad,
+            intentosFinal,
+        );
+        return {
+            kind: /** @type {'Regular' | 'Libre'} */ (
+                estadoConsolidado === ESTADOS_MATERIA.REGULAR ? 'Regular' : 'Libre'
+            ),
+            estado: estadoConsolidado,
+            detalles: {
+                intentosFinal,
+                notaFinal: null,
+                esEquivalencia: false,
+                rendidaLibre: false,
+                fechaRegularidad,
+                notaRegularizacion,
+            },
+            aplazosCount,
+        };
+    },
+
+    /** Intentos desaprobados o condición Libre sin regularidad vigente ni aprobación. */
+    aplazosPendientes: ({ intentosFinal, aplazosCount }) => ({
+        kind: /** @type {const} */ ('Libre'),
+        estado: ESTADOS_MATERIA.LIBRE,
+        detalles: {
+            intentosFinal,
+            notaFinal: null,
+            esEquivalencia: false,
+            rendidaLibre: false,
+            fechaRegularidad: null,
+            notaRegularizacion: null,
+        },
+        aplazosCount,
+    }),
+};
+
+/**
+ * Selecciona y ejecuta la estrategia adecuada para resolver los registros de una materia.
  *
  * @param {{
  *   nombre: string,
@@ -168,7 +311,7 @@ function isPiiLine(line) {
  *   aplazosCount: number
  * } | null}
  */
-function evaluateRecordSummary(rec) {
+function resolveRecordWithStrategy(rec) {
     const intentosOrdenados = [...rec.intentos].sort((a, b) => a.fecha.localeCompare(b.fecha));
     const ausentesOrdenados = [...rec.ausentes].sort((a, b) => a.fecha.localeCompare(b.fecha));
     const cursadasOrdenadas = [...rec.cursadas].sort(
@@ -209,138 +352,64 @@ function evaluateRecordSummary(rec) {
         : null;
     const notaRegularizacion = ultimaRegular?.nota ?? null;
 
-    // 1. Equivalencia / Eximida en cambio de plan
     if (rec.equivalencia) {
-        const anioExamenEq =
-            rec.equivalencia.fecha && /^\d{4}/.test(rec.equivalencia.fecha)
-                ? Number(rec.equivalencia.fecha.slice(0, 4))
-                : null;
-        return {
-            kind: 'Equivalencia',
-            estado: ESTADOS_MATERIA.APROBADO,
-            detalles: {
-                intentosFinal: [],
-                notaFinal: null,
-                esEquivalencia: true,
-                rendidaLibre: false,
-                fechaAprobacion: rec.equivalencia.fecha,
-                ...(anioExamenEq ? { anioExamen: anioExamenEq } : {}),
-                fechaRegularidad: null,
-                notaRegularizacion: null,
-            },
-            aplazosCount,
-        };
+        return ACTA_RESOLUTION_STRATEGIES.equivalenciaExplicita({ rec, aplazosCount });
     }
 
-    // 2. Promocionada (prioridad sobre intentos previos)
     const promoAnalitico = [...intentosOrdenados].reverse().find((i) => i.tipo === 'P' && i.nota >= 4);
     if (promoAnalitico || ultimaPromovidaCursada) {
-        const notaPromo = promoAnalitico?.nota ?? ultimaPromovidaCursada?.nota ?? null;
-        /** @type {{ anio: number, cuatrimestre: 1 | 2 } | null} */
-        const fechaPromo = ultimaPromovidaCursada
-            ? {
-                  anio: ultimaPromovidaCursada.anio,
-                  cuatrimestre: ultimaPromovidaCursada.cuatrimestre === 2 ? 2 : 1,
-              }
-            : promoAnalitico?.fecha
-              ? inferFechaCursadaFromIso(promoAnalitico.fecha)
-              : null;
-        return {
-            kind: 'Promocionado',
-            estado: ESTADOS_MATERIA.PROMOCIONADO,
-            detalles: {
-                intentosFinal,
-                notaFinal: notaPromo,
-                esEquivalencia: false,
-                rendidaLibre: false,
-                ...(promoAnalitico?.fecha && { fechaAprobacion: promoAnalitico.fecha }),
-                fechaRegularidad: fechaPromo ?? fechaRegularidad,
-                notaRegularizacion: notaPromo ?? notaRegularizacion,
-            },
+        return ACTA_RESOLUTION_STRATEGIES.promocion({
+            promoAnalitico,
+            ultimaPromovidaCursada,
+            intentosFinal,
+            fechaRegularidad,
+            notaRegularizacion,
             aplazosCount,
-        };
+        });
     }
 
-    // 3. Final aprobado (Regular o Libre)
     const finalAprobado = [...intentosOrdenados].reverse().find((i) => i.nota >= 4);
     if (finalAprobado) {
-        const fechaRegInferida =
-            finalAprobado.tipo === 'L'
-                ? null
-                : (fechaRegularidad ??
-                  inferFechaRegularidadFromIntentos(intentosOrdenados, finalAprobado));
-        return {
-            kind: 'Aprobado',
-            estado: ESTADOS_MATERIA.APROBADO,
-            detalles: {
+        if (finalAprobado.tipo === 'L') {
+            return ACTA_RESOLUTION_STRATEGIES.finalLibre({
+                finalAprobado,
                 intentosFinal,
-                notaFinal: finalAprobado.nota,
-                esEquivalencia: false,
-                rendidaLibre: finalAprobado.tipo === 'L',
-                fechaAprobacion: finalAprobado.fecha,
-                fechaRegularidad: fechaRegInferida,
-                notaRegularizacion,
-            },
-            aplazosCount,
-        };
-    }
-
-    // 4. Regular vigente o vencida (desde tabla Cursadas)
-    if (fechaRegularidad) {
-        const estadoConsolidado = regularidadUtils.calcularEstadoConsolidado(
-            ESTADOS_MATERIA.REGULAR,
-            fechaRegularidad,
+                aplazosCount,
+            });
+        }
+        return ACTA_RESOLUTION_STRATEGIES.finalRegular({
+            finalAprobado,
+            intentosOrdenados,
             intentosFinal,
-        );
-        return {
-            kind: estadoConsolidado === ESTADOS_MATERIA.REGULAR ? 'Regular' : 'Libre',
-            estado: estadoConsolidado,
-            detalles: {
-                intentosFinal,
-                notaFinal: null,
-                esEquivalencia: false,
-                rendidaLibre: false,
-                fechaRegularidad,
-                notaRegularizacion,
-            },
+            fechaRegularidad,
+            notaRegularizacion,
             aplazosCount,
-        };
+        });
     }
 
-    // 5. Solo aplazos sin regularidad vigente ni aprobación posterior
-    if (intentosFinal.length > 0 || cursadasOrdenadas.some((c) => c.condicion === 'Libre')) {
-        return {
-            kind: 'Libre',
-            estado: ESTADOS_MATERIA.LIBRE,
-            detalles: {
-                intentosFinal,
-                notaFinal: null,
-                esEquivalencia: false,
-                rendidaLibre: false,
-                fechaRegularidad: null,
-                notaRegularizacion: null,
-            },
+    if (fechaRegularidad) {
+        return ACTA_RESOLUTION_STRATEGIES.regularidadVigente({
+            fechaRegularidad,
+            notaRegularizacion,
+            intentosFinal,
             aplazosCount,
-        };
+        });
+    }
+
+    if (intentosFinal.length > 0 || cursadasOrdenadas.some((c) => c.condicion === 'Libre')) {
+        return ACTA_RESOLUTION_STRATEGIES.aplazosPendientes({ intentosFinal, aplazosCount });
     }
 
     return null;
 }
 
 /**
- * Parsea uno o más bloques de texto copiados desde SAWeb (PDF Analítico, Equivalencias,
- * tablas de Cursadas y/o Finales) y construye un preview consolidado sobre las materias del plan.
- *
+ * Etapa 1: Extracción y tokenización de bloques de texto SAWeb (con filtrado de PII).
  * @param {string[] | string} rawInputs
- * @param {Materia[]} materiasPlan
  */
-export function parseSawebTexts(rawInputs, materiasPlan = []) {
+function tokenizeSawebInputs(rawInputs) {
     const chunks = Array.isArray(rawInputs) ? rawInputs : [rawInputs];
     const validChunks = chunks.filter((c) => typeof c === 'string' && c.trim().length > 0);
-
-    const materiasByCode = new Map(
-        (materiasPlan || []).map((m) => [String(m.codigo).trim(), m]),
-    );
 
     /** @type {string | null} */
     let detectedPlan = null;
@@ -368,13 +437,6 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
     /**
      * @param {string} codigo
      * @param {string} nombre
-     * @returns {{
-     *   nombre: string,
-     *   intentos: Array<{ tipo: 'P'|'R'|'L', nota: number, fecha: string }>,
-     *   ausentes: Array<{ fecha: string }>,
-     *   equivalencia: { tipo: 'E'|'X', fecha: string } | null,
-     *   cursadas: Array<{ anio: number, cuatrimestre: number, condicion: string, nota: number | null }>
-     * }}
      */
     const ensureRecord = (codigo, nombre) => {
         const existing = recordsByCode.get(codigo);
@@ -487,164 +549,154 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         }
     }
 
-    /** @type {ProgresoMap} */
-    const progreso = {};
-    /** @type {ProgresoDetallesMap} */
-    const progresoDetalles = {};
+    return { detectedPlan, anioIngreso, sourcesDetected, recordsByCode };
+}
 
-    const counts = {
-        Promocionado: 0,
-        Aprobado: 0,
-        Equivalencia: 0,
-        Regular: 0,
-        Libre: 0,
-        Aplazos: 0,
-        Omitidas: 0,
+/**
+ * Etapa 3: Motor de homologación entre planes (`17.13 → 17.14`).
+ * Transfiere el acta completa (estado, nota, cursada e intentos) solo a la materia troncal
+ * primaria en el plan destino y registra los talleres / desdoblamientos como Equivalencia
+ * (`esEquivalencia: true`, `notaFinal: null`) para no duplicar notas ni aplazos en el promedio.
+ *
+ * @param {{
+ *   materiasByCode: Map<string, Materia>,
+ *   externalRecords: Array<{ codigo: string, nombre: string }>,
+ *   evaluatedExternalByCode: Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>,
+ *   progreso: ProgresoMap,
+ *   progresoDetalles: ProgresoDetallesMap,
+ *   counts: { Promocionado: number, Aprobado: number, Equivalencia: number, Regular: number, Libre: number, Aplazos: number, Omitidas: number },
+ *   omittedCodes: Array<{ codigo: string, nombre: string }>,
+ * }} params
+ */
+function homologateCrossPlanRecords({
+    materiasByCode,
+    externalRecords,
+    evaluatedExternalByCode,
+    progreso,
+    progresoDetalles,
+    counts,
+    omittedCodes,
+}) {
+    if (materiasByCode.size === 0 || externalRecords.length === 0) return;
+
+    const consumedExternalCodes = new Set();
+    const primaryActaAssignedFor1713 = new Set();
+
+    /** @param {ReturnType<typeof resolveRecordWithStrategy>} evalData */
+    const isEvalApproved = (evalData) =>
+        Boolean(
+            evalData &&
+                (evalData.estado === ESTADOS_MATERIA.APROBADO ||
+                    evalData.estado === ESTADOS_MATERIA.PROMOCIONADO),
+        );
+
+    /** @param {string} cod */
+    const resolveEvalForCode = (cod) => {
+        if (evaluatedExternalByCode.has(cod)) {
+            return evaluatedExternalByCode.get(cod) || null;
+        }
+        if (progreso[cod] && progresoDetalles[cod]) {
+            /** @type {'Promocionado' | 'Equivalencia' | 'Aprobado'} */
+            const kind =
+                progreso[cod] === ESTADOS_MATERIA.PROMOCIONADO
+                    ? 'Promocionado'
+                    : progresoDetalles[cod]?.esEquivalencia
+                      ? 'Equivalencia'
+                      : 'Aprobado';
+            return {
+                kind,
+                estado: progreso[cod],
+                detalles: /** @type {MateriaDetalle} */ (progresoDetalles[cod]),
+                aplazosCount: 0,
+            };
+        }
+        return null;
     };
 
-    /** @type {Array<{ codigo: string, nombre: string }>} */
-    const omittedCodes = [];
-    /** @type {Map<string, NonNullable<ReturnType<typeof evaluateRecordSummary>>>} */
-    const evaluatedExternalByCode = new Map();
-    /** @type {Array<{ codigo: string, nombre: string }>} */
-    const externalRecords = [];
+    const getRulePriority = ([targetCode, reqCodes]) => {
+        const targetMat = materiasByCode.get(targetCode);
+        if (targetMat?.taller) return 2;
+        if (Array.isArray(reqCodes) && reqCodes.length === 1) return 0;
+        return 1;
+    };
 
-    for (const [codigo, rec] of recordsByCode.entries()) {
-        const evalRes = evaluateRecordSummary(rec);
+    const sortedRules = Object.entries(equivalencias1714)
+        .filter(
+            ([targetCode, reqCodes]) =>
+                materiasByCode.has(targetCode) && Array.isArray(reqCodes) && reqCodes.length > 0,
+        )
+        .sort((a, b) => {
+            const pDiff = getRulePriority(a) - getRulePriority(b);
+            if (pDiff !== 0) return pDiff;
+            const matA = materiasByCode.get(a[0]);
+            const matB = materiasByCode.get(b[0]);
+            const cDiff = (Number(matA?.cuatrimestre) || 99) - (Number(matB?.cuatrimestre) || 99);
+            return cDiff;
+        });
 
-        if (materiasByCode.size > 0 && !materiasByCode.has(codigo)) {
-            if (evalRes) {
-                evaluatedExternalByCode.set(codigo, evalRes);
-            }
-            externalRecords.push({ codigo, nombre: rec.nombre });
+    for (const [targetCode1714, requiredCodes1713] of sortedRules) {
+        const sourceEntries = requiredCodes1713.map((reqCode) => ({
+            reqCode,
+            isExternal: evaluatedExternalByCode.has(reqCode),
+            evalData: resolveEvalForCode(reqCode),
+        }));
+
+        if (!sourceEntries.every(({ evalData }) => isEvalApproved(evalData))) {
             continue;
         }
 
-        if (!evalRes) continue;
-        progreso[codigo] = evalRes.estado;
-        progresoDetalles[codigo] = evalRes.detalles;
-        counts[evalRes.kind] += 1;
-        counts.Aplazos += evalRes.aplazosCount;
-    }
-
-    // Homologar materias aprobadas del plan anterior (ej. 17.13) al Plan 17.14 preservando nota, cursada e intentos
-    if (materiasByCode.size > 0 && externalRecords.length > 0) {
-        const consumedExternalCodes = new Set();
-        const aplazosCountedForExternal = new Set();
-
-        /** @param {ReturnType<typeof evaluateRecordSummary>} evalData */
-        const isEvalApproved = (evalData) =>
-            Boolean(
-                evalData &&
-                    (evalData.estado === ESTADOS_MATERIA.APROBADO ||
-                        evalData.estado === ESTADOS_MATERIA.PROMOCIONADO),
-            );
-
-        /** @param {string} cod */
-        const resolveEvalForCode = (cod) => {
-            if (evaluatedExternalByCode.has(cod)) {
-                return evaluatedExternalByCode.get(cod) || null;
+        for (const { reqCode, isExternal } of sourceEntries) {
+            if (isExternal) {
+                consumedExternalCodes.add(reqCode);
             }
-            if (progreso[cod] && progresoDetalles[cod]) {
-                /** @type {'Promocionado' | 'Equivalencia' | 'Aprobado'} */
-                const kind =
-                    progreso[cod] === ESTADOS_MATERIA.PROMOCIONADO
-                        ? 'Promocionado'
-                        : progresoDetalles[cod]?.esEquivalencia
-                          ? 'Equivalencia'
-                          : 'Aprobado';
-                return {
-                    kind,
-                    estado: progreso[cod],
-                    detalles: /** @type {MateriaDetalle} */ (progresoDetalles[cod]),
-                    aplazosCount: 0,
-                };
-            }
-            return null;
-        };
+        }
 
-        for (const [targetCode1714, requiredCodes1713] of Object.entries(equivalencias1714)) {
-            if (
-                !materiasByCode.has(targetCode1714) ||
-                !Array.isArray(requiredCodes1713) ||
-                requiredCodes1713.length === 0
-            ) {
-                continue;
-            }
+        // Si 39553 consume 31972 (Inglés II), también absorbe 31971 (Inglés I)
+        if (
+            requiredCodes1713.includes('31972') &&
+            isEvalApproved(evaluatedExternalByCode.get('31971') || null)
+        ) {
+            consumedExternalCodes.add('31971');
+        }
 
-            const sourceEntries = requiredCodes1713.map((reqCode) => ({
-                reqCode,
-                isExternal: evaluatedExternalByCode.has(reqCode),
-                evalData: resolveEvalForCode(reqCode),
-            }));
+        // Si ya vino como Equivalencia explícita en Página 3 (ej. 13021), respetar ese registro oficial
+        if (progreso[targetCode1714]) {
+            continue;
+        }
 
-            if (!sourceEntries.every(({ evalData }) => isEvalApproved(evalData))) {
-                continue;
-            }
+        const targetMateria = materiasByCode.get(targetCode1714);
+        const unassignedExternal = sourceEntries.filter(
+            ({ reqCode, isExternal, evalData }) =>
+                isExternal && Boolean(evalData) && !primaryActaAssignedFor1713.has(reqCode),
+        );
 
-            for (const { reqCode, isExternal, evalData } of sourceEntries) {
-                if (isExternal && evalData) {
-                    consumedExternalCodes.add(reqCode);
-                    if (!aplazosCountedForExternal.has(reqCode)) {
-                        aplazosCountedForExternal.add(reqCode);
-                        counts.Aplazos += evalData.aplazosCount;
-                    }
-                }
-            }
+        // Asignar el acta completa (con nota, regularidad e intentos) únicamente al destino troncal primario
+        if (!targetMateria?.taller && unassignedExternal.length === 1 && unassignedExternal[0].evalData) {
+            const { reqCode, evalData } = unassignedExternal[0];
+            primaryActaAssignedFor1713.add(reqCode);
+            progreso[targetCode1714] = evalData.estado;
+            progresoDetalles[targetCode1714] = {
+                ...evalData.detalles,
+                intentosFinal: [...(evalData.detalles.intentosFinal || [])],
+            };
+            counts[evalData.kind] += 1;
+            counts.Aplazos += evalData.aplazosCount;
+            continue;
+        }
 
-            // Si 39553 consume 31972 (Inglés II), también absorbe 31971 (Inglés I)
-            if (
-                requiredCodes1713.includes('31972') &&
-                isEvalApproved(evaluatedExternalByCode.get('31971') || null)
-            ) {
-                consumedExternalCodes.add('31971');
-                if (!aplazosCountedForExternal.has('31971')) {
-                    aplazosCountedForExternal.add('31971');
-                    counts.Aplazos += evaluatedExternalByCode.get('31971')?.aplazosCount || 0;
-                }
-            }
+        if (!targetMateria?.taller && unassignedExternal.length > 1) {
+            const evalList = unassignedExternal
+                .map((u) => u.evalData)
+                .filter(
+                    /** @returns {e is NonNullable<ReturnType<typeof resolveRecordWithStrategy>>} */ (
+                        e,
+                    ) => Boolean(e),
+                );
+            unassignedExternal.forEach((u) => {
+                primaryActaAssignedFor1713.add(u.reqCode);
+                if (u.evalData) counts.Aplazos += u.evalData.aplazosCount;
+            });
 
-            if (progreso[targetCode1714]) {
-                // Si ya vino como Equivalencia oficial sin nota en Página 3, completar nota y cursada desde origen
-                const existingDet = progresoDetalles[targetCode1714];
-                if (existingDet?.esEquivalencia && existingDet.notaFinal == null) {
-                    const notas = sourceEntries
-                        .map(({ evalData }) => evalData?.detalles.notaFinal)
-                        .filter(/** @returns {n is number} */ (n) => typeof n === 'number');
-                    if (notas.length === sourceEntries.length && notas.length > 0) {
-                        const notaProm = Math.round(
-                            notas.reduce((sum, n) => sum + n, 0) / notas.length,
-                        );
-                        const fechasReg = sourceEntries
-                            .map(({ evalData }) => evalData?.detalles.fechaRegularidad)
-                            .filter(Boolean);
-                        progresoDetalles[targetCode1714] = {
-                            ...existingDet,
-                            notaFinal: notaProm,
-                            ...(fechasReg.length > 0 && !existingDet.fechaRegularidad
-                                ? { fechaRegularidad: fechasReg[fechasReg.length - 1] }
-                                : {}),
-                        };
-                    }
-                }
-                continue;
-            }
-
-            if (sourceEntries.length === 1 && sourceEntries[0].evalData) {
-                const src = sourceEntries[0].evalData;
-                progreso[targetCode1714] = src.estado;
-                progresoDetalles[targetCode1714] = {
-                    ...src.detalles,
-                    intentosFinal: [...(src.detalles.intentosFinal || [])],
-                };
-                counts[src.kind] += 1;
-                continue;
-            }
-
-            // Regla con múltiples materias origen (ej. 14028 requiere 11072 y 11073)
-            const evalList = sourceEntries
-                .map(({ evalData }) => evalData)
-                .filter(/** @returns {e is NonNullable<ReturnType<typeof evaluateRecordSummary>>} */ (e) => Boolean(e));
             const allPromocionado = evalList.every(
                 (e) => e.estado === ESTADOS_MATERIA.PROMOCIONADO,
             );
@@ -660,10 +712,6 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                 .filter(/** @returns {f is string} */ (f) => typeof f === 'string' && f.length > 0)
                 .sort();
             const latestFecha = fechasAprob.pop() || null;
-            const anioExamen =
-                latestFecha && /^\d{4}/.test(latestFecha)
-                    ? Number(latestFecha.slice(0, 4))
-                    : null;
             const fechasReg = evalList
                 .map((e) => e.detalles.fechaRegularidad)
                 .filter(
@@ -694,20 +742,111 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                     !anyEquivalenciaOnly &&
                     evalList.every((e) => Boolean(e.detalles.rendidaLibre)),
                 ...(latestFecha ? { fechaAprobacion: latestFecha } : {}),
-                ...(anyEquivalenciaOnly && anioExamen ? { anioExamen } : {}),
+                ...(anyEquivalenciaOnly && latestFecha && /^\d{4}/.test(latestFecha)
+                    ? { anioExamen: Number(latestFecha.slice(0, 4)) }
+                    : {}),
                 fechaRegularidad: latestFechaReg,
                 notaRegularizacion: allPromocionado ? notaCombinada : null,
             };
             counts[targetKind] += 1;
+            continue;
         }
 
-        for (const ext of externalRecords) {
-            if (!consumedExternalCodes.has(ext.codigo)) {
-                counts.Omitidas += 1;
-                omittedCodes.push(ext);
-            }
+        // Talleres y segundas materias derivadas del mismo código: Equivalencia sin duplicar notas ni aplazos
+        const fechas = sourceEntries
+            .map(({ evalData }) => evalData?.detalles.fechaAprobacion)
+            .filter(/** @returns {f is string} */ (f) => typeof f === 'string' && f.length > 0)
+            .sort();
+        const latestFecha = fechas.pop() || null;
+        const anioExamen =
+            latestFecha && /^\d{4}/.test(latestFecha) ? Number(latestFecha.slice(0, 4)) : null;
+
+        progreso[targetCode1714] = ESTADOS_MATERIA.APROBADO;
+        progresoDetalles[targetCode1714] = {
+            intentosFinal: [],
+            notaFinal: null,
+            esEquivalencia: true,
+            rendidaLibre: false,
+            ...(latestFecha ? { fechaAprobacion: latestFecha } : {}),
+            ...(anioExamen && !Number.isNaN(anioExamen) ? { anioExamen } : {}),
+            fechaRegularidad: null,
+            notaRegularizacion: null,
+        };
+        counts.Equivalencia += 1;
+    }
+
+    for (const ext of externalRecords) {
+        if (!consumedExternalCodes.has(ext.codigo)) {
+            counts.Omitidas += 1;
+            omittedCodes.push(ext);
         }
     }
+}
+
+/**
+ * Parsea uno o más bloques de texto copiados desde SAWeb (PDF Analítico, Equivalencias,
+ * tablas de Cursadas y/o Finales) y construye un preview consolidado sobre las materias del plan.
+ *
+ * @param {string[] | string} rawInputs
+ * @param {Materia[]} materiasPlan
+ */
+export function parseSawebTexts(rawInputs, materiasPlan = []) {
+    const materiasByCode = new Map(
+        (materiasPlan || []).map((m) => [String(m.codigo).trim(), m]),
+    );
+
+    const { detectedPlan, anioIngreso, sourcesDetected, recordsByCode } =
+        tokenizeSawebInputs(rawInputs);
+
+    /** @type {ProgresoMap} */
+    const progreso = {};
+    /** @type {ProgresoDetallesMap} */
+    const progresoDetalles = {};
+
+    const counts = {
+        Promocionado: 0,
+        Aprobado: 0,
+        Equivalencia: 0,
+        Regular: 0,
+        Libre: 0,
+        Aplazos: 0,
+        Omitidas: 0,
+    };
+
+    /** @type {Array<{ codigo: string, nombre: string }>} */
+    const omittedCodes = [];
+    /** @type {Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>} */
+    const evaluatedExternalByCode = new Map();
+    /** @type {Array<{ codigo: string, nombre: string }>} */
+    const externalRecords = [];
+
+    for (const [codigo, rec] of recordsByCode.entries()) {
+        const evalRes = resolveRecordWithStrategy(rec);
+
+        if (materiasByCode.size > 0 && !materiasByCode.has(codigo)) {
+            if (evalRes) {
+                evaluatedExternalByCode.set(codigo, evalRes);
+            }
+            externalRecords.push({ codigo, nombre: rec.nombre });
+            continue;
+        }
+
+        if (!evalRes) continue;
+        progreso[codigo] = evalRes.estado;
+        progresoDetalles[codigo] = evalRes.detalles;
+        counts[evalRes.kind] += 1;
+        counts.Aplazos += evalRes.aplazosCount;
+    }
+
+    homologateCrossPlanRecords({
+        materiasByCode,
+        externalRecords,
+        evaluatedExternalByCode,
+        progreso,
+        progresoDetalles,
+        counts,
+        omittedCodes,
+    });
 
     // Completar Disponible / Bloqueado para el resto de materias del plan
     for (const materia of materiasPlan || []) {
@@ -740,10 +879,10 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
 }
 
 /**
- * Combina el resultado del Analítico oficial con el progreso y detalles existentes del alumno,
- * actualizando intentos de final, fechas de aprobación, equivalencias y notas finales
- * SIN pisar `notaRegularizacion`, `fechaRegularidad`, `historial` ni materias `Cursando`/`Regular`
- * que no figuran en el Analítico.
+ * Etapa 4 (Reconciliador Oficial): Combina el resultado del Analítico oficial con el progreso
+ * existente tomando el Analítico como fuente de verdad para actas (`P-`, `R-`, `L-`, `E/X`),
+ * y preservando únicamente `notaRegularizacion` manual en materias aprobadas por final Regular (`R-`)
+ * o materias `Cursando`/`Regular` que aún no figuran en el certificado.
  *
  * @param {ReturnType<typeof parseSawebTexts>} parsedResult
  * @param {ProgresoMap} existingProgreso
@@ -773,21 +912,79 @@ export function mergeSawebImportWithExisting(
         const importedEstado = importedProgreso[codigo];
 
         if (importedDet && importedEstado) {
+            if (importedEstado === ESTADOS_MATERIA.PROMOCIONADO) {
+                // Promoción: la nota y fecha del Analítico son de cursada -> fuente de verdad oficial
+                mergedProgreso[codigo] = ESTADOS_MATERIA.PROMOCIONADO;
+                mergedDetalles[codigo] = {
+                    ...prevDet,
+                    ...importedDet,
+                    esEquivalencia: false,
+                    rendidaLibre: false,
+                    notaFinal: importedDet.notaFinal ?? null,
+                    notaRegularizacion: importedDet.notaRegularizacion ?? importedDet.notaFinal ?? null,
+                    fechaRegularidad: importedDet.fechaRegularidad ?? prevDet?.fechaRegularidad ?? null,
+                    ...(prevDet?.historial && { historial: prevDet.historial }),
+                };
+                continue;
+            }
+
+            if (importedEstado === ESTADOS_MATERIA.APROBADO && importedDet.esEquivalencia) {
+                // Equivalencia / Eximida: respetar exactamente la resolución de equivalencia
+                mergedProgreso[codigo] = ESTADOS_MATERIA.APROBADO;
+                mergedDetalles[codigo] = {
+                    ...prevDet,
+                    ...importedDet,
+                    esEquivalencia: true,
+                    rendidaLibre: false,
+                    notaFinal: importedDet.notaFinal ?? null,
+                    notaRegularizacion: null,
+                    fechaRegularidad: null,
+                    ...(prevDet?.historial && { historial: prevDet.historial }),
+                };
+                continue;
+            }
+
+            if (importedEstado === ESTADOS_MATERIA.APROBADO && importedDet.rendidaLibre) {
+                // Aprobada por final Libre: la nota pertenece al final y no hay regularidad de cursada
+                mergedProgreso[codigo] = ESTADOS_MATERIA.APROBADO;
+                mergedDetalles[codigo] = {
+                    ...prevDet,
+                    ...importedDet,
+                    esEquivalencia: false,
+                    rendidaLibre: true,
+                    notaFinal: importedDet.notaFinal ?? null,
+                    notaRegularizacion: null,
+                    fechaRegularidad: null,
+                    ...(prevDet?.historial && { historial: prevDet.historial }),
+                };
+                continue;
+            }
+
+            if (importedEstado === ESTADOS_MATERIA.APROBADO) {
+                // Final Regular (R-): el Analítico manda en el final e intentos y conserva nota de cursada previa
+                mergedProgreso[codigo] = ESTADOS_MATERIA.APROBADO;
+                mergedDetalles[codigo] = {
+                    ...prevDet,
+                    ...importedDet,
+                    esEquivalencia: false,
+                    rendidaLibre: false,
+                    notaFinal: importedDet.notaFinal ?? null,
+                    fechaRegularidad: importedDet.fechaRegularidad ?? prevDet?.fechaRegularidad ?? null,
+                    notaRegularizacion: prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null,
+                    ...(prevDet?.historial && { historial: prevDet.historial }),
+                };
+                continue;
+            }
+
             const importedAnioReg = getAnioFromFechaRegularidad(importedDet.fechaRegularidad);
             const prevAnioReg = getAnioFromFechaRegularidad(prevDet?.fechaRegularidad);
-            const isPromoMasReciente =
-                importedEstado === ESTADOS_MATERIA.PROMOCIONADO &&
-                importedAnioReg !== null &&
-                prevAnioReg !== null &&
-                importedAnioReg > prevAnioReg;
+            const nextFechaReg =
+                importedAnioReg !== null && (prevAnioReg === null || importedAnioReg > prevAnioReg)
+                    ? importedDet.fechaRegularidad
+                    : (prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null);
+            const nextNotaReg = prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null;
 
-            const nextNotaReg = isPromoMasReciente
-                ? (importedDet.notaRegularizacion ?? prevDet?.notaRegularizacion ?? null)
-                : (prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null);
-            const nextFechaReg = isPromoMasReciente
-                ? importedDet.fechaRegularidad
-                : (prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null);
-
+            /** @type {EstadoMateria} */
             let finalEstado = importedEstado;
             // Si en el Analítico solo hay aplazos (sin aprobación) y ya estaba Regular en el simulador,
             // recalcular si la regularidad sigue vigente según intentos y fecha de cursada.
@@ -806,7 +1003,6 @@ export function mergeSawebImportWithExisting(
             mergedDetalles[codigo] = {
                 ...prevDet,
                 ...importedDet,
-                // Nunca pisar nota de cursada ni fecha de regularidad cargadas previamente
                 notaRegularizacion: nextNotaReg,
                 fechaRegularidad: nextFechaReg,
                 ...(prevDet?.historial && { historial: prevDet.historial }),

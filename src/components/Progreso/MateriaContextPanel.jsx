@@ -443,6 +443,15 @@ export function MateriaContextContent({
                 Rendida libre
               </Chip>
             )}
+            {esEquivalencia && (
+              <Chip
+                size="sm"
+                variant="flat"
+                className="bg-[#F5F3FF] text-[#6D28D9] dark:bg-[#2E1065]/50 dark:text-[#C4B5FD] font-medium"
+              >
+                Equivalencia
+              </Chip>
+            )}
             {detalles.notaFinal != null &&
               (estadoActual === "Aprobado" || estadoActual === "Promocionado") && (
                 <Chip
@@ -757,6 +766,21 @@ export function MateriaContextContent({
                 }
                 onValueChange={handleCambioNotaCursada}
               />
+            </div>
+          ) : esEquivalencia && !faltaInfo ? (
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] text-xs text-[#475569] dark:text-[#94A3B8] space-y-1">
+              <p>
+                Reconocida por <strong>Equivalencia / Eximida</strong>
+                {typeof detalles.fechaAprobacion === "string" && detalles.fechaAprobacion
+                  ? ` (${detalles.fechaAprobacion})`
+                  : detalles.anioExamen != null
+                    ? ` (${detalles.anioExamen})`
+                    : ""}
+                . No suma nota ni aplazos al promedio oficial.
+              </p>
+              <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                Podés editar su año o nota desde <strong>Opciones avanzadas e historial</strong>.
+              </p>
             </div>
           ) : esRendidaLibre && !esEquivalencia ? (
             <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] flex flex-wrap items-center justify-between gap-2 text-xs text-[#475569] dark:text-[#94A3B8]">
