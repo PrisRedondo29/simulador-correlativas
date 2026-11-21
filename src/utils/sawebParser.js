@@ -3,6 +3,7 @@ import {
     calcularEstadoBaseMateria,
     ESTADOS_MATERIA,
 } from './Progreso/materiaStateMachine';
+import equivalencias1714 from '../data/equivalencias.json';
 
 /** @typedef {import('../types/domain').Materia} Materia */
 /** @typedef {import('../types/domain').FechaRegularidad} FechaRegularidad */
@@ -324,11 +325,46 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
 
     /** @type {Array<{ codigo: string, nombre: string }>} */
     const omittedCodes = [];
+    /** @type {Map<string, { fecha: string | null, nombre: string }>} */
+    const approvedExternalByCode = new Map();
+    /** @type {Array<{ codigo: string, nombre: string }>} */
+    const externalRecords = [];
 
     for (const [codigo, rec] of recordsByCode.entries()) {
         if (materiasByCode.size > 0 && !materiasByCode.has(codigo)) {
-            counts.Omitidas += 1;
-            omittedCodes.push({ codigo, nombre: rec.nombre });
+            const intentosOrd = [...rec.intentos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+            const cursadasOrd = [...rec.cursadas].sort(
+                (a, b) => a.anio - b.anio || a.cuatrimestre - b.cuatrimestre,
+            );
+            const promoExt = [...intentosOrd].reverse().find((i) => i.tipo === 'P' && i.nota >= 4);
+            const promoCursadaExt = [...cursadasOrd]
+                .reverse()
+                .find((c) => c.condicion === 'Promovido');
+            const finalAprExt = [...intentosOrd].reverse().find((i) => i.nota >= 4);
+
+            if (rec.equivalencia) {
+                approvedExternalByCode.set(codigo, {
+                    fecha: rec.equivalencia.fecha || null,
+                    nombre: rec.nombre,
+                });
+            } else if (promoExt) {
+                approvedExternalByCode.set(codigo, {
+                    fecha: promoExt.fecha || null,
+                    nombre: rec.nombre,
+                });
+            } else if (promoCursadaExt) {
+                approvedExternalByCode.set(codigo, {
+                    fecha: `${promoCursadaExt.anio}-${promoCursadaExt.cuatrimestre === 2 ? '12-01' : '07-01'}`,
+                    nombre: rec.nombre,
+                });
+            } else if (finalAprExt) {
+                approvedExternalByCode.set(codigo, {
+                    fecha: finalAprExt.fecha || null,
+                    nombre: rec.nombre,
+                });
+            }
+
+            externalRecords.push({ codigo, nombre: rec.nombre });
             continue;
         }
 
@@ -375,6 +411,10 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
 
         // 1. Equivalencia / Eximida en cambio de plan
         if (rec.equivalencia) {
+            const anioExamenEq =
+                rec.equivalencia.fecha && /^\d{4}/.test(rec.equivalencia.fecha)
+                    ? Number(rec.equivalencia.fecha.slice(0, 4))
+                    : null;
             progreso[codigo] = ESTADOS_MATERIA.APROBADO;
             progresoDetalles[codigo] = {
                 intentosFinal: [],
@@ -382,6 +422,7 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                 esEquivalencia: true,
                 rendidaLibre: false,
                 fechaAprobacion: rec.equivalencia.fecha,
+                ...(anioExamenEq ? { anioExamen: anioExamenEq } : {}),
                 fechaRegularidad: null,
                 notaRegularizacion: null,
             };
@@ -474,6 +515,76 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                 notaRegularizacion: null,
             };
             counts.Libre += 1;
+        }
+    }
+
+    // Homologar materias aprobadas del plan anterior (ej. 17.13) al Plan 17.14 como Equivalencia
+    if (materiasByCode.size > 0 && externalRecords.length > 0) {
+        const consumedExternalCodes = new Set();
+
+        for (const [targetCode1714, requiredCodes1713] of Object.entries(equivalencias1714)) {
+            if (
+                !materiasByCode.has(targetCode1714) ||
+                !Array.isArray(requiredCodes1713) ||
+                requiredCodes1713.length === 0
+            ) {
+                continue;
+            }
+
+            const allApproved = requiredCodes1713.every((reqCode) => {
+                if (approvedExternalByCode.has(reqCode)) return true;
+                return (
+                    progreso[reqCode] === ESTADOS_MATERIA.APROBADO ||
+                    progreso[reqCode] === ESTADOS_MATERIA.PROMOCIONADO
+                );
+            });
+
+            if (!allApproved) continue;
+
+            /** @type {string[]} */
+            const fechas = [];
+            for (const reqCode of requiredCodes1713) {
+                if (approvedExternalByCode.has(reqCode)) {
+                    consumedExternalCodes.add(reqCode);
+                    const extInfo = approvedExternalByCode.get(reqCode);
+                    if (extInfo?.fecha) fechas.push(extInfo.fecha);
+                } else if (progresoDetalles[reqCode]?.fechaAprobacion) {
+                    fechas.push(/** @type {string} */ (progresoDetalles[reqCode].fechaAprobacion));
+                }
+            }
+
+            // Si 39553 consume 31972 (Inglés II), también absorbe 31971 (Inglés I) para no listarla omitida
+            if (requiredCodes1713.includes('31972') && approvedExternalByCode.has('31971')) {
+                consumedExternalCodes.add('31971');
+            }
+
+            if (!progreso[targetCode1714]) {
+                const latestFecha = fechas.sort().pop() || null;
+                const anioExamen =
+                    latestFecha && /^\d{4}/.test(latestFecha)
+                        ? Number(latestFecha.slice(0, 4))
+                        : null;
+
+                progreso[targetCode1714] = ESTADOS_MATERIA.APROBADO;
+                progresoDetalles[targetCode1714] = {
+                    intentosFinal: [],
+                    notaFinal: null,
+                    esEquivalencia: true,
+                    rendidaLibre: false,
+                    ...(latestFecha ? { fechaAprobacion: latestFecha } : {}),
+                    ...(anioExamen && !Number.isNaN(anioExamen) ? { anioExamen } : {}),
+                    fechaRegularidad: null,
+                    notaRegularizacion: null,
+                };
+                counts.Equivalencia += 1;
+            }
+        }
+
+        for (const ext of externalRecords) {
+            if (!consumedExternalCodes.has(ext.codigo)) {
+                counts.Omitidas += 1;
+                omittedCodes.push(ext);
+            }
         }
     }
 

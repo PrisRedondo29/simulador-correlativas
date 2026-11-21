@@ -230,6 +230,7 @@ export interface MateriaDetalle {
     fechaRegularidad?: FechaRegularidad | null;
     fechaRegularizacion?: string | null;
     fechaAprobacion?: string | null;
+    anioExamen?: number | null;
     notaRegularizacion?: number | string | null;
     notaFinal?: number | string | null;
     esEquivalencia?: boolean;

@@ -10,6 +10,7 @@ import storageRepository, {
     subscribeStorageChanges,
 } from '../../services/storageRepository';
 import {
+    PLAN_POLICIES,
     canUseFeature,
     getPlanPolicy,
     getPlanTransitionMeta,
@@ -293,7 +294,7 @@ export default function OnboardingGate({ children }) {
             '17.14';
 
         const candidatePlan =
-            detectedPlan && getPlanPolicy(detectedPlan, careersRegistry)
+            detectedPlan && Object.prototype.hasOwnProperty.call(PLAN_POLICIES, detectedPlan)
                 ? detectedPlan
                 : fallbackPlan;
 
@@ -407,7 +408,7 @@ export default function OnboardingGate({ children }) {
                 onOpenChange={onSawebOpenChange}
                 plan={step === 2 ? selectedPlan : null}
                 materias={step === 2 ? materias : []}
-                resolvePlanMaterias={step === 1 ? resolveSawebTarget : null}
+                resolvePlanMaterias={resolveSawebTarget}
                 onApplyImport={handleSawebImportComplete}
             />
 

@@ -19,6 +19,7 @@ import { mergeSawebImportWithExisting } from '../../utils/sawebParser';
  */
 export default function useProgresoDashboard({
     plan,
+    setPlan = null,
     materias,
     progreso,
     setProgreso,
@@ -436,7 +437,8 @@ export default function useProgresoDashboard({
     }, [grupoAAprobar, cambioDeEstadoMultiple, onAprobarAnioClose]);
 
     const importarDesdeSaweb = useCallback((parsedResult) => {
-        if (!parsedResult || !plan) return;
+        const targetPlan = parsedResult?.targetPlan || parsedResult?.detectedPlan || plan;
+        if (!parsedResult || !targetPlan) return;
 
         if (storageRepository.hasExistingAcademicData()) {
             storageRepository.saveRecoveryBackup(storageRepository.readAcademicBundle(), {
@@ -444,20 +446,38 @@ export default function useProgresoDashboard({
             });
         }
 
+        const isSamePlan = targetPlan === plan;
+        const targetMaterias =
+            !isSamePlan && Array.isArray(parsedResult.targetMaterias) && parsedResult.targetMaterias.length > 0
+                ? parsedResult.targetMaterias
+                : materias;
+        const baseProgreso = isSamePlan
+            ? progreso
+            : storageRepository.getProgreso(targetPlan, {});
+        const baseDetalles = isSamePlan
+            ? progresoDetalles
+            : storageRepository.getProgresoDetalles(targetPlan, {});
+
         const { progreso: nextProgreso, progresoDetalles: nextDetalles } =
             mergeSawebImportWithExisting(
                 parsedResult,
-                progreso,
-                progresoDetalles,
-                materias,
+                baseProgreso,
+                baseDetalles,
+                targetMaterias,
             );
 
-        setProgreso(nextProgreso);
-        setProgresoDetalles(nextDetalles);
-        updateAuthProgreso(plan, nextProgreso, nextDetalles);
+        if (isSamePlan) {
+            setProgreso(nextProgreso);
+            setProgresoDetalles(nextDetalles);
+        }
+        updateAuthProgreso(targetPlan, nextProgreso, nextDetalles);
+
+        if (!isSamePlan && typeof setPlan === 'function') {
+            setPlan(targetPlan);
+        }
 
         trackImportarSaweb({
-            plan,
+            plan: targetPlan,
             detectedPlan: parsedResult.detectedPlan,
             totalImported: parsedResult.totalMatched,
             usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
@@ -466,10 +486,10 @@ export default function useProgresoDashboard({
 
         addToast({
             title: 'Analítico importado desde SAWeb',
-            description: `Se actualizaron ${parsedResult.totalMatched} materias en el Plan ${plan} sin pisar tus notas de cursada.`,
+            description: `Se actualizaron ${parsedResult.totalMatched} materias en el Plan ${targetPlan}${!isSamePlan ? ' y se activó como tu plan actual' : ' sin pisar tus notas de cursada'}.`,
             color: 'success',
         });
-    }, [plan, materias, progreso, progresoDetalles, setProgreso, setProgresoDetalles, updateAuthProgreso]);
+    }, [plan, setPlan, materias, progreso, progresoDetalles, setProgreso, setProgresoDetalles, updateAuthProgreso]);
 
     return {
         // Filtros y búsqueda

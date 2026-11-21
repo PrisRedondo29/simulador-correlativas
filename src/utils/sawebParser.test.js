@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mergeSawebImportWithExisting, parseSawebTexts } from './sawebParser';
+import sistemasPlanes from '../data/sistemas.json';
 
 const MOCK_PLAN_1713 = [
     { codigo: '11071', nombre: 'Introducción a la Programación', correlativas: [] },
@@ -292,5 +293,67 @@ Plan 1713:
             anio: 2025,
             cuatrimestre: 2,
         });
+    });
+
+    it('homologa materias aprobadas de Plan 17.13 a Plan 17.14 como Equivalencia (Opción A) manteniendo materias de código común', () => {
+        const analiticoCambioPlan = `
+Universidad Nacional de Luján
+CERTIFICADO ANALITICO DE ACTIVIDADES ACADEMICAS RENDIDAS
+consta que ESTUDIANTE CAMBIO, DNI: 99999999, Nº de Legajo 196677, ingresó a la Universidad en el año 2023, habiendo rendido las siguientes asignaturas correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1714:
+ACTIVIDAD ACADEMICA NOTA LIBRO-FOLIO FECHA
+31971 P-INGLES I 10(DIEZ) 0452-052 26-06-2023
+11071 L-INTRODUCCION A LA PROGRAMACION 2(DOS) 0558-014 12-07-2023
+41407 L-ORGANIZACION DE COMPUTADORAS 2(DOS) 0282-017 04-08-2023
+11071 P-INTRODUCCION A LA PROGRAMACION 7(SIETE) 0565-006 01-11-2023
+41407 R-ORGANIZACION DE COMPUTADORAS 2(DOS) 0284-099 15-12-2023
+21056 R-INTROD. A LOS SISTEMAS DE INFORMACION 2(DOS) 1328-030 19-12-2023
+41407 R-ORGANIZACION DE COMPUTADORAS 2(DOS) 0287-077 16-02-2024
+21056 R-INTROD. A LOS SISTEMAS DE INFORMACION 2(DOS) 1337-098 22-02-2024
+41407 P-ORGANIZACION DE COMPUTADORAS 7(SIETE) 0291-047 19-06-2024
+11072 R-ALGEBRA Y LOGICA COMPUTACIONAL 4(CUATRO) 0583-029 31-07-2024
+31972 L-INGLES II 9(NUEVE) 0482-080 23-09-2024
+11073 P-MATEMATICA DISCRETA 9(NUEVE) 0592-066 29-11-2024
+41406 P-ARQUITECTURA DE COMPUTADORAS 7(SIETE) 0298-022 02-12-2024
+11074 L-PROGRAMACION I 2(DOS) 0590-056 18-12-2024
+11074 L-PROGRAMACION I 8(OCHO) 0601-047 08-07-2025
+21056 R-INTROD. A LOS SISTEMAS DE INFORMACION 4(CUATRO) 1418-070 30-09-2025
+
+ACTIVIDADES ACADEMICAS RECONOCIDAS POR EQUIVALENCIA O EXIMIDAS
+13021-ALGEBRA LINEAL Y GEOMETRIA E 21-08-2026
+`;
+        const plan1714Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.14')?.materias || [];
+
+        const result = parseSawebTexts(analiticoCambioPlan, plan1714Materias);
+
+        expect(result.detectedPlan).toBe('17.14');
+        expect(result.anioIngreso).toBe(2023);
+        expect(result.counts.Promocionado).toBe(1); // 41407 común a ambos planes
+        expect(result.counts.Equivalencia).toBe(10); // 13021 + 9 equivalencias 17.13 -> 17.14
+        expect(result.counts.Omitidas).toBe(0);
+        expect(result.totalMatched).toBe(11);
+
+        expect(result.progreso['41407']).toBe('Promocionado');
+        expect(result.progresoDetalles['41407'].notaFinal).toBe(7);
+        expect(result.progresoDetalles['41407'].esEquivalencia).toBe(false);
+
+        const codigosEquivalentes = [
+            '19054',
+            '39553',
+            '14026',
+            '11271',
+            '13014',
+            '21256',
+            '11274',
+            '13021',
+            '41426',
+            '14028',
+        ];
+        for (const cod of codigosEquivalentes) {
+            expect(result.progreso[cod]).toBe('Aprobado');
+            expect(result.progresoDetalles[cod]?.esEquivalencia).toBe(true);
+        }
+        expect(result.progresoDetalles['11271']?.fechaAprobacion).toBe('2023-11-01');
+        expect(result.progresoDetalles['11271']?.anioExamen).toBe(2023);
     });
 });

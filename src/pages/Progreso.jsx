@@ -35,6 +35,7 @@ export default function Progreso() {
 
   const dashboard = useProgresoDashboard({
     plan,
+    setPlan,
     materias,
     progreso,
     setProgreso,

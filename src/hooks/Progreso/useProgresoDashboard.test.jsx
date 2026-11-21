@@ -18,6 +18,7 @@ vi.mock('../../services/analyticsService', () => ({
     trackProgreso: vi.fn(),
     trackCambioMateria: vi.fn(),
     trackRecursada: vi.fn(),
+    trackImportarSaweb: vi.fn(),
 }));
 
 vi.mock('@heroui/react', () => {
@@ -33,6 +34,7 @@ vi.mock('@heroui/react', () => {
 
     return {
         useDisclosure,
+        addToast: vi.fn(),
         Modal: ({ isOpen, children }) => (isOpen ? <div role="dialog">{children}</div> : null),
         ModalContent: ({ children }) => (
             <div>{typeof children === 'function' ? children(() => {}) : children}</div>
@@ -242,5 +244,43 @@ describe('useProgresoDashboard + ConfirmarCambioModal - Confirmación de cascada
         expect(result.current.soloIncompletas).toBe(true);
         expect(result.current.isFiltering).toBe(true);
         expect(result.current.filteredMaterias.map((m) => m.codigo)).toEqual(['M1']);
+    });
+
+    it('importarDesdeSaweb cambia al plan detectado en el Analítico cuando difiere del plan activo', () => {
+        const setPlan = vi.fn();
+        const setProgreso = vi.fn();
+        const setProgresoDetalles = vi.fn();
+
+        const { result } = renderHook(() =>
+            useProgresoDashboard({
+                plan: '17.14',
+                setPlan,
+                materias: MATERIAS_MOCK,
+                progreso: {},
+                setProgreso,
+                progresoDetalles: {},
+                setProgresoDetalles,
+            }),
+        );
+
+        act(() => {
+            result.current.importarDesdeSaweb({
+                detectedPlan: '17.13',
+                targetPlan: '17.13',
+                targetMaterias: MATERIAS_MOCK,
+                totalMatched: 1,
+                sourcesDetected: { analitico: true, cursadas: false },
+                progreso: { M1: 'Aprobado', M2: 'Disponible' },
+                progresoDetalles: { M1: { notaFinal: 8, intentosFinal: [] } },
+            });
+        });
+
+        expect(mockUpdateAuthProgreso).toHaveBeenCalledWith(
+            '17.13',
+            expect.objectContaining({ M1: 'Aprobado' }),
+            expect.objectContaining({ M1: expect.objectContaining({ notaFinal: 8 }) }),
+        );
+        expect(setPlan).toHaveBeenCalledWith('17.13');
+        expect(setProgreso).not.toHaveBeenCalled();
     });
 });

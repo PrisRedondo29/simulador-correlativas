@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { parseSawebTexts } from "../../../utils/sawebParser";
 import { extractTextFromPdfFile } from "../../../utils/pdfTextExtractor";
+import planService from "../../../services/planService";
+import { PLAN_POLICIES } from "../../../config/planPolicies";
 
 /**
  * Modal de importación desde el Analítico oficial en PDF de SAWeb (disponible en celular y PC).
@@ -69,6 +71,18 @@ export default function ImportarSawebModal({
         const resolved = await resolvePlanMaterias(preliminary.detectedPlan);
         if (resolved?.targetPlan) targetPlan = resolved.targetPlan;
         if (Array.isArray(resolved?.materias)) targetMaterias = resolved.materias;
+      } else {
+        const preliminary = parseSawebTexts([rawText], []);
+        const detected = preliminary.detectedPlan;
+        if (detected && Object.prototype.hasOwnProperty.call(PLAN_POLICIES, detected)) {
+          targetPlan = detected;
+          if (targetPlan !== plan || !Array.isArray(materias) || materias.length === 0) {
+            const loaded = await planService.getMateriasByPlan(targetPlan);
+            if (Array.isArray(loaded)) {
+              targetMaterias = loaded;
+            }
+          }
+        }
       }
 
       const parsed = parseSawebTexts([rawText], targetMaterias);
@@ -297,14 +311,14 @@ export default function ImportarSawebModal({
                   </div>
 
                   {verifiedResult.detectedPlan &&
-                    effectivePlan &&
-                    verifiedResult.detectedPlan !== effectivePlan && (
-                      <div className="flex items-start gap-2.5 rounded-xl border border-[#FDE68A] dark:border-[#5C4318] bg-[#FFFBEB] dark:bg-[#2D2210] p-3 text-xs text-[#92400E] dark:text-[#FCD34D]">
-                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    plan &&
+                    verifiedResult.detectedPlan !== plan && (
+                      <div className="flex items-start gap-2.5 rounded-xl border border-[#A7F3D0] dark:border-[#1E4D38] bg-[#ECFDF5]/70 dark:bg-[#102A20]/60 p-3 text-xs text-[#065F46] dark:text-[#A7F3D0]">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-[#005A36] dark:text-[#6EE7B7]" />
                         <p>
-                          El Analítico indica <strong>Plan {verifiedResult.detectedPlan}</strong>,
-                          pero tenés seleccionado el <strong>Plan {effectivePlan}</strong>. Solo se
-                          importarán las materias que coincidan con el plan activo.
+                          El Analítico corresponde al <strong>Plan {verifiedResult.detectedPlan}</strong>.
+                          Al importar, se seleccionará automáticamente el{" "}
+                          <strong>Plan {verifiedResult.detectedPlan}</strong> como tu plan activo.
                         </p>
                       </div>
                     )}
