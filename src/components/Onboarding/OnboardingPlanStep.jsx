@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PropTypes from 'prop-types';
-import { AlertTriangle, ArrowRight, ChevronDown, GraduationCap } from 'lucide-react';
+import { AlertTriangle, ArrowRight, ChevronDown, ClipboardPaste, GraduationCap } from 'lucide-react';
 
 /**
  * Paso 1 del Onboarding inicial:
@@ -15,6 +15,7 @@ export default function OnboardingPlanStep({
     hasExistingData = false,
     onSelectPlan,
     onSkip,
+    onOpenSawebImport,
 }) {
     const initialCareer =
         availableCareers.find((c) => c.plans?.some((p) => p.planNumero === initialPlan)) ||
@@ -264,6 +265,27 @@ export default function OnboardingPlanStep({
                     </div>
                 </div>
             )}
+
+            {onOpenSawebImport && (
+                <div className="hidden md:flex items-center justify-between gap-4 p-4 rounded-2xl bg-[#ECFDF5]/70 dark:bg-[#102A20]/60 border border-[#A7F3D0] dark:border-[#1E4D38]">
+                    <div className="space-y-0.5 min-w-0">
+                        <p className="text-xs font-bold text-[#005A36] dark:text-[#86EFAC]">
+                            ¿Ya rendiste materias y estás desde la compu?
+                        </p>
+                        <p className="text-xs text-[#047857] dark:text-[#6EE7B7]/85">
+                            Importá tu Analítico desde SAWeb y detectamos tu plan y materias automáticamente en segundos.
+                        </p>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onOpenSawebImport}
+                        className="min-h-10 px-4 rounded-xl bg-[#005A36] hover:bg-[#00462A] text-white text-xs font-semibold inline-flex items-center gap-2 shrink-0 transition-colors cursor-pointer"
+                    >
+                        <ClipboardPaste className="w-4 h-4 shrink-0" aria-hidden="true" />
+                        <span>Importar SAWeb</span>
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
@@ -275,4 +297,5 @@ OnboardingPlanStep.propTypes = {
     hasExistingData: PropTypes.bool,
     onSelectPlan: PropTypes.func.isRequired,
     onSkip: PropTypes.func,
+    onOpenSawebImport: PropTypes.func,
 };

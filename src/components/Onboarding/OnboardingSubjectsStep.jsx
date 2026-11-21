@@ -6,6 +6,7 @@ import {
     Check,
     CheckCheck,
     ChevronDown,
+    ClipboardPaste,
     Lock,
     Redo2,
     RotateCcw,
@@ -138,6 +139,7 @@ export default function OnboardingSubjectsStep({
     supportsTransition = false,
     onBack,
     onComplete,
+    onOpenSawebImport,
 }) {
     const {
         progreso,
@@ -240,14 +242,26 @@ export default function OnboardingSubjectsStep({
                             </p>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={handleFreshmanSkip}
-                            className="min-h-11 px-3.5 py-2 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold text-[#005A36] dark:text-[#86EFAC] hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-                        >
-                            <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-                            <span>Soy ingresante (0 materias)</span>
-                        </button>
+                        <div className="flex items-center gap-2 shrink-0">
+                            {onOpenSawebImport && (
+                                <button
+                                    type="button"
+                                    onClick={onOpenSawebImport}
+                                    className="hidden md:inline-flex min-h-11 px-3.5 py-2 rounded-xl bg-[#005A36] hover:bg-[#00462A] text-white text-xs font-semibold items-center justify-center gap-2 shrink-0 transition-colors cursor-pointer"
+                                >
+                                    <ClipboardPaste className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                    <span>Importar SAWeb</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={handleFreshmanSkip}
+                                className="min-h-11 px-3.5 py-2 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold text-[#005A36] dark:text-[#86EFAC] hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                            >
+                                <Sparkles className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+                                <span>Soy ingresante (0 materias)</span>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Barra de búsqueda + Deshacer / Rehacer */}
@@ -563,4 +577,5 @@ OnboardingSubjectsStep.propTypes = {
     supportsTransition: PropTypes.bool,
     onBack: PropTypes.func.isRequired,
     onComplete: PropTypes.func.isRequired,
+    onOpenSawebImport: PropTypes.func,
 };

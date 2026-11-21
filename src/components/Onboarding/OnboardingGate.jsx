@@ -15,10 +15,12 @@ import {
     getPlanTransitionMeta,
 } from '../../config/planPolicies';
 import {
+    trackImportarSaweb,
     trackProgresoInicial,
     trackSeleccionCarrera,
 } from '../../services/analyticsService';
 import LoginModal from '../Auth/LoginModal';
+import ImportarSawebModal from '../Progreso/modals/ImportarSawebModal';
 import { GoogleIcon } from '../Shared/BrandIcons';
 import OnboardingPlanStep from './OnboardingPlanStep';
 import OnboardingSubjectsStep from './OnboardingSubjectsStep';
@@ -40,6 +42,11 @@ export default function OnboardingGate({ children }) {
     const { plan, setPlan } = useActivePlan();
     const { availableCareers, catalogCareers, careersRegistry, tenant } = usePlanCapabilities();
     const { isOpen: isLoginOpen, onOpen: onLoginOpen, onClose: onLoginClose } = useDisclosure();
+    const {
+        isOpen: isSawebOpen,
+        onOpen: onSawebOpen,
+        onOpenChange: onSawebOpenChange,
+    } = useDisclosure();
 
     const [onboardingVersion, setOnboardingVersion] = useState(() =>
         storageRepository.getOnboardingVersionCompleted(),
@@ -213,6 +220,92 @@ export default function OnboardingGate({ children }) {
         navigate('/mis-materias', { replace: true });
     };
 
+    const resolveSawebTarget = async (detectedPlan) => {
+        const fallbackPlan =
+            selectedPlan ||
+            plan ||
+            availableCareers[0]?.plans?.find((p) => p.isDefault)?.planNumero ||
+            availableCareers[0]?.plans?.[0]?.planNumero ||
+            '17.14';
+
+        const candidatePlan =
+            detectedPlan && getPlanPolicy(detectedPlan, careersRegistry)
+                ? detectedPlan
+                : fallbackPlan;
+
+        const list = await planService.getMateriasByPlan(candidatePlan);
+        return {
+            targetPlan: candidatePlan,
+            materias: Array.isArray(list) ? list : [],
+        };
+    };
+
+    const handleSawebImportComplete = (parsedResult) => {
+        const targetPlan = parsedResult?.targetPlan || selectedPlan;
+        if (!targetPlan) return;
+
+        if (hasExistingData) {
+            storageRepository.saveRecoveryBackup(storageRepository.readAcademicBundle(), {
+                reason: 'pre_onboarding_saweb_import',
+            });
+        }
+
+        const policy = getPlanPolicy(targetPlan, careersRegistry);
+        const supportsTransitionForTarget = canUseFeature(
+            targetPlan,
+            'planTransition',
+            careersRegistry,
+        );
+        const transitionMeta = getPlanTransitionMeta(targetPlan, careersRegistry);
+
+        const nextProgreso = parsedResult.progreso || {};
+        const nextDetalles = parsedResult.progresoDetalles || {};
+
+        setPlan(targetPlan);
+        updateAuthProgreso(targetPlan, nextProgreso, nextDetalles);
+        storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+
+        trackSeleccionCarrera({
+            plan: targetPlan,
+            origen_plan: 'saweb_import_onboarding',
+            carrera: policy?.carrera,
+        });
+        trackProgresoInicial({
+            plan: targetPlan,
+            aprobadas:
+                (parsedResult.counts?.Promocionado || 0) +
+                (parsedResult.counts?.Aprobado || 0) +
+                (parsedResult.counts?.Equivalencia || 0),
+            total: Object.keys(nextProgreso).length,
+        });
+        trackImportarSaweb({
+            plan: targetPlan,
+            detectedPlan: parsedResult.detectedPlan,
+            totalImported: parsedResult.totalMatched || 0,
+            usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
+            usedCursadas: Boolean(parsedResult.sourcesDetected?.cursadas),
+        });
+
+        addToast({
+            title: 'Progreso importado desde SAWeb',
+            description: `Se cargaron ${parsedResult.totalMatched} materias en el Plan ${targetPlan}.`,
+            color: 'success',
+        });
+
+        setStep(1);
+        setDevSimulateNewcomer(false);
+
+        if (supportsTransitionForTarget && (parsedResult.totalMatched || 0) > 0) {
+            navigate(transitionMeta?.route || '/cambio-plan', {
+                replace: true,
+                state: { fromOnboarding: true, autoEvaluate: true },
+            });
+            return;
+        }
+
+        navigate('/mis-materias', { replace: true });
+    };
+
     if (!shouldShowOnboarding) {
         return children;
     }
@@ -225,6 +318,14 @@ export default function OnboardingGate({ children }) {
     return (
         <div className="min-h-screen h-dvh flex flex-col bg-[#F8FAFC] dark:bg-[#0F1419]">
             <LoginModal isOpen={isLoginOpen} onClose={onLoginClose} onConfirm={handleSignIn} />
+            <ImportarSawebModal
+                isOpen={isSawebOpen}
+                onOpenChange={onSawebOpenChange}
+                plan={step === 2 ? selectedPlan : null}
+                materias={step === 2 ? materias : []}
+                resolvePlanMaterias={step === 1 ? resolveSawebTarget : null}
+                onApplyImport={handleSawebImportComplete}
+            />
 
             {/* Barra superior compacta del asistente */}
             <header className="shrink-0 bg-white/95 dark:bg-[#161D24]/95 border-b border-[#E2E8F0] dark:border-[#2A3540] px-3 sm:px-6 pt-[max(0.75rem,env(safe-area-inset-top,0px))] pb-3">
@@ -297,6 +398,7 @@ export default function OnboardingGate({ children }) {
                         hasExistingData={effectiveHasExistingData}
                         onSelectPlan={loadSubjectsForPlan}
                         onSkip={handleSkipExisting}
+                        onOpenSawebImport={onSawebOpen}
                     />
                 )}
 
@@ -344,6 +446,7 @@ export default function OnboardingGate({ children }) {
                         supportsTransition={supportsTransition}
                         onBack={() => setStep(1)}
                         onComplete={handleComplete}
+                        onOpenSawebImport={onSawebOpen}
                     />
                 )}
             </main>

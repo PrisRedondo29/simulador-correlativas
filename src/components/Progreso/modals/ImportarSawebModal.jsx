@@ -30,14 +30,16 @@ import { parseSawebTexts } from "../../../utils/sawebParser";
 export default function ImportarSawebModal({
   isOpen,
   onOpenChange,
-  plan,
-  materias,
+  plan = null,
+  materias = [],
+  resolvePlanMaterias = null,
   onApplyImport,
 }) {
   const [pastedChunks, setPastedChunks] = useState([]);
   const [manualText, setManualText] = useState("");
   const [showManualFallback, setShowManualFallback] = useState(false);
   const [verifiedResult, setVerifiedResult] = useState(null);
+  const [verifying, setVerifying] = useState(false);
 
   const allChunks = useMemo(() => {
     const manualTrimmed = manualText.trim();
@@ -100,17 +102,38 @@ export default function ImportarSawebModal({
     }
   };
 
-  const handleVerify = () => {
-    const parsed = parseSawebTexts(allChunks, materias);
-    setVerifiedResult(parsed);
+  const handleVerify = async () => {
+    setVerifying(true);
+    try {
+      let targetPlan = plan;
+      let targetMaterias = materias;
 
-    if (parsed.totalMatched === 0) {
+      if (resolvePlanMaterias) {
+        const preliminary = parseSawebTexts(allChunks, []);
+        const resolved = await resolvePlanMaterias(preliminary.detectedPlan);
+        if (resolved?.targetPlan) targetPlan = resolved.targetPlan;
+        if (Array.isArray(resolved?.materias)) targetMaterias = resolved.materias;
+      }
+
+      const parsed = parseSawebTexts(allChunks, targetMaterias);
+      setVerifiedResult({ ...parsed, targetPlan });
+
+      if (parsed.totalMatched === 0) {
+        addToast({
+          title: "No se detectaron materias del plan",
+          description:
+            "Revisá haber copiado el texto completo del PDF Analítico o de la tabla de Cursadas de SAWeb.",
+          color: "warning",
+        });
+      }
+    } catch {
       addToast({
-        title: "No se detectaron materias del plan",
-        description:
-          "Revisá haber copiado el texto completo del PDF Analítico o de la tabla de Cursadas de SAWeb.",
-        color: "warning",
+        title: "No se pudo verificar el plan",
+        description: "Intentá nuevamente o seleccioná tu plan manualmente.",
+        color: "danger",
       });
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -157,6 +180,8 @@ export default function ImportarSawebModal({
       ]
     : [];
 
+  const effectivePlan = verifiedResult?.targetPlan || plan;
+
   return (
     <Modal
       isOpen={isOpen}
@@ -172,9 +197,11 @@ export default function ImportarSawebModal({
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#005A36] dark:text-[#6EE7B7]" />
                 <span>Importar desde SAWeb</span>
-                <Chip size="sm" variant="flat" color="success" className="text-[11px]">
-                  Plan {plan}
-                </Chip>
+                {effectivePlan && (
+                  <Chip size="sm" variant="flat" color="success" className="text-[11px]">
+                    Plan {effectivePlan}
+                  </Chip>
+                )}
               </div>
               <p className="text-xs font-normal text-[#64748B] dark:text-[#94A3B8]">
                 Cargá tu historial en segundos sin guardar DNI ni número de legajo.
@@ -298,12 +325,14 @@ export default function ImportarSawebModal({
                     </div>
                   </div>
 
-                  {verifiedResult.detectedPlan && verifiedResult.detectedPlan !== plan && (
+                  {verifiedResult.detectedPlan &&
+                    effectivePlan &&
+                    verifiedResult.detectedPlan !== effectivePlan && (
                     <div className="flex items-start gap-2.5 rounded-xl border border-[#FDE68A] dark:border-[#5C4318] bg-[#FFFBEB] dark:bg-[#2D2210] p-3 text-xs text-[#92400E] dark:text-[#FCD34D]">
                       <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                       <p>
                         El Analítico indica <strong>Plan {verifiedResult.detectedPlan}</strong>, pero
-                        tenés seleccionado el <strong>Plan {plan}</strong>. Solo se importarán las
+                        tenés seleccionado el <strong>Plan {effectivePlan}</strong>. Solo se importarán las
                         materias que coincidan con el plan activo.
                       </p>
                     </div>
@@ -324,7 +353,7 @@ export default function ImportarSawebModal({
                   {verifiedResult.counts.Omitidas > 0 && (
                     <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
                       Se omitieron {verifiedResult.counts.Omitidas} materia(s) de otro plan que no
-                      forman parte del Plan {plan} (
+                      forman parte del Plan {effectivePlan || "activo"} (
                       {verifiedResult.omittedCodes.map((o) => o.codigo).join(", ")}).
                     </p>
                   )}
@@ -339,7 +368,8 @@ export default function ImportarSawebModal({
               <Button
                 variant="bordered"
                 color="success"
-                isDisabled={!hasContent}
+                isDisabled={!hasContent || verifying}
+                isLoading={verifying}
                 onPress={handleVerify}
               >
                 Verificar
@@ -363,7 +393,8 @@ export default function ImportarSawebModal({
 ImportarSawebModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onOpenChange: PropTypes.func.isRequired,
-  plan: PropTypes.string.isRequired,
-  materias: PropTypes.array.isRequired,
+  plan: PropTypes.string,
+  materias: PropTypes.array,
+  resolvePlanMaterias: PropTypes.func,
   onApplyImport: PropTypes.func.isRequired,
 };

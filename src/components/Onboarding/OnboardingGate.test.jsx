@@ -35,6 +35,7 @@ vi.mock('../../services/planService', () => ({
 vi.mock('../../services/analyticsService', () => ({
     trackSeleccionCarrera: vi.fn(),
     trackProgresoInicial: vi.fn(),
+    trackImportarSaweb: vi.fn(),
 }));
 
 const mockAddToast = vi.fn();
@@ -52,8 +53,24 @@ vi.mock('@heroui/react', () => {
         useDisclosure,
         addToast: (...args) => mockAddToast(...args),
         Spinner: ({ label }) => <div role="status">{label || 'Cargando'}</div>,
-        Button: ({ children, onPress, 'aria-label': ariaLabel }) => (
-            <button type="button" onClick={onPress} aria-label={ariaLabel}>
+        Chip: ({ children }) => <span>{children}</span>,
+        Textarea: ({ value, onValueChange, placeholder, label }) => (
+            <textarea
+                aria-label={label || placeholder}
+                placeholder={placeholder}
+                value={value}
+                onChange={(e) => onValueChange?.(e.target.value)}
+            />
+        ),
+        Modal: ({ isOpen, children }) => (isOpen ? <div role="dialog">{children}</div> : null),
+        ModalContent: ({ children }) => (
+            <div>{typeof children === 'function' ? children(() => {}) : children}</div>
+        ),
+        ModalHeader: ({ children }) => <div>{children}</div>,
+        ModalBody: ({ children }) => <div>{children}</div>,
+        ModalFooter: ({ children }) => <div>{children}</div>,
+        Button: ({ children, onPress, isDisabled, 'aria-label': ariaLabel }) => (
+            <button type="button" onClick={onPress} disabled={isDisabled} aria-label={ariaLabel}>
                 {children}
             </button>
         ),
@@ -130,7 +147,8 @@ describe('OnboardingGate - Asistente inicial obligatorio, usuarios existentes y 
         expect(screen.queryByText('Contenido App')).toBeNull();
 
         fireEvent.click(screen.getByText(/¿No estás seguro en qué plan estás\?/i));
-        expect(screen.getByText(/SAWeb/i)).toBeTruthy();
+        expect(screen.getAllByText(/SAWeb/i).length).toBeGreaterThan(0);
+        expect(screen.getByRole('button', { name: /Importar SAWeb/i })).toBeTruthy();
         expect(screen.queryByText(/\bSIU\b/i)).toBeNull();
     });
 
