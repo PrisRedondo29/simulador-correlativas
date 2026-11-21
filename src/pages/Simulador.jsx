@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { addToast, Button, Spinner, useDisclosure, Card, CardBody, Modal, ModalContent, ModalBody } from '@heroui/react';
 
 import HeaderSimulador from '../components/Simulador/HeaderSimulador';
-import MateriasSimulador from '../components/Simulador/MateriasSimulador';
 import HistorialAcademico from '../components/Simulador/HistorialAcademico';
 import CarreraFinalizada from '../components/Simulador/CarreraFinalizada';
 import ConfiguracionSimulador from '../components/Simulador/modals/ConfiguracionSimulador';
@@ -15,7 +14,7 @@ import useSimuladorEstado from '../hooks/Simulador/useSimuladorEstado';
 import useSimuladorMaterias from '../hooks/Simulador/useSimuladorMaterias';
 import useSimuladorPDF from '../hooks/Simulador/useSimuladorPDF';
 import usePlanData from '../hooks/usePlanData';
-import { CloudDownload, Maximize2, Minimize2 } from 'lucide-react';
+import { CheckCircle2, CloudDownload, Maximize2, Minimize2, Pin, X } from 'lucide-react';
 import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
@@ -30,14 +29,23 @@ function Simulador({ plan: initialPlan }) {
 
     const [openedAccordions, setOpenedAccordions] = useState(new Set());
     const [descargandoPDF, setDescargandoPDF] = useState(false);
+    const [interactionMode, setInteractionMode] = useState('planificar');
+    const [selectedCodigo, setSelectedCodigo] = useState(null);
     const [viewMode, setViewMode] = useState(() => {
         const guardada = storageRepository.getRaw(STORAGE_KEYS.SIMULADOR_VISTA, null);
-        if (guardada && ['malla', 'grafo', 'lista'].includes(guardada)) {
+        if (guardada && ['malla', 'grafo'].includes(guardada)) {
             return guardada;
         }
         if (typeof window !== 'undefined' && window.innerWidth < 768) return 'malla';
         return 'grafo';
     });
+
+    const handleChangeInteractionMode = (nextMode) => {
+        setInteractionMode(nextMode);
+        if (nextMode === 'planificar') {
+            setSelectedCodigo(null);
+        }
+    };
 
     const handleCambioVista = (nuevoModo) => {
         setViewMode(nuevoModo);
@@ -142,7 +150,7 @@ function Simulador({ plan: initialPlan }) {
         };
     }, [plan, materias, progresoSimulado]);
 
-    const { cambioDeEstado, materiasCursables, materiasBloqueadas } = useSimuladorMaterias(
+    const { cambioDeEstado, materiasCursables } = useSimuladorMaterias(
         materias,
         progresoSimulado || {},
         cuatri,
@@ -164,11 +172,63 @@ function Simulador({ plan: initialPlan }) {
     }, [materias, historialSemestres, progresoBase, cuatri, anioActual]);
 
     const handleNodeClick = React.useCallback((codigo) => {
+        if (interactionMode === 'explorar') {
+            setSelectedCodigo((prev) => (prev === codigo ? null : codigo));
+            return;
+        }
         const item = projection?.items?.[codigo];
         if (item && item.estado === 'Presente') {
             cambioDeEstado(codigo);
         }
-    }, [projection, cambioDeEstado]);
+    }, [interactionMode, projection, cambioDeEstado]);
+
+    const selectedMateria = React.useMemo(
+        () => (selectedCodigo ? materias.find((m) => m.codigo === selectedCodigo) || null : null),
+        [selectedCodigo, materias],
+    );
+
+    const selectedStats = React.useMemo(() => {
+        if (!selectedMateria) return { reqs: 0, unlocks: 0 };
+        const reqs = selectedMateria.correlativas?.length || 0;
+        const unlocks = materias.filter((m) => m.correlativas?.includes(selectedMateria.codigo)).length;
+        return { reqs, unlocks };
+    }, [selectedMateria, materias]);
+
+    const isSelectedSimulatedApproved = Boolean(
+        selectedCodigo &&
+            (progresoSimulado?.[selectedCodigo] === 'Aprobado' ||
+                progresoSimulado?.[selectedCodigo] === 'Promocionado' ||
+                progresoSimulado?.[selectedCodigo] === 'Cursado'),
+    );
+
+    const handleToggleSelectedApproval = () => {
+        if (!selectedCodigo) return;
+        const nextEstado = isSelectedSimulatedApproved ? 'Disponible' : 'Aprobado';
+        setProgresoSimulado((prev) => ({
+            ...(prev || {}),
+            [selectedCodigo]: nextEstado,
+        }));
+    };
+
+    const hasRealProgressToImport = React.useMemo(
+        () =>
+            Boolean(
+                progresoReal &&
+                    Object.values(progresoReal).some((v) =>
+                        ['Aprobado', 'Promocionado', 'Regular', 'Cursando'].includes(v),
+                    ),
+            ),
+        [progresoReal],
+    );
+
+    const elegidasEsteCuatri = React.useMemo(
+        () =>
+            materiasCursables.filter((m) => {
+                const st = progresoSimulado?.[m.codigo];
+                return st === 'Cursado' || st === 'Aprobado' || st === 'Promocionado';
+            }).length,
+        [materiasCursables, progresoSimulado],
+    );
 
     const { handleDownloadPDF } = useSimuladorPDF({
         historialSemestres,
@@ -185,41 +245,114 @@ function Simulador({ plan: initialPlan }) {
         setProgresoSimulado(nuevo);
     };
 
-    const renderFloatingControls = () => (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center w-full px-4 max-w-sm sm:max-w-md pointer-events-none">
-            <div className="pointer-events-auto flex items-center bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] p-1.5 rounded-2xl shadow-md gap-2 sm:gap-4 w-full justify-between">
-                <Button
-                    onPress={handleAnterior}
-                    isDisabled={!estadoAnterior}
-                    variant="flat"
-                    size="sm"
-                    className="font-medium rounded-xl px-3 sm:px-4 min-w-0 h-9 bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
-                    startContent={<i className="fa-solid fa-chevron-left text-xs" />}
-                >
-                    <span className="text-xs sm:text-sm">Anterior</span>
-                </Button>
+    const renderModeControlBar = () => {
+        if (interactionMode === 'explorar') {
+            return (
+                <div className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl px-4 py-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    {selectedMateria ? (
+                        <>
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#005A36] dark:text-[#6EE7B7]">
+                                    <Pin size={14} className="shrink-0" aria-hidden="true" />
+                                    <span className="truncate">{selectedMateria.nombre}</span>
+                                    <span className="font-mono text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                        ({selectedMateria.codigo})
+                                    </span>
+                                </span>
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#FFFBEB] dark:bg-[#2D2210] text-[#92400E] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]">
+                                    Requiere: {selectedStats.reqs}
+                                </span>
+                                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]">
+                                    Habilita: {selectedStats.unlocks}
+                                </span>
+                            </div>
 
-                <div className="flex flex-col items-center px-1 sm:px-2 min-w-fit">
-                    <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8] font-medium leading-none">
-                        Simulando
-                    </span>
-                    <span className="text-xs sm:text-sm font-bold text-[#005A36] dark:text-[#6EE7B7] truncate whitespace-nowrap tabular-nums">
-                        {cuatri}° Cuatri · {anioActual}
-                    </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <Button
+                                    size="sm"
+                                    color={isSelectedSimulatedApproved ? 'default' : 'success'}
+                                    variant={isSelectedSimulatedApproved ? 'bordered' : 'solid'}
+                                    className={
+                                        isSelectedSimulatedApproved
+                                            ? 'h-8 text-xs font-medium'
+                                            : 'h-8 text-xs font-semibold bg-[#005A36] text-white'
+                                    }
+                                    startContent={<CheckCircle2 size={14} />}
+                                    onPress={handleToggleSelectedApproval}
+                                >
+                                    {isSelectedSimulatedApproved ? 'Quitar aprobación' : 'Simular aprobar'}
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="light"
+                                    className="h-8 text-xs text-[#64748B]"
+                                    startContent={<X size={14} />}
+                                    onPress={() => setSelectedCodigo(null)}
+                                >
+                                    Limpiar
+                                </Button>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex items-center gap-2 text-xs text-[#475569] dark:text-[#94A3B8]">
+                            <Pin size={14} className="text-[#005A36] dark:text-[#6EE7B7] shrink-0" aria-hidden="true" />
+                            <span>
+                                Tocá cualquier materia del mapa para dejarla fijada y ver sus requisitos previos (ámbar) y las materias que habilita (verde).
+                            </span>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        return (
+            <div className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl px-3 sm:px-4 py-2.5 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                    <Button
+                        onPress={handleAnterior}
+                        isDisabled={!estadoAnterior}
+                        variant="flat"
+                        size="sm"
+                        className="font-medium rounded-xl px-3 h-9 bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
+                        startContent={<i className="fa-solid fa-chevron-left text-xs" />}
+                    >
+                        <span className="text-xs sm:text-sm">Anterior</span>
+                    </Button>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 px-1 sm:px-2">
+                        <span className="text-xs sm:text-sm font-bold text-[#005A36] dark:text-[#6EE7B7] tabular-nums">
+                            {cuatri}° Cuatri · {anioActual}
+                        </span>
+                        <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] tabular-nums">
+                            {elegidasEsteCuatri} {elegidasEsteCuatri === 1 ? 'elegida' : 'elegidas'}
+                        </span>
+                    </div>
+
+                    <Button
+                        onPress={() => handleSiguiente(materiasCursables)}
+                        isDisabled={!estadoSiguiente}
+                        size="sm"
+                        className="font-semibold rounded-xl px-3 h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
+                        endContent={<i className="fa-solid fa-chevron-right text-xs" />}
+                    >
+                        <span className="text-xs sm:text-sm">Siguiente</span>
+                    </Button>
                 </div>
 
-                <Button
-                    onPress={() => handleSiguiente(materiasCursables)}
-                    isDisabled={!estadoSiguiente}
-                    size="sm"
-                    className="font-semibold rounded-xl px-3 sm:px-4 min-w-0 h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
-                    endContent={<i className="fa-solid fa-chevron-right text-xs" />}
-                >
-                    <span className="text-xs sm:text-sm">Siguiente</span>
-                </Button>
+                {historialSemestres.length === 0 && hasRealProgressToImport && (
+                    <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={handleImportarProgreso}
+                        className="font-semibold rounded-xl text-xs h-9 bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]"
+                        startContent={<CloudDownload size={14} />}
+                    >
+                        Importar desde Mis Materias
+                    </Button>
+                )}
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="flex flex-col gap-5 py-5 sm:py-6 px-4 sm:px-6 md:px-10 max-w-7xl mx-auto min-h-screen w-full">
@@ -306,6 +439,8 @@ function Simulador({ plan: initialPlan }) {
                         cuatri={cuatri}
                         anioInicio={anioInicio}
                         cuatriInicio={cuatriInicio}
+                        interactionMode={interactionMode}
+                        onChangeInteractionMode={handleChangeInteractionMode}
                         viewMode={viewMode}
                         onCambioVista={handleCambioVista}
                         onOpenConfig={onConfigOpen}
@@ -342,75 +477,41 @@ function Simulador({ plan: initialPlan }) {
                                         handleDownloadPDF={handleDownloadPDF}
                                         descargandoPDF={descargandoPDF}
                                     />
-                                ) : viewMode === 'lista' ? (
-                                    <div className="animate-in fade-in duration-300">
-                                        <div className="flex flex-wrap gap-2 justify-end mb-4">
-                                            <Button
-                                                variant="flat"
-                                                color="success"
-                                                size="sm"
-                                                className="font-medium text-xs rounded-xl"
-                                                onPress={() => marcarTodasEnPantalla('Cursado')}
-                                                startContent={<i className="fa-solid fa-check-double text-[11px]" />}
-                                                isDisabled={materiasCursables.length === 0}
-                                            >
-                                                Seleccionar todas
-                                            </Button>
-                                            <Button
-                                                variant="flat"
-                                                size="sm"
-                                                className="font-medium text-xs rounded-xl bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540]"
-                                                onPress={() => marcarTodasEnPantalla('No Cursado')}
-                                                startContent={<i className="fa-solid fa-rotate-left text-[11px]" />}
-                                                isDisabled={materiasCursables.length === 0}
-                                            >
-                                                Quitar todas
-                                            </Button>
-                                        </div>
-
-                                        {materiasCursables.length === 0 && materiasBloqueadas.length === 0 ? (
-                                            <div className="p-10 text-center text-[#64748B] bg-white dark:bg-[#161D24] rounded-2xl border border-dashed border-[#CBD5E1] dark:border-[#2A3540]">
-                                                <i className="fa-regular fa-folder-open text-3xl mb-2 opacity-60" />
-                                                <p className="text-sm font-medium">No hay materias disponibles para este cuatrimestre.</p>
-                                            </div>
-                                        ) : (
-                                            <MateriasSimulador
-                                                materiasCursables={materiasCursables}
-                                                materiasBloqueadas={materiasBloqueadas}
-                                                cambioDeEstado={cambioDeEstado}
-                                                progreso={progresoSimulado}
-                                            />
-                                        )}
-                                    </div>
                                 ) : viewMode === 'malla' ? (
-                                    <div className="relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs rounded-2xl overflow-hidden flex flex-col bg-white dark:bg-[#161D24]">
-                                        {renderFloatingControls()}
-                                        <MateriasMallaEstatica
-                                            materias={materias}
-                                            progreso={progresoSimulado}
-                                            onNodeClick={handleNodeClick}
-                                            projection={projection}
-                                            cambioDeEstado={cambioDeEstado}
-                                            marcarTodasEnPantalla={marcarTodasEnPantalla}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div
-                                        ref={grafoContainerRef}
-                                        className={`relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs transition-all duration-300 flex flex-col bg-white dark:bg-[#161D24] ${
-                                            isFullScreen
-                                                ? 'fixed inset-0 z-[1000] p-0 rounded-none w-screen h-screen'
-                                                : 'h-[620px] sm:h-[720px] rounded-2xl overflow-hidden'
-                                        }`}
-                                    >
-                                        {renderFloatingControls()}
-                                        <div className="flex-1 min-h-0">
-                                            <MateriasGrafo
+                                    <div className="space-y-3">
+                                        {renderModeControlBar()}
+                                        <div className="relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs rounded-2xl overflow-hidden flex flex-col bg-white dark:bg-[#161D24]">
+                                            <MateriasMallaEstatica
                                                 materias={materias}
                                                 progreso={progresoSimulado}
                                                 onNodeClick={handleNodeClick}
                                                 projection={projection}
-                                                topRightContent={
+                                                cambioDeEstado={cambioDeEstado}
+                                                marcarTodasEnPantalla={marcarTodasEnPantalla}
+                                                selectedCodigo={interactionMode === 'explorar' ? selectedCodigo : null}
+                                                interactionMode={interactionMode}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {renderModeControlBar()}
+                                        <div
+                                            ref={grafoContainerRef}
+                                            className={`relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs transition-all duration-300 flex flex-col bg-white dark:bg-[#161D24] ${
+                                                isFullScreen
+                                                    ? 'fixed inset-0 z-[1000] p-0 rounded-none w-screen h-screen'
+                                                    : 'h-[620px] sm:h-[720px] rounded-2xl overflow-hidden'
+                                            }`}
+                                        >
+                                            <div className="flex-1 min-h-0">
+                                                <MateriasGrafo
+                                                    materias={materias}
+                                                    progreso={progresoSimulado}
+                                                    onNodeClick={handleNodeClick}
+                                                    projection={projection}
+                                                    selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
+                                                    topRightContent={
                                                     <>
                                                         {progresoIntermedio.totales > 0 && (
                                                             <div
@@ -440,6 +541,7 @@ function Simulador({ plan: initialPlan }) {
                                                     </>
                                                 }
                                             />
+                                            </div>
                                         </div>
                                     </div>
                                 )}

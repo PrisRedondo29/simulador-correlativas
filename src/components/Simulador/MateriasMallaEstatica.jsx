@@ -4,12 +4,22 @@ import React, { useMemo, useState } from 'react';
  * MateriasMallaEstatica: Malla Curricular Nativa en HTML/CSS.
  * Unificada con la paleta serena institucional UNLu.
  */
-function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, cambioDeEstado, marcarTodasEnPantalla }) {
+function MateriasMallaEstatica({
+    materias,
+    progreso,
+    onNodeClick,
+    projection,
+    cambioDeEstado,
+    marcarTodasEnPantalla,
+    selectedCodigo = null,
+    interactionMode = 'planificar',
+}) {
     const items = useMemo(() => projection?.items || {}, [projection]);
     const labels = projection?.labels || {};
     const maxCol = projection?.maxCol || 0;
 
     const [hoveredCodigo, setHoveredCodigo] = useState(null);
+    const activeCodigo = selectedCodigo || hoveredCodigo;
 
     const colActiva = useMemo(() => {
         if (!items) return null;
@@ -22,9 +32,9 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
     }, [items]);
 
     const hoveredMateria = useMemo(() => {
-        if (!hoveredCodigo || !materias) return null;
-        return materias.find((m) => m.codigo === hoveredCodigo);
-    }, [hoveredCodigo, materias]);
+        if (!activeCodigo || !materias) return null;
+        return materias.find((m) => m.codigo === activeCodigo);
+    }, [activeCodigo, materias]);
 
     const columnasMap = useMemo(() => {
         const map = {};
@@ -217,7 +227,7 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
                                 const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
                                 const isDisponibleActiva = items[materia.codigo]?.estado === 'Presente';
 
-                                const isHovered = hoveredCodigo === materia.codigo;
+                                const isHovered = activeCodigo === materia.codigo;
                                 const isRequeridaPorHovered = hoveredMateria && hoveredMateria.correlativas?.includes(materia.codigo);
                                 const isDesbloqueadaPorHovered = hoveredMateria && materia.correlativas?.includes(hoveredMateria.codigo);
 
@@ -231,7 +241,9 @@ function MateriasMallaEstatica({ materias, progreso, onNodeClick, projection, ca
                                 }
 
                                 const handleCardPress = () => {
-                                    if (isDisponibleActiva && cambioDeEstado) {
+                                    if (interactionMode === 'explorar' && onNodeClick) {
+                                        onNodeClick(materia.codigo);
+                                    } else if (isDisponibleActiva && cambioDeEstado) {
                                         cambioDeEstado(materia.codigo);
                                     } else if (onNodeClick) {
                                         onNodeClick(materia.codigo);

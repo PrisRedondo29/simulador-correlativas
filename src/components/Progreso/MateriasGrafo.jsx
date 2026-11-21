@@ -159,7 +159,14 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
 /**
  * FlowInner: Componente interno con la lógica de interacción del grafo.
  */
-const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightContent }) => {
+const FlowInner = ({
+  materias,
+  progreso,
+  onNodeClick,
+  projection,
+  topRightContent,
+  selectedNodeId = null,
+}) => {
   const [direction, setDirection] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) return 'TB';
     return 'LR';
@@ -168,7 +175,7 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
   const [hoveredNode, setHoveredNode] = useState(null);
   const { zoomIn: rfZoomIn, zoomOut: rfZoomOut, fitView, setViewport } = useReactFlow();
 
-  const activeNodeId = hoveredNode;
+  const activeNodeId = selectedNodeId || hoveredNode;
 
   const initialNodes = useMemo(() => {
     const projItems = projection?.items || {};
@@ -317,14 +324,16 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
     }
 
     return edges.map(e => {
-      const isRelated = e.source === activeNodeId || e.target === activeNodeId;
-      if (isRelated) {
+      const isPrerequisite = e.target === activeNodeId;
+      const isUnlockedByActive = e.source === activeNodeId;
+      if (isPrerequisite || isUnlockedByActive) {
+        const edgeColor = isPrerequisite ? '#D97706' : '#005A36';
         return {
           ...e,
           type: 'straight',
           animated: true,
-          style: { stroke: '#005A36', strokeWidth: 2.5, opacity: 1 },
-          markerEnd: { type: MarkerType.ArrowClosed, color: '#005A36', width: 14, height: 14 },
+          style: { stroke: edgeColor, strokeWidth: 2.5, opacity: 1 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor, width: 14, height: 14 },
         };
       }
       return {
@@ -387,8 +396,8 @@ const FlowInner = ({ materias, progreso, onNodeClick, projection, topRightConten
       </div>
 
       {!activeNodeId && nodes.length > 0 && (
-        <div className="absolute top-14 sm:top-auto sm:bottom-20 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="bg-white dark:bg-[#161D24] text-[#64748B] dark:text-[#94A3B8] text-[11px] font-medium px-3 py-1 rounded-full shadow-2xs border border-[#E2E8F0] dark:border-[#2A3540] flex items-center gap-1.5 whitespace-nowrap">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <div className="bg-white/95 dark:bg-[#161D24]/95 text-[#64748B] dark:text-[#94A3B8] text-[11px] font-medium px-3 py-1 rounded-full shadow-2xs border border-[#E2E8F0] dark:border-[#2A3540] flex items-center gap-1.5 whitespace-nowrap">
             <i className="fa-solid fa-hand-pointer text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
             Pasá o tocá una materia para ver sus correlativas
           </div>
