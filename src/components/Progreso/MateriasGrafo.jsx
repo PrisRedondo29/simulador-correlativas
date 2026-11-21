@@ -24,7 +24,14 @@ const SemesterNode = ({ data }) => {
   if (data.variant === 'separator') {
     return (
       <div className="pointer-events-none select-none flex items-center justify-center">
-        <div className={`border-primary/30 dark:border-primary/20 border-dashed ${isHorizontal ? 'border-l-2 h-[900px]' : 'border-t-2 w-[900px]'}`} />
+        {isHorizontal ? (
+          <div
+            className="border-primary/30 dark:border-primary/20 border-dashed border-l-2"
+            style={{ height: `${data.height || 900}px` }}
+          />
+        ) : (
+          <div className="border-primary/30 dark:border-primary/20 border-dashed border-t-2 w-[255px] sm:w-[275px]" />
+        )}
       </div>
     );
   }
@@ -33,7 +40,7 @@ const SemesterNode = ({ data }) => {
 
   if (status === 'current') {
     return (
-      <div className="pointer-events-none select-none">
+      <div className="pointer-events-none select-none w-[255px] sm:w-[275px] flex justify-center">
         <div className="bg-[#005A36] dark:bg-[#2E8B63] text-white font-bold px-4 py-2 rounded-xl text-xs tracking-wide shadow-md ring-4 ring-[#005A36]/20 dark:ring-[#4A9D68]/30 inline-flex items-center justify-center gap-2 uppercase min-w-[170px]">
           <span className="w-2 h-2 rounded-full bg-[#86EFAC] animate-pulse shrink-0" aria-hidden="true" />
           <span>{data.label}</span>
@@ -47,7 +54,7 @@ const SemesterNode = ({ data }) => {
 
   if (status === 'past') {
     return (
-      <div className="pointer-events-none select-none">
+      <div className="pointer-events-none select-none w-[255px] sm:w-[275px] flex justify-center">
         <div className="bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] font-semibold px-4 py-2 rounded-xl text-xs tracking-wide text-center uppercase min-w-[140px]">
           ✓ {data.label}
         </div>
@@ -57,7 +64,7 @@ const SemesterNode = ({ data }) => {
 
   if (status === 'future') {
     return (
-      <div className="pointer-events-none select-none">
+      <div className="pointer-events-none select-none w-[255px] sm:w-[275px] flex justify-center">
         <div className="bg-white dark:bg-[#161D24] text-[#64748B] dark:text-[#94A3B8] border border-dashed border-[#CBD5E1] dark:border-[#2A3540] font-semibold px-4 py-2 rounded-xl text-xs tracking-wide text-center uppercase min-w-[140px]">
           {data.label}
         </div>
@@ -66,7 +73,7 @@ const SemesterNode = ({ data }) => {
   }
 
   return (
-    <div className="pointer-events-none select-none">
+    <div className="pointer-events-none select-none w-[255px] sm:w-[275px] flex justify-center">
       <div className="bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0] border border-[#E2E8F0] dark:border-[#2A3540] font-semibold px-4 py-2 rounded-xl text-xs tracking-wide text-center uppercase min-w-[140px]">
         {data.label}
       </div>
@@ -119,13 +126,16 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
     materiasPorColumna[col].push(node);
   });
 
-  const gapX = isHorizontal ? 340 : 320;
+  const cardWidth = 275;
+  const gapX = isHorizontal ? 345 : 320;
   const gapY = isHorizontal ? 170 : 270;
+  const maxNodesInCol = Math.max(...Object.values(materiasPorColumna).map((arr) => arr.length), 5);
+  const separatorHeight = Math.max(850, maxNodesInCol * gapY + 120);
 
   const newNodes = [];
   const startCol = 1;
   const endCol = maxCol || Math.max(...Object.keys(materiasPorColumna).map(Number), 0);
-  
+
   if (isHorizontal) {
     for (let col = startCol; col <= endCol; col++) {
       const colIdx = col - startCol;
@@ -135,7 +145,7 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
         id: `header-${col}`,
         type: 'semester',
         data: { label, direction, variant: 'header', status: getHeaderStatus(col) },
-        position: { x: colIdx * gapX + 40, y: -80 },
+        position: { x: colIdx * gapX, y: -80 },
         zIndex: -1,
         draggable: false,
       });
@@ -144,8 +154,8 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
         newNodes.push({
           id: `sep-${col}`,
           type: 'semester',
-          data: { direction, variant: 'separator' },
-          position: { x: (colIdx * gapX) - 20, y: -80 },
+          data: { direction, variant: 'separator', height: separatorHeight },
+          position: { x: colIdx * gapX - Math.round((gapX - cardWidth) / 2) - 1, y: -80 },
           zIndex: -2,
           draggable: false,
         });
