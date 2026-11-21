@@ -194,8 +194,8 @@ export default function ImportarSawebModal({
                 )}
               </div>
               <p className="text-xs font-normal text-[#64748B] dark:text-[#94A3B8]">
-                Lectura 100% local en tu dispositivo. Nunca guardamos tu DNI ni legajo, ni pisamos
-                tus notas de cursada.
+                Lectura 100% local en tu dispositivo. Nunca guardamos tu DNI ni legajo, y
+                conservamos tus notas y registros previos.
               </p>
             </ModalHeader>
 
@@ -213,9 +213,9 @@ export default function ImportarSawebModal({
                     Subilo acá abajo con <strong>Subir PDF del analítico</strong>.
                   </li>
                   <li>
-                    Corroborá las cantidades por estado antes de confirmar. Tus materias{" "}
-                    <strong>Regulares</strong>, <strong>Cursando</strong> y{" "}
-                    <strong>notas de cursada</strong> previas se conservan intactas.
+                    Corroborá las cantidades detectadas antes de confirmar. Se actualizan tus
+                    materias rendidas manteniendo compatibilidad con tus notas y registros previos,
+                    sin perder ni pisar información.
                   </li>
                 </ol>
               </div>

@@ -446,15 +446,32 @@ export function mergeSawebImportWithExisting(
         const importedEstado = importedProgreso[codigo];
 
         if (importedDet && importedEstado) {
-            mergedProgreso[codigo] = importedEstado;
+            const nextNotaReg =
+                prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null;
+            const nextFechaReg =
+                prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null;
+
+            let finalEstado = importedEstado;
+            // Si en el Analítico solo hay aplazos (sin aprobación) y ya estaba Regular en el simulador,
+            // recalcular si la regularidad sigue vigente según intentos y fecha de cursada.
+            if (
+                importedEstado === ESTADOS_MATERIA.LIBRE &&
+                prevEstado === ESTADOS_MATERIA.REGULAR
+            ) {
+                finalEstado = regularidadUtils.calcularEstadoConsolidado(
+                    ESTADOS_MATERIA.REGULAR,
+                    nextFechaReg,
+                    importedDet.intentosFinal,
+                );
+            }
+
+            mergedProgreso[codigo] = finalEstado;
             mergedDetalles[codigo] = {
                 ...prevDet,
                 ...importedDet,
                 // Nunca pisar nota de cursada ni fecha de regularidad cargadas previamente
-                notaRegularizacion:
-                    prevDet?.notaRegularizacion ?? importedDet.notaRegularizacion ?? null,
-                fechaRegularidad:
-                    prevDet?.fechaRegularidad ?? importedDet.fechaRegularidad ?? null,
+                notaRegularizacion: nextNotaReg,
+                fechaRegularidad: nextFechaReg,
                 ...(prevDet?.historial && { historial: prevDet.historial }),
             };
         } else if (

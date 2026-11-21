@@ -185,4 +185,35 @@ describe('sawebParser', () => {
         expect(merged.progresoDetalles['11079'].notaRegularizacion).toBe(7);
         expect(merged.progreso['11081']).toBe('Cursando');
     });
+
+    it('si estaba Regular y el Analítico trae 1 aplazo sin aprobar aún, mantiene Regular con el intento registrado', () => {
+        const analiticoConAplazo = `
+Plan 1713:
+11075 R-PROGRAMACION II 2(DOS) 0563-048 30-09-2025
+`;
+        const parsed = parseSawebTexts(analiticoConAplazo, MOCK_PLAN_1713);
+        const existingProgreso = { '11075': 'Regular' };
+        const existingDetalles = {
+            '11075': {
+                notaRegularizacion: 6,
+                fechaRegularidad: { anio: 2025, cuatrimestre: 1 },
+                intentosFinal: [],
+            },
+        };
+
+        const merged = mergeSawebImportWithExisting(
+            parsed,
+            existingProgreso,
+            existingDetalles,
+            MOCK_PLAN_1713,
+        );
+
+        expect(merged.progreso['11075']).toBe('Regular');
+        expect(merged.progresoDetalles['11075'].notaRegularizacion).toBe(6);
+        expect(merged.progresoDetalles['11075'].intentosFinal).toHaveLength(1);
+        expect(merged.progresoDetalles['11075'].intentosFinal[0]).toMatchObject({
+            estado: 'reprobado',
+            nota: 2,
+        });
+    });
 });
