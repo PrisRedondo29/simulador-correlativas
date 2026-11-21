@@ -167,6 +167,10 @@ const FlowInner = ({
   projection,
   topRightContent,
   selectedNodeId = null,
+  controlsPosition = 'top-left',
+  topOverlayContent = null,
+  bottomRightContent = null,
+  rounded = true,
 }) => {
   const [direction, setDirection] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 768) return 'TB';
@@ -335,8 +339,41 @@ const FlowInner = ({
     });
   }, [edges, activeNodeId]);
 
+  const zoomAndDirectionControls = (
+    <>
+      <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
+        <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
+        <Button isIconOnly onPress={() => rfZoomOut()} aria-label="Alejar" title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={15} /></Button>
+        <Button isIconOnly onPress={handleGoHome} aria-label="Centrar inicio" title="Centrar inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
+      </ButtonGroup>
+
+      <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
+        <Button
+          isIconOnly
+          color={direction === 'LR' ? 'primary' : 'default'}
+          onPress={() => setDirection('LR')}
+          aria-label="Vista horizontal"
+          title="Horizontal"
+          className="min-w-8 h-8 sm:min-w-9 sm:h-9"
+        >
+          <ArrowRight size={15} />
+        </Button>
+        <Button
+          isIconOnly
+          color={direction === 'TB' ? 'primary' : 'default'}
+          onPress={() => setDirection('TB')}
+          aria-label="Vista vertical"
+          title="Vertical"
+          className="min-w-8 h-8 sm:min-w-9 sm:h-9"
+        >
+          <ArrowDown size={15} />
+        </Button>
+      </ButtonGroup>
+    </>
+  );
+
   return (
-    <div className="w-full h-full min-h-0 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#0F1419] rounded-2xl">
+    <div className={`w-full h-full min-h-0 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#0F1419] ${rounded ? 'rounded-2xl' : 'rounded-none'}`}>
       {nodes.length === 0 && (
         <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-xs flex flex-col items-center justify-center p-8 gap-4 animate-pulse">
           <div className="flex items-center gap-3">
@@ -346,44 +383,37 @@ const FlowInner = ({
         </div>
       )}
 
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-20 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
-        <div className="flex items-center gap-1.5 pointer-events-auto">
-          <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
-            <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
-            <Button isIconOnly onPress={() => rfZoomOut()} aria-label="Alejar" title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={15} /></Button>
-            <Button isIconOnly onPress={handleGoHome} aria-label="Centrar inicio" title="Centrar inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
-          </ButtonGroup>
-
-          <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
-            <Button
-              isIconOnly
-              color={direction === 'LR' ? 'primary' : 'default'}
-              onPress={() => setDirection('LR')}
-              aria-label="Vista horizontal"
-              title="Horizontal"
-              className="min-w-8 h-8 sm:min-w-9 sm:h-9"
-            >
-              <ArrowRight size={15} />
-            </Button>
-            <Button
-              isIconOnly
-              color={direction === 'TB' ? 'primary' : 'default'}
-              onPress={() => setDirection('TB')}
-              aria-label="Vista vertical"
-              title="Vertical"
-              className="min-w-8 h-8 sm:min-w-9 sm:h-9"
-            >
-              <ArrowDown size={15} />
-            </Button>
-          </ButtonGroup>
+      {topOverlayContent ? (
+        <div className="absolute top-3 left-3 right-3 z-20 pointer-events-none">
+          {topOverlayContent}
         </div>
+      ) : (
+        <div className="absolute top-2.5 left-2.5 right-2.5 z-20 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
+          {controlsPosition === 'top-left' && (
+            <div className="flex items-center gap-1.5 pointer-events-auto">
+              {zoomAndDirectionControls}
+            </div>
+          )}
 
-        {topRightContent && (
-          <div className="flex items-center gap-1.5 pointer-events-auto ml-auto shrink-0">
-            {topRightContent}
-          </div>
-        )}
-      </div>
+          {topRightContent && (
+            <div className="flex items-center gap-1.5 pointer-events-auto ml-auto shrink-0">
+              {topRightContent}
+            </div>
+          )}
+        </div>
+      )}
+
+      {controlsPosition === 'bottom-left' && (
+        <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 pointer-events-auto">
+          {zoomAndDirectionControls}
+        </div>
+      )}
+
+      {bottomRightContent && (
+        <div className="absolute bottom-3 right-3 z-20 flex items-center gap-2 pointer-events-auto">
+          {bottomRightContent}
+        </div>
+      )}
 
       <ReactFlow
         nodes={nodes}

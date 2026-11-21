@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { addToast, Button, Spinner, useDisclosure, Card, CardBody, Modal, ModalContent, ModalBody } from '@heroui/react';
+import { addToast, Button, Spinner, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/react';
 
 import HeaderSimulador from '../components/Simulador/HeaderSimulador';
 import HistorialAcademico from '../components/Simulador/HistorialAcademico';
@@ -8,6 +8,8 @@ import ConfiguracionSimulador from '../components/Simulador/modals/Configuracion
 import GuardarSimulacion from '../components/Simulador/modals/GuardarSimulacion';
 import ConfirmarImportarModal from '../components/Simulador/modals/ConfirmarImportarModal';
 import SimuladorModeModal from '../components/Simulador/modals/SimuladorModeModal';
+import SimuladorSidePanel from '../components/Simulador/SimuladorSidePanel';
+import SimuladorFloatingHud from '../components/Simulador/SimuladorFloatingHud';
 import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverlay';
 import { TOUR_IDS, TUTORIAL_TOURS } from '../config/tutorialTours';
 import MateriasGrafo from '../components/Progreso/MateriasGrafo';
@@ -17,7 +19,7 @@ import useSimuladorEstado from '../hooks/Simulador/useSimuladorEstado';
 import useSimuladorMaterias from '../hooks/Simulador/useSimuladorMaterias';
 import useSimuladorPDF from '../hooks/Simulador/useSimuladorPDF';
 import usePlanData from '../hooks/usePlanData';
-import { CloudDownload, Maximize2, Minimize2, Pin, X } from 'lucide-react';
+import { CloudDownload, Columns2, Layers, Maximize2, Minimize2, PanelRightOpen, Pin, X } from 'lucide-react';
 import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
@@ -39,6 +41,9 @@ function Simulador({ plan: initialPlan }) {
         () => !storageRepository.getSimuladorModeSelected(),
     );
     const [selectedCodigo, setSelectedCodigo] = useState(null);
+    const [desktopLayout, setDesktopLayout] = useState('panel'); // 'panel' (Alt 2) | 'hud' (Alt 3)
+    const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
+    const [tourOpenKey, setTourOpenKey] = useState(0);
     const [viewMode] = useState(() => {
         if (typeof window !== 'undefined' && window.innerWidth < 768) return 'malla';
         return 'grafo';
@@ -89,6 +94,7 @@ function Simulador({ plan: initialPlan }) {
     const { isOpen: isConfigOpen, onClose: onConfigClose, onOpenChange: onConfigOpenChange, onOpen: onConfigOpen } = useDisclosure();
     const { isOpen: isGuardarOpen, onClose: onGuardarClose, onOpenChange: onGuardarOpenChange, onOpen: onGuardarOpen } = useDisclosure();
     const { isOpen: isConfirmImportOpen, onOpenChange: onConfirmImportOpenChange, onOpen: onConfirmImportOpen } = useDisclosure();
+    const { isOpen: isHistoryOpen, onOpen: onHistoryOpen, onOpenChange: onHistoryOpenChange } = useDisclosure();
 
     const {
         materias,
@@ -199,6 +205,14 @@ function Simulador({ plan: initialPlan }) {
         return { reqs, unlocks };
     }, [selectedMateria, materias]);
 
+    const selectedRelations = React.useMemo(() => {
+        if (!selectedMateria || !materias?.length) return { reqsList: [], unlocksList: [] };
+        const reqCodes = new Set(selectedMateria.correlativas || []);
+        const reqsList = materias.filter((m) => reqCodes.has(m.codigo));
+        const unlocksList = materias.filter((m) => m.correlativas?.includes(selectedMateria.codigo));
+        return { reqsList, unlocksList };
+    }, [selectedMateria, materias]);
+
     const elegidasEsteCuatri = React.useMemo(
         () =>
             materiasCursables.filter((m) => {
@@ -207,6 +221,12 @@ function Simulador({ plan: initialPlan }) {
             }).length,
         [materiasCursables, progresoSimulado],
     );
+
+    const handleBeforeTourStep = React.useCallback(() => {
+        if (desktopLayout === 'panel') {
+            setIsSidePanelOpen(true);
+        }
+    }, [desktopLayout]);
 
     const { handleDownloadPDF } = useSimuladorPDF({
         historialSemestres,
@@ -222,6 +242,61 @@ function Simulador({ plan: initialPlan }) {
         materiasCursables.forEach(m => { nuevo[m.codigo] = estado; });
         setProgresoSimulado(nuevo);
     };
+
+    const isDesktopGrafo = Boolean(plan) && !cargando && !simulacionTerminada && viewMode === 'grafo';
+
+    const renderIntermediateBadge = () => (
+        <div
+            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 border ${
+                isIntermedioCompletado
+                    ? 'bg-[#ECFDF5] text-[#166534] border-[#A7F3D0] dark:bg-[#102A20] dark:text-[#86EFAC] dark:border-[#1E4D38]'
+                    : 'bg-white/95 dark:bg-[#161D24]/95 text-[#334155] dark:text-[#E2E8F0] border-[#E2E8F0] dark:border-[#2A3540]'
+            }`}
+        >
+            <i className="fa-solid fa-graduation-cap text-xs text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+            <span className="hidden sm:inline">{tituloIntermedioNombre}:</span>
+            <span className="tabular-nums">
+                {progresoIntermedio.completadas}/{progresoIntermedio.totales}
+            </span>
+        </div>
+    );
+
+    const renderLayoutComparisonSwitcher = () => (
+        <div
+            aria-label="Comparar diseños de escritorio"
+            className="bg-white/95 dark:bg-[#161D24]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-[#2A3540] shadow-sm rounded-xl p-1 flex items-center gap-1"
+        >
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] px-1.5 hidden xl:inline">
+                Diseño
+            </span>
+            <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setDesktopLayout('panel')}
+                startContent={<Columns2 size={13} />}
+                className={`h-7 text-[11px] font-medium rounded-lg px-2 ${
+                    desktopLayout === 'panel'
+                        ? 'bg-[#005A36] text-white font-semibold shadow-2xs'
+                        : 'bg-transparent text-[#64748B] dark:text-[#94A3B8]'
+                }`}
+            >
+                Panel lateral
+            </Button>
+            <Button
+                size="sm"
+                variant="flat"
+                onPress={() => setDesktopLayout('hud')}
+                startContent={<Layers size={13} />}
+                className={`h-7 text-[11px] font-medium rounded-lg px-2 ${
+                    desktopLayout === 'hud'
+                        ? 'bg-[#005A36] text-white font-semibold shadow-2xs'
+                        : 'bg-transparent text-[#64748B] dark:text-[#94A3B8]'
+                }`}
+            >
+                HUD flotante
+            </Button>
+        </div>
+    );
 
     const renderModeControlBar = () => {
         if (interactionMode === 'explorar') {
@@ -313,7 +388,15 @@ function Simulador({ plan: initialPlan }) {
     };
 
     return (
-        <div className="flex flex-col gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full lg:h-[calc(100vh-3.5rem)] lg:max-h-[calc(100vh-3.5rem)] lg:overflow-hidden min-h-screen lg:min-h-0">
+        <div
+            className={
+                isDesktopGrafo
+                    ? `w-full flex flex-col h-[calc(100vh-3.5rem)] max-h-[calc(100vh-3.5rem)] overflow-hidden ${
+                          desktopLayout === 'hud' ? 'p-0' : 'p-3'
+                      }`
+                    : 'flex flex-col gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full min-h-[calc(100vh-3.5rem)]'
+            }
+        >
             <ConfiguracionSimulador
                 isOpen={isConfigOpen}
                 onOpenChange={onConfigOpenChange}
@@ -347,6 +430,24 @@ function Simulador({ plan: initialPlan }) {
                 isOpen={Boolean(plan) && !cargando && isModeModalOpen}
                 onSelectMode={handleSelectInitialMode}
             />
+
+            <Modal isOpen={isHistoryOpen} onOpenChange={onHistoryOpenChange} size="3xl" scrollBehavior="inside">
+                <ModalContent>
+                    <ModalHeader className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                        Historial de cuatrimestres simulados
+                    </ModalHeader>
+                    <ModalBody className="pb-6">
+                        <HistorialAcademico
+                            historialSemestres={historialSemestres}
+                            openedAccordions={openedAccordions}
+                            setOpenedAccordions={setOpenedAccordions}
+                            descargandoPDF={descargandoPDF}
+                            plan={plan}
+                            materias={materias}
+                        />
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
 
             <Modal isOpen={descargandoPDF} hideCloseButton isDismissable={false} backdrop="opaque" placement="center">
                 <ModalContent>
@@ -393,7 +494,152 @@ function Simulador({ plan: initialPlan }) {
                 </div>
             )}
 
-            {plan && (
+            {plan && isDesktopGrafo && (
+                <div className="animate-in fade-in duration-300 flex-1 min-h-0 flex flex-col">
+                    <InteractiveTourOverlay
+                        tour={TUTORIAL_TOURS[TOUR_IDS.SIMULADOR]}
+                        ready={Boolean(plan) && !cargando && !isModeModalOpen}
+                        triggerPlacement="hidden"
+                        openRequestKey={tourOpenKey}
+                        onBeforeStep={handleBeforeTourStep}
+                    />
+
+                    {desktopLayout === 'panel' ? (
+                        <div className="flex flex-1 min-h-0 h-full w-full gap-3">
+                            <div
+                                ref={grafoContainerRef}
+                                className={`relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs flex-1 min-w-0 h-full flex flex-col bg-white dark:bg-[#161D24] ${
+                                    isFullScreen
+                                        ? 'fixed inset-0 z-[1000] p-0 rounded-none w-screen h-screen'
+                                        : 'rounded-2xl overflow-hidden'
+                                }`}
+                            >
+                                <div className="flex-1 min-h-0 h-full">
+                                    <MateriasGrafo
+                                        materias={materias}
+                                        progreso={progresoSimulado}
+                                        onNodeClick={handleNodeClick}
+                                        projection={projection}
+                                        selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
+                                        controlsPosition="top-left"
+                                        rounded={true}
+                                        topRightContent={
+                                            <>
+                                                {interactionMode === 'planificar' &&
+                                                    progresoIntermedio.totales > 0 &&
+                                                    renderIntermediateBadge()}
+                                                <Button
+                                                    isIconOnly
+                                                    variant="flat"
+                                                    className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] min-w-8 h-8 sm:min-w-9 sm:h-9"
+                                                    onPress={toggleFullScreen}
+                                                    aria-label={isFullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                                                    title={isFullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                                                >
+                                                    {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                                                </Button>
+                                                {!isSidePanelOpen && !isFullScreen && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="flat"
+                                                        onPress={() => setIsSidePanelOpen(true)}
+                                                        startContent={<PanelRightOpen size={14} />}
+                                                        className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#005A36] dark:text-[#6EE7B7] font-semibold h-8 sm:h-9 rounded-xl"
+                                                    >
+                                                        Panel
+                                                    </Button>
+                                                )}
+                                            </>
+                                        }
+                                        bottomRightContent={renderLayoutComparisonSwitcher()}
+                                    />
+                                </div>
+                            </div>
+
+                            {isSidePanelOpen && (
+                                <SimuladorSidePanel
+                                    plan={plan}
+                                    interactionMode={interactionMode}
+                                    onChangeInteractionMode={handleChangeInteractionMode}
+                                    cuatri={cuatri}
+                                    anioActual={anioActual}
+                                    elegidasEsteCuatri={elegidasEsteCuatri}
+                                    estadoAnterior={estadoAnterior}
+                                    estadoSiguiente={estadoSiguiente}
+                                    onAnterior={handleAnterior}
+                                    onSiguiente={() => handleSiguiente(materiasCursables)}
+                                    tituloIntermedioNombre={tituloIntermedioNombre}
+                                    progresoIntermedio={progresoIntermedio}
+                                    isIntermedioCompletado={isIntermedioCompletado}
+                                    historialSemestres={historialSemestres}
+                                    onOpenHistory={onHistoryOpen}
+                                    selectedMateria={selectedMateria}
+                                    selectedRelations={selectedRelations}
+                                    onSelectCodigo={setSelectedCodigo}
+                                    onImportarProgreso={handleImportarProgreso}
+                                    onOpenConfig={onConfigOpen}
+                                    onOpenTutorial={() => setTourOpenKey((k) => k + 1)}
+                                    onClose={() => setIsSidePanelOpen(false)}
+                                />
+                            )}
+                        </div>
+                    ) : (
+                        <div
+                            ref={grafoContainerRef}
+                            className={`relative flex-1 min-h-0 flex flex-col bg-[#F8FAFC] dark:bg-[#0F1419] ${
+                                isFullScreen
+                                    ? 'fixed inset-0 z-[1000] p-0 rounded-none w-screen h-screen'
+                                    : 'w-full h-full overflow-hidden'
+                            }`}
+                        >
+                            <div className="flex-1 min-h-0 h-full">
+                                <MateriasGrafo
+                                    materias={materias}
+                                    progreso={progresoSimulado}
+                                    onNodeClick={handleNodeClick}
+                                    projection={projection}
+                                    selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
+                                    controlsPosition="bottom-left"
+                                    rounded={false}
+                                    topOverlayContent={
+                                        <SimuladorFloatingHud
+                                            interactionMode={interactionMode}
+                                            onChangeInteractionMode={handleChangeInteractionMode}
+                                            cuatri={cuatri}
+                                            anioActual={anioActual}
+                                            elegidasEsteCuatri={elegidasEsteCuatri}
+                                            estadoAnterior={estadoAnterior}
+                                            estadoSiguiente={estadoSiguiente}
+                                            onAnterior={handleAnterior}
+                                            onSiguiente={() => handleSiguiente(materiasCursables)}
+                                            historialSemestres={historialSemestres}
+                                            onOpenHistory={onHistoryOpen}
+                                            selectedMateria={selectedMateria}
+                                            selectedStats={selectedStats}
+                                            onClearSelected={() => setSelectedCodigo(null)}
+                                            onImportarProgreso={handleImportarProgreso}
+                                            onOpenConfig={onConfigOpen}
+                                            onOpenTutorial={() => setTourOpenKey((k) => k + 1)}
+                                            isFullScreen={isFullScreen}
+                                            onToggleFullScreen={toggleFullScreen}
+                                        />
+                                    }
+                                    bottomRightContent={
+                                        <>
+                                            {interactionMode === 'planificar' &&
+                                                progresoIntermedio.totales > 0 &&
+                                                renderIntermediateBadge()}
+                                            {renderLayoutComparisonSwitcher()}
+                                        </>
+                                    }
+                                />
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {plan && !isDesktopGrafo && (
                 <div className="animate-in fade-in duration-300 flex flex-col gap-3 flex-1 min-h-0">
                     <InteractiveTourOverlay
                         tour={TUTORIAL_TOURS[TOUR_IDS.SIMULADOR]}
@@ -443,7 +689,7 @@ function Simulador({ plan: initialPlan }) {
                                         handleDownloadPDF={handleDownloadPDF}
                                         descargandoPDF={descargandoPDF}
                                     />
-                                ) : viewMode === 'malla' ? (
+                                ) : (
                                     <div className="space-y-2 flex-1 min-h-0 flex flex-col">
                                         <div className="shrink-0">{renderModeControlBar()}</div>
                                         <div className="relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs rounded-2xl overflow-hidden flex-1 min-h-0 flex flex-col bg-white dark:bg-[#161D24]">
@@ -459,96 +705,8 @@ function Simulador({ plan: initialPlan }) {
                                             />
                                         </div>
                                     </div>
-                                ) : (
-                                    <div className="space-y-2 flex-1 min-h-0 flex flex-col">
-                                        <div className="shrink-0">{renderModeControlBar()}</div>
-                                        <div
-                                            ref={grafoContainerRef}
-                                            className={`relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs transition-all duration-300 flex-1 min-h-[420px] lg:min-h-0 flex flex-col bg-white dark:bg-[#161D24] ${
-                                                isFullScreen
-                                                    ? 'fixed inset-0 z-[1000] p-0 rounded-none w-screen h-screen'
-                                                    : 'h-[580px] lg:h-full rounded-2xl overflow-hidden'
-                                            }`}
-                                        >
-                                            <div className="flex-1 min-h-0 h-full">
-                                                <MateriasGrafo
-                                                    materias={materias}
-                                                    progreso={progresoSimulado}
-                                                    onNodeClick={handleNodeClick}
-                                                    projection={projection}
-                                                    selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
-                                                    topRightContent={
-                                                    <>
-                                                        {interactionMode === 'planificar' && progresoIntermedio.totales > 0 && (
-                                                            <div
-                                                                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 border ${
-                                                                    isIntermedioCompletado
-                                                                        ? 'bg-[#ECFDF5] text-[#166534] border-[#A7F3D0] dark:bg-[#102A20] dark:text-[#86EFAC] dark:border-[#1E4D38]'
-                                                                        : 'bg-white dark:bg-[#161D24] text-[#334155] dark:text-[#E2E8F0] border-[#E2E8F0] dark:border-[#2A3540]'
-                                                                }`}
-                                                            >
-                                                                <i className="fa-solid fa-graduation-cap text-xs text-[#005A36] dark:text-[#6EE7B7]" />
-                                                                <span className="hidden sm:inline">{tituloIntermedioNombre}:</span>
-                                                                <span className="tabular-nums">
-                                                                    {progresoIntermedio.completadas}/{progresoIntermedio.totales}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        <Button
-                                                            isIconOnly
-                                                            variant="flat"
-                                                            className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] min-w-8 h-8 sm:min-w-9 sm:h-9"
-                                                            onPress={toggleFullScreen}
-                                                            aria-label={isFullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                                                            title={isFullScreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-                                                        >
-                                                            {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-                                                        </Button>
-                                                    </>
-                                                }
-                                            />
-                                            </div>
-                                        </div>
-                                    </div>
                                 )}
                             </div>
-
-                            {viewMode === 'lista' && !simulacionTerminada && (
-                                <Card shadow="none" className="mt-4 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
-                                    <CardBody className="flex flex-col md:flex-row justify-between items-center p-4 gap-3">
-                                        <Button
-                                            onPress={handleAnterior}
-                                            isDisabled={!estadoAnterior}
-                                            variant="flat"
-                                            startContent={<i className="fa-solid fa-chevron-left text-xs" />}
-                                            className="w-full md:w-auto font-medium bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
-                                        >
-                                            Anterior
-                                        </Button>
-
-                                        <div className="flex flex-col items-center text-center">
-                                            <span className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-                                                {cuatri}° Cuatrimestre · Año {anioActual}
-                                            </span>
-                                            {progresoIntermedio.totales > 0 && (
-                                                <span className={`text-xs font-semibold ${isIntermedioCompletado ? 'text-[#478559] dark:text-[#86EFAC]' : 'text-[#005A36] dark:text-[#6EE7B7]'}`}>
-                                                    {tituloIntermedioNombre}: {progresoIntermedio.porcentaje}%
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <Button
-                                            onPress={() => handleSiguiente(materiasCursables)}
-                                            isDisabled={!estadoSiguiente}
-                                            className="w-full md:w-auto font-semibold bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
-                                            endContent={<i className="fa-solid fa-chevron-right text-xs" />}
-                                            aria-label="Siguiente cuatrimestre"
-                                        >
-                                            Siguiente
-                                        </Button>
-                                    </CardBody>
-                                </Card>
-                            )}
                         </div>
                     )}
                 </div>

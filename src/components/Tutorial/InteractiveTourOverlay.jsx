@@ -18,6 +18,7 @@ export default function InteractiveTourOverlay({
   ready = true,
   triggerPlacement = "inline",
   onBeforeStep = null,
+  openRequestKey = 0,
 }) {
   const location = useLocation();
   const navigate = useNavigate();
@@ -70,6 +71,13 @@ export default function InteractiveTourOverlay({
     }
     return undefined;
   }, [ready, tour, steps.length, location.state, location.pathname, navigate, startTour]);
+
+  // Apertura manual solicitada desde controles externos (ej. botón en panel o HUD)
+  useEffect(() => {
+    if (!ready || !openRequestKey || !steps.length) return undefined;
+    const timer = setTimeout(() => startTour(0), 20);
+    return () => clearTimeout(timer);
+  }, [ready, openRequestKey, steps.length, startTour]);
 
   const finishTour = useCallback(
     (action = "complete") => {
@@ -184,7 +192,7 @@ export default function InteractiveTourOverlay({
   if (!ready || !tour) return null;
 
   if (!isOpen) {
-    if (prefs.pillHidden) return null;
+    if (triggerPlacement === "hidden" || prefs.pillHidden) return null;
 
     const pillContent = (
       <div className="inline-flex items-center rounded-full bg-white/95 dark:bg-[#161D24]/95 border border-[#E2E8F0] dark:border-[#2A3540] shadow-xs">
@@ -359,6 +367,7 @@ InteractiveTourOverlay.propTypes = {
     ).isRequired,
   }),
   ready: PropTypes.bool,
-  triggerPlacement: PropTypes.oneOf(["inline", "floating"]),
+  triggerPlacement: PropTypes.oneOf(["inline", "floating", "hidden"]),
   onBeforeStep: PropTypes.func,
+  openRequestKey: PropTypes.number,
 };
