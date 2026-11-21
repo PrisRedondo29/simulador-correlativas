@@ -16,7 +16,6 @@ const mockFetchCloudBundle = vi.fn();
 const mockUploadAcademicSnapshot = vi.fn();
 const mockGetUserData = vi.fn();
 const mockGetUserRole = vi.fn();
-const mockSaveUserSimulacion = vi.fn();
 const mockLogout = vi.fn();
 const mockAddToast = vi.fn();
 
@@ -51,7 +50,6 @@ vi.mock('../services/analyticsService', () => ({
 vi.mock('../services/dbService', () => ({
     getUserData: (...args) => mockGetUserData(...args),
     getUserRole: (...args) => mockGetUserRole(...args),
-    saveUserSimulacion: (...args) => mockSaveUserSimulacion(...args),
 }));
 
 // Mantenemos adoptRemoteSnapshot y claimLocalSnapshotForAccount REALES de syncService
@@ -281,12 +279,12 @@ describe('AuthContext + SyncModal - Integración React completa (Etapa 6A.2)', (
         expect(screen.getByTestId('sync-status').textContent).toBe(SYNC_STATUS.SYNCED);
         expect(screen.getByTestId('alias').textContent).toBe('Pris');
 
-        // 1. Guardar simulación local NO dispara saveUserSimulacion y marca pending automáticamente
+        // 1. Guardar simulación local NO dispara subida inmediata a la nube y marca pending automáticamente
         act(() => {
             authBox.current.setSimulacionLocal('17.14', { anioFinal: 2029, historial: [] });
         });
 
-        expect(mockSaveUserSimulacion).not.toHaveBeenCalled();
+        expect(mockUploadAcademicSnapshot).not.toHaveBeenCalled();
         expect(storageRepository.getSimulacion('17.14')).toEqual({ anioFinal: 2029, historial: [] });
         expect(screen.getByTestId('sync-status').textContent).toBe(SYNC_STATUS.PENDING);
 

@@ -17,6 +17,8 @@ import { auth, db } from './firebase';
 import { trackErrorGA } from './analyticsService';
 import storageRepository from './storageRepository';
 
+const FIRESTORE_AUTH_READY_TIMEOUT_MS = 500;
+
 // ─── Entorno ──────────────────────────────────────────────────────────────────
 const IS_DEV = import.meta.env.DEV === true;
 
@@ -170,6 +172,45 @@ const devLog = (level, errorCode, errorMessage, context) => {
 // ─── API pública ──────────────────────────────────────────────────────────────
 
 /**
+ * Sanitiza un objeto de contexto para escritura en Firestore (`app_logs`)
+ * respetando estrictamente la lista blanca y los límites de `firestore.rules`.
+ *
+ * @param {Record<string, unknown> | null | undefined} ctx
+ * @returns {Record<string, string | number | boolean | null>}
+ */
+export const sanitizeFirestoreLogContext = (ctx) => {
+    /** @type {Record<string, string | number | boolean | null>} */
+    const clean = {};
+    if (!ctx || typeof ctx !== 'object') return clean;
+
+    if (typeof ctx.scope === 'string') {
+        clean.scope = sanitizeLogString(ctx.scope).trim().slice(0, 40);
+    }
+    if (typeof ctx.route === 'string') {
+        clean.route = sanitizeLogString(ctx.route).trim().slice(0, 200);
+    }
+    if (ctx.plan === null) {
+        clean.plan = null;
+    } else if (typeof ctx.plan === 'string') {
+        clean.plan = sanitizeLogString(ctx.plan).trim().slice(0, 20);
+    }
+    if (typeof ctx.source === 'string') {
+        clean.source = sanitizeLogString(ctx.source).trim().slice(0, 60);
+    }
+    if (typeof ctx.action === 'string') {
+        clean.action = sanitizeLogString(ctx.action).trim().slice(0, 60);
+    }
+    if (typeof ctx.retries === 'number' && Number.isFinite(ctx.retries)) {
+        clean.retries = Math.min(100, Math.max(0, Math.trunc(ctx.retries)));
+    }
+    if (typeof ctx.offline === 'boolean') {
+        clean.offline = ctx.offline;
+    }
+
+    return clean;
+};
+
+/**
  * Persiste de forma asíncrona y segura (fire-and-forget) un registro de error en `app_logs`
  * cumpliendo estrictamente el contrato validado por `firestore.rules`.
  *
@@ -181,13 +222,14 @@ const devLog = (level, errorCode, errorMessage, context) => {
  *   componentStack?: string | null,
  *   planActivo?: string | null,
  *   uid?: string | null,
- *   context?: Record<string, string | number | boolean>,
+ *   context?: Record<string, unknown>,
  * }} payload
  * @param {{
  *   addDocFn?: typeof addDoc,
  *   collectionFn?: typeof collection,
  *   serverTimestampFn?: typeof serverTimestamp,
  *   firestoreDb?: typeof db,
+ *   authInstance?: { currentUser?: { uid?: string | null } | null, authStateReady?: () => Promise<void> } | null,
  * }} [deps]
  * @returns {Promise<boolean>}
  */
@@ -197,11 +239,32 @@ export const persistAppLogToFirestore = async (payload, deps = {}) => {
         collectionFn = collection,
         serverTimestampFn = serverTimestamp,
         firestoreDb = db,
+        authInstance = deps.firestoreDb ? null : auth,
     } = deps;
 
     if (!firestoreDb) return false;
 
     try {
+        /** @type {string | null} */
+        let safeUid = null;
+        if (authInstance) {
+            if (typeof authInstance.authStateReady === 'function') {
+                try {
+                    await Promise.race([
+                        authInstance.authStateReady(),
+                        new Promise((resolve) => setTimeout(resolve, FIRESTORE_AUTH_READY_TIMEOUT_MS)),
+                    ]);
+                } catch {
+                    // Ignorar fallos al aguardar hidratación de Auth para no bloquear telemetría
+                }
+            }
+            const authUid = authInstance.currentUser?.uid;
+            safeUid = typeof authUid === 'string' && authUid.trim() ? authUid.trim() : null;
+        } else {
+            safeUid =
+                typeof payload.uid === 'string' && payload.uid.trim() ? payload.uid.trim() : null;
+        }
+
         const safeCode = String(payload.errorCode || 'unknown').trim().slice(0, 100) || 'unknown';
         const safeMessage = sanitizeMessage(payload.errorMessage || 'Sin detalle') || 'Sin detalle';
         const safeRoute = String(payload.route || '/').trim().slice(0, 200) || '/';
@@ -210,8 +273,7 @@ export const persistAppLogToFirestore = async (payload, deps = {}) => {
                 ? payload.planActivo.trim().slice(0, 20)
                 : null;
         const safeStack = sanitizeComponentStack(payload.componentStack);
-        const safeUid =
-            typeof payload.uid === 'string' && payload.uid.trim() ? payload.uid.trim() : null;
+        const safeContext = sanitizeFirestoreLogContext(payload.context);
 
         const docData = {
             level: payload.level === LOG_LEVEL.WARNING ? LOG_LEVEL.WARNING : LOG_LEVEL.ERROR,
@@ -221,7 +283,7 @@ export const persistAppLogToFirestore = async (payload, deps = {}) => {
             componentStack: safeStack,
             planActivo: safePlan,
             uid: safeUid,
-            context: payload.context || {},
+            context: safeContext,
             createdAt: serverTimestampFn(),
         };
 
@@ -279,8 +341,7 @@ export const writeLog = ({
         }
 
         if (persistToDatabase) {
-            const currentUid =
-                userId !== undefined ? userId : (auth?.currentUser?.uid ?? null);
+            const currentUid = auth?.currentUser?.uid ?? (userId ?? null);
             const currentPlan = storageRepository.getPlanActivo();
             void persistAppLogToFirestore(
                 {

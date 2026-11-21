@@ -1,6 +1,4 @@
 import {
-    saveUserProgreso,
-    saveUserCursada,
     getUserData,
     commitAcademicBundleTransaction,
 } from './dbService';
@@ -246,36 +244,6 @@ export const uploadAcademicSnapshot = async (uid, options = {}) => {
         hasConcurrentLocalEdits,
         nextStatus: SYNC_STATUS.ERROR,
     };
-};
-
-/**
- * Sube el progreso actual de un plan a la nube de forma manual.
- * Se asegura de leer tanto el progreso (estados) como los detalles (notas, fechas)
- * desde storageRepository antes de enviarlos.
- * @param {string} uid
- * @param {string} plan
- * @returns {Promise<boolean>}
- */
-export const uploadPlanProgress = async (uid, plan) => {
-    try {
-        const progreso = storageRepository.getProgreso(plan, null);
-        const detalles = storageRepository.getProgresoDetalles(plan, {});
-        const cursada = storageRepository.getCursada(plan, null);
-
-        if (!progreso && !cursada) {
-            throw new Error('No hay datos locales para este plan.');
-        }
-
-        if (progreso) {
-            await saveUserProgreso(uid, plan, progreso, detalles || {}, cursada);
-        } else if (cursada) {
-            await saveUserCursada(uid, plan, cursada);
-        }
-        return true;
-    } catch (error) {
-        if (import.meta.env.DEV) console.error('Error al subir datos:', error);
-        throw error;
-    }
 };
 
 /**

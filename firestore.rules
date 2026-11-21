@@ -1,524 +1,315 @@
 rules_version = '2';
 
-// ===============================================================
-// Assumed Data Model
-// ===============================================================
-//
-// This security rules file assumes the following data structures:
-//
-// Collection: users
-// Document ID: {userId} (must match request.auth.uid)
-// Access: Private per-user profile and unified academic sync snapshot.
-//         Contains PII (email, displayName, photoURL); strictly owner-get only.
-//         Collection listing and client-side deletes are explicitly denied.
-// Fields:
-//   - uid: string (required, immutable after creation, must equal userId / request.auth.uid)
-//   - email: string | null (optional, empty string or valid email, max 254 chars)
-//   - displayName: string | null (optional, max 120 chars)
-//   - photoURL: string | null (optional, empty string or valid http/https URL, max 1000 chars)
-//   - createdAt: timestamp (optional on create, must equal request.time when set; immutable once set; cannot be added/modified/deleted on update)
-//   - schemaVersion: int (optional, range 1..10; cannot be deleted once set)
-//   - syncRevision: int (optional; on create: 1 if academic payload is present, else 0..1;
-//                        on update: must increment strictly by +1 from previous revision
-//                        whenever any academic sync field changes, otherwise must remain unchanged)
-//   - academicHash: string (optional, 1..64 chars, deterministic content hash e.g. "v1:<16 hex>")
-//   - academicUpdatedAt: timestamp (optional, must equal request.time on create or when modified; cannot be deleted)
-//   - configUpdatedAt: timestamp (optional, must equal request.time on create or when modified; cannot be deleted)
-//   - config: map (optional, keys strictly limited to ['alias', 'planActivo', 'tema']):
-//       - alias: string (optional, max 80 chars)
-//       - planActivo: string | null (optional, max 20 chars)
-//       - tema: string (optional, enum: 'light' | 'dark' | 'system')
-//   - progreso: map (optional, max 25 plan entries, maps plan ID -> subject status map)
-//   - progresoDetalles: map (optional, max 25 plan entries, maps plan ID -> subject details map)
-//   - cursada: map (optional, max 25 plan entries, maps plan ID -> schedule/events/log map)
-//   - simulaciones: map (optional, max 25 plan entries, maps plan ID -> simulation payload)
-//
-// Legacy Update Compatibility:
-//   Existing production documents may contain untouched legacy keys (e.g.,
-//   materiasAprobadas, progresoUpdatedAt, cursadaUpdatedAt, simulacionUpdatedAt,
-//   or literal dotted root keys like "progreso.17.13"). Updates validate
-//   request.resource.data.diff(resource.data).affectedKeys().hasOnly(...) so
-//   untouched legacy fields do not break legitimate updates while still blocking
-//   clients from creating, modifying, or deleting unauthorized fields.
-//
-// Collection: roles
-// Document ID: {userId} (must match request.auth.uid)
-// Access: Self-lookup only via single-document get. Listing and all client
-//         writes are denied; roles are managed exclusively via Admin SDK / Console.
-// Fields:
-//   - role: string ('admin' | 'user', managed out-of-band)
-//
-// Collection: app_logs
-// Document ID: {logId} (auto-generated)
-// Access: Client error/warning telemetry (e.g., ErrorBoundary crashes).
-//         Anyone (anonymous or authenticated) may create strictly validated log
-//         entries with server-enforced request.time, bounded field sizes, closed
-//         bounded context schema, and strict uid attribution (authenticated callers
-//         MUST set uid == request.auth.uid; unauthenticated callers MUST omit uid
-//         or set uid == null). Documents are strictly immutable after creation
-//         (update is denied for everyone, including admins).
-//         Only verified admins (/roles/{uid}.role == 'admin') may get, list,
-//         or delete log documents from the Admin Panel.
-// Fields:
-//   - level: string (required, enum: 'error' | 'warning')
-//   - errorCode: string (required, 1..100 chars)
-//   - errorMessage: string (required, 1..500 chars)
-//   - route: string (required, 1..200 chars)
-//   - createdAt: timestamp (required, must equal request.time)
-//   - componentStack: string | null (optional, max 1000 chars)
-//   - planActivo: string | null (optional, max 20 chars)
-//   - uid: string | null (required == request.auth.uid when authenticated; absent or null when unauthenticated)
-//   - context: map (optional, closed keys ['scope', 'route', 'plan', 'source', 'action', 'retries', 'offline'] with strict types/bounds)
-//
-// Collection: catalog_meta
-// Document ID: {docId} (publicly readable only for 'index')
-// Access: Public curriculum catalog version index (non-PII).
-//         Anyone may get 'index' to check remote curriculum versions.
-//         Only verified admins (/roles/{uid}.role == 'admin') may list, create,
-//         update (with schema validation), or delete catalog metadata.
-// Fields:
-//   - plans: map (required, max 50 entries)
-//   - updatedAt: timestamp (required, must equal request.time)
-//   - updatedBy: string | null (optional, max 128 chars; prefer non-PII admin UID)
-//
-// Collection: catalog_plans
-// Document ID: {planId} (e.g. '17.14', '17.13')
-// Access: Public university study plan definitions (non-PII).
-//         Anyone may get individual plans by ID. Only verified admins may list,
-//         create, update (with schema validation), or delete plan documents.
-// Fields:
-//   - plan_numero: string (required, 1..20 chars)
-//   - carrera: string | null (optional, max 160 chars)
-//   - version: int (required, >= 1)
-//   - materias: list (required, 1..150 items)
-//   - changelogMessage: string | null (optional, max 500 chars)
-//   - codeMappings: map | null (optional, max 150 entries)
-//   - updatedAt: timestamp (required, must equal request.time)
-//   - updatedBy: string | null (optional, max 128 chars; prefer non-PII admin UID)
-//
-// All other collections and subcollections:
-//   Explicitly denied by default fallback rule.
-//
-// ===============================================================
+// PROPUESTA DE REGLAS - NO DESPLEGAR SIN TESTS DE EMULADOR
+// Arquitectura actual: proyecto Firebase de UNLu, roles 'admin' globales,
+// sincronizacion del alumno por transaccion, catalogo publico por ID.
+// NO implementa RBAC por carrera, auditoria institucional confiable,
+// aislamiento multi-tenant, validacion profunda de correlativas ni rate limiting.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===============================================================
-    // Helper Functions
-    // ===============================================================
-
-    // Check if the user is authenticated
+    // === Autenticacion ===
     function isAuthenticated() {
       return request.auth != null;
     }
 
-    // Check if the authenticated user owns the document path
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    // Check if the authenticated user holds the 'admin' role in /roles/{uid}
     function isAdmin() {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/roles/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/roles/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Verify UID matches the authenticated user on create
-    function uidUnchanged() {
-      return !('uid' in request.resource.data) ||
-        request.resource.data.uid == request.auth.uid;
+    // === Helpers de esquema ===
+    function hasOnlyFields(data, allowed) {
+      return data.keys().hasOnly(allowed);
     }
 
-    // Ensure an existing uid field is never modified on update
-    function uidNotModified() {
-      return !('uid' in resource.data) ||
-        ('uid' in request.resource.data && request.resource.data.uid == resource.data.uid);
+    function hasRequiredFields(data, required) {
+      return data.keys().hasAll(required);
     }
 
-    // Validate required fields exist in the resulting document
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+    function validEmail(data) {
+      return !('email' in data) || data.email == null || data.email == '' ||
+        (data.email is string && data.email.size() <= 254 &&
+         data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'));
     }
 
-    // Validate the resulting document contains only allowed fields
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function validPhotoURL(data) {
+      return !('photoURL' in data) || data.photoURL == null || data.photoURL == '' ||
+        (data.photoURL is string && data.photoURL.size() <= 1000 &&
+         (data.photoURL.matches('^https://.*') || data.photoURL.matches('^http://.*')));
     }
 
-    // Validate that immutable fields are not added, modified, or deleted on update
-    function areImmutableFieldsUnchanged(fields) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
-    }
-
-    // Validate email format (RFC-compatible practical check)
-    function isValidEmail(email) {
-      return email is string &&
-        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    // Validate URL format (must start with https:// or http://)
-    function isValidUrl(url) {
-      return url is string &&
-        (url.matches("^https://.*") || url.matches("^http://.*"));
-    }
-
-    // ===============================================================
-    // User Schema & Domain Validators
-    // ===============================================================
-
-    function allowedUserCreateFields() {
+    // === Documento de usuario ===
+    function allowedUserFields() {
       return [
-        'uid',
-        'email',
-        'displayName',
-        'photoURL',
-        'createdAt',
-        'schemaVersion',
-        'syncRevision',
-        'academicHash',
-        'academicUpdatedAt',
-        'configUpdatedAt',
-        'config',
-        'progreso',
-        'progresoDetalles',
-        'cursada',
-        'simulaciones'
+        'uid', 'email', 'displayName', 'photoURL', 'createdAt',
+        'schemaVersion', 'syncRevision', 'academicHash', 'academicUpdatedAt',
+        'configUpdatedAt', 'config', 'progreso', 'progresoDetalles',
+        'cursada', 'simulaciones'
       ];
     }
 
-    // createdAt is intentionally excluded so it can never be forged, altered, or deleted on update
-    function allowedUserMutableFields() {
+    function allowedUserChangedFields() {
       return [
-        'uid',
-        'email',
-        'displayName',
-        'photoURL',
-        'schemaVersion',
-        'syncRevision',
-        'academicHash',
-        'academicUpdatedAt',
-        'configUpdatedAt',
-        'config',
-        'progreso',
-        'progresoDetalles',
-        'cursada',
-        'simulaciones'
+        'uid', 'email', 'displayName', 'photoURL',
+        'schemaVersion', 'syncRevision', 'academicHash', 'academicUpdatedAt',
+        'configUpdatedAt', 'config', 'progreso', 'progresoDetalles',
+        'cursada', 'simulaciones'
       ];
     }
 
-    function academicPayloadFields() {
+    // No incluye syncRevision: evita incrementar revisiones por si solas.
+    function academicFields() {
       return [
-        'academicHash',
-        'academicUpdatedAt',
-        'progreso',
-        'progresoDetalles',
-        'cursada',
-        'simulaciones'
+        'academicHash', 'academicUpdatedAt',
+        'progreso', 'progresoDetalles', 'cursada', 'simulaciones'
       ];
     }
 
-    function academicSyncFields() {
-      return [
-        'syncRevision',
-        'academicHash',
-        'academicUpdatedAt',
-        'progreso',
-        'progresoDetalles',
-        'cursada',
-        'simulaciones'
-      ];
+    function academicContentFields() {
+      return ['academicHash', 'progreso', 'progresoDetalles', 'cursada', 'simulaciones'];
     }
 
-    function isValidOptionalEmail(data) {
-      return !('email' in data) ||
-        data.email == null ||
-        data.email == '' ||
-        (data.email is string && data.email.size() <= 254 && isValidEmail(data.email));
-    }
-
-    function isValidOptionalDisplayName(data) {
-      return !('displayName' in data) ||
-        data.displayName == null ||
-        (data.displayName is string && data.displayName.size() <= 120);
-    }
-
-    function isValidOptionalPhotoUrl(data) {
-      return !('photoURL' in data) ||
-        data.photoURL == null ||
-        data.photoURL == '' ||
-        (isValidUrl(data.photoURL) && data.photoURL.size() <= 1000);
-    }
-
-    function isValidConfig(config) {
+    function validConfig(config) {
       return config is map &&
         config.keys().hasOnly(['alias', 'planActivo', 'tema']) &&
         (!('alias' in config) || (config.alias is string && config.alias.size() <= 80)) &&
-        (!('planActivo' in config) ||
-          config.planActivo == null ||
+        (!('planActivo' in config) || config.planActivo == null ||
           (config.planActivo is string && config.planActivo.size() <= 20)) &&
         (!('tema' in config) ||
           (config.tema is string && config.tema in ['light', 'dark', 'system']));
     }
 
-    function isValidAcademicMap(data, field) {
+    function validAcademicMap(data, field) {
       return !(field in data) ||
         (data[field] is map && data[field].size() <= 25);
     }
 
-    // Core domain validator called on BOTH create and update
-    function isValidUser(data, userId) {
-      return hasRequiredFields(['uid']) &&
-        data.uid is string &&
-        data.uid == userId &&
-        isValidOptionalEmail(data) &&
-        isValidOptionalDisplayName(data) &&
-        isValidOptionalPhotoUrl(data) &&
+    function validUserData(data, userId) {
+      return hasRequiredFields(data, ['uid']) &&
+        data.uid is string && data.uid == userId &&
+        validEmail(data) &&
+        (!('displayName' in data) || data.displayName == null ||
+          (data.displayName is string && data.displayName.size() <= 120)) &&
+        validPhotoURL(data) &&
         (!('createdAt' in data) || data.createdAt is timestamp) &&
         (!('schemaVersion' in data) ||
           (data.schemaVersion is int && data.schemaVersion >= 1 && data.schemaVersion <= 10)) &&
         (!('syncRevision' in data) ||
           (data.syncRevision is int && data.syncRevision >= 0)) &&
         (!('academicHash' in data) ||
-          (data.academicHash is string &&
-           data.academicHash.size() > 0 &&
+          (data.academicHash is string && data.academicHash.size() > 0 &&
            data.academicHash.size() <= 64)) &&
         (!('academicUpdatedAt' in data) || data.academicUpdatedAt is timestamp) &&
         (!('configUpdatedAt' in data) || data.configUpdatedAt is timestamp) &&
-        (!('config' in data) || isValidConfig(data.config)) &&
-        isValidAcademicMap(data, 'progreso') &&
-        isValidAcademicMap(data, 'progresoDetalles') &&
-        isValidAcademicMap(data, 'cursada') &&
-        isValidAcademicMap(data, 'simulaciones');
+        (!('config' in data) || validConfig(data.config)) &&
+        validAcademicMap(data, 'progreso') &&
+        validAcademicMap(data, 'progresoDetalles') &&
+        validAcademicMap(data, 'cursada') &&
+        validAcademicMap(data, 'simulaciones');
     }
 
-    // On create: initial syncRevision is 1 when academic data is written directly,
-    // or 0..1 (or omitted) on profile/config-only creation.
-    function isValidInitialSyncRevision(data) {
-      return data.keys().hasAny(academicPayloadFields())
+    function validInitialRevision(data) {
+      return data.keys().hasAny(academicFields())
         ? ('syncRevision' in data && data.syncRevision is int && data.syncRevision == 1)
         : (!('syncRevision' in data) ||
-            (data.syncRevision is int && data.syncRevision >= 0 && data.syncRevision <= 1));
+          (data.syncRevision is int && data.syncRevision >= 0 && data.syncRevision <= 1));
     }
 
-    // Legacy docs without an integer syncRevision default to revision 0
-    function previousSyncRevision(existingData) {
-      return ('syncRevision' in existingData &&
-              existingData.syncRevision is int &&
-              existingData.syncRevision >= 0)
-        ? existingData.syncRevision
-        : 0;
+    function priorRevision(data) {
+      return ('syncRevision' in data && data.syncRevision is int && data.syncRevision >= 0)
+        ? data.syncRevision : 0;
     }
 
-    // Server-side Optimistic Concurrency Control (OCC) enforcement:
-    // - Any change to academic sync fields must advance syncRevision strictly by +1.
-    // - Non-academic updates (e.g. config) must leave syncRevision untouched.
-    function isValidSyncRevisionTransition(newData, existingData) {
-      let affected = newData.diff(existingData).affectedKeys();
-      let prevRev = previousSyncRevision(existingData);
-      return affected.hasAny(academicSyncFields())
-        ? ('syncRevision' in newData &&
-           newData.syncRevision is int &&
-           newData.syncRevision == prevRev + 1)
-        : (('syncRevision' in existingData)
-            ? ('syncRevision' in newData && newData.syncRevision == existingData.syncRevision)
-            : !('syncRevision' in newData));
+    function validRevisionUpdate(next, old) {
+      let changed = next.diff(old).affectedKeys();
+      return changed.hasAny(academicFields())
+        ? ('syncRevision' in next && next.syncRevision is int &&
+          next.syncRevision == priorRevision(old) + 1)
+        : !changed.hasAny(['syncRevision']);
     }
 
-    function isValidUserCreate(data, userId) {
-      return hasOnlyAllowedFields(allowedUserCreateFields()) &&
-        uidUnchanged() &&
-        isValidUser(data, userId) &&
-        isValidInitialSyncRevision(data) &&
+    // Cuando cambia contenido academico, la marca temporal debe actualizarse.
+    // Si cambia solo academicUpdatedAt, validRevisionUpdate exige revision +1.
+    function validAcademicTimestampUpdate(next, old) {
+      let changed = next.diff(old).affectedKeys();
+      return !changed.hasAny(academicContentFields()) ||
+        (changed.hasAny(['academicUpdatedAt']) &&
+          'academicUpdatedAt' in next && next.academicUpdatedAt == request.time);
+    }
+
+    // Al editar configuracion, requiere timestamp del servidor.
+    function validConfigTimestampUpdate(next, old) {
+      let changed = next.diff(old).affectedKeys();
+      return !changed.hasAny(['config']) ||
+        (changed.hasAny(['configUpdatedAt']) &&
+          'configUpdatedAt' in next && next.configUpdatedAt == request.time);
+    }
+
+    // No se permite inventar/editar/borrar un timestamp aislado.
+    function validTimestampChanges(next, old) {
+      let changed = next.diff(old).affectedKeys();
+      return (!changed.hasAny(['academicUpdatedAt']) ||
+          ('academicUpdatedAt' in next && next.academicUpdatedAt == request.time)) &&
+        (!changed.hasAny(['configUpdatedAt']) ||
+          ('configUpdatedAt' in next && next.configUpdatedAt == request.time));
+    }
+
+    function validUserCreate(data, userId) {
+      return hasOnlyFields(data, allowedUserFields()) &&
+        validUserData(data, userId) &&
+        validInitialRevision(data) &&
         (!('createdAt' in data) || data.createdAt == request.time) &&
         (!('academicUpdatedAt' in data) || data.academicUpdatedAt == request.time) &&
         (!('configUpdatedAt' in data) || data.configUpdatedAt == request.time);
     }
 
-    function isValidUserUpdate(newData, existingData, userId) {
-      let affected = newData.diff(existingData).affectedKeys();
-      return affected.hasOnly(allowedUserMutableFields()) &&
-        areImmutableFieldsUnchanged(['createdAt']) &&
-        (!('createdAt' in existingData) || newData.createdAt == existingData.createdAt) &&
-        (!('schemaVersion' in existingData) || 'schemaVersion' in newData) &&
-        (!('academicUpdatedAt' in affected) ||
-          ('academicUpdatedAt' in newData && newData.academicUpdatedAt == request.time)) &&
-        (!('configUpdatedAt' in affected) ||
-          ('configUpdatedAt' in newData && newData.configUpdatedAt == request.time)) &&
-        uidNotModified() &&
-        isValidUser(newData, userId) &&
-        isValidSyncRevisionTransition(newData, existingData);
+    function validUserUpdate(next, old, userId) {
+      let changed = next.diff(old).affectedKeys();
+      return changed.hasOnly(allowedUserChangedFields()) &&
+        !changed.hasAny(['createdAt']) &&
+        (!('schemaVersion' in old) || 'schemaVersion' in next) &&
+        validUserData(next, userId) &&
+        // uid existente no cambia, pero es posible añadir uid a documentos legacy.
+        (!('uid' in old) || next.uid == old.uid) &&
+        validRevisionUpdate(next, old) &&
+        validAcademicTimestampUpdate(next, old) &&
+        validConfigTimestampUpdate(next, old) &&
+        validTimestampChanges(next, old);
     }
 
-    // ===============================================================
-    // App Logs Schema & Domain Validator
-    // ===============================================================
-
-    function requiredAppLogFields() {
-      return [
-        'level',
-        'errorCode',
-        'errorMessage',
-        'route',
-        'createdAt'
-      ];
-    }
-
-    function allowedAppLogFields() {
-      return [
-        'level',
-        'errorCode',
-        'errorMessage',
-        'route',
-        'componentStack',
-        'planActivo',
-        'uid',
-        'context',
-        'createdAt'
-      ];
-    }
-
-    function isValidAppLogContext(ctx) {
+    // === Telemetria ===
+    function validAppLogContext(ctx) {
       return ctx is map &&
         ctx.keys().hasOnly(['scope', 'route', 'plan', 'source', 'action', 'retries', 'offline']) &&
         (!('scope' in ctx) || (ctx.scope is string && ctx.scope.size() <= 40)) &&
         (!('route' in ctx) || (ctx.route is string && ctx.route.size() <= 200)) &&
-        (!('plan' in ctx) || ctx.plan == null || (ctx.plan is string && ctx.plan.size() <= 20)) &&
+        (!('plan' in ctx) || ctx.plan == null ||
+          (ctx.plan is string && ctx.plan.size() <= 20)) &&
         (!('source' in ctx) || (ctx.source is string && ctx.source.size() <= 60)) &&
         (!('action' in ctx) || (ctx.action is string && ctx.action.size() <= 60)) &&
         (!('retries' in ctx) || (ctx.retries is int && ctx.retries >= 0 && ctx.retries <= 100)) &&
         (!('offline' in ctx) || ctx.offline is bool);
     }
 
-    function isValidAppLogUid(data) {
+    function validAppLogUid(data) {
       return isAuthenticated()
         ? ('uid' in data && data.uid is string && data.uid == request.auth.uid)
         : (!('uid' in data) || data.uid == null);
     }
 
-    function isValidAppLogCreate(data) {
-      return hasRequiredFields(requiredAppLogFields()) &&
-        hasOnlyAllowedFields(allowedAppLogFields()) &&
-        data.level is string &&
-        data.level in ['error', 'warning'] &&
-        data.errorCode is string &&
-        data.errorCode.size() >= 1 &&
-        data.errorCode.size() <= 100 &&
-        data.errorMessage is string &&
-        data.errorMessage.size() >= 1 &&
-        data.errorMessage.size() <= 500 &&
-        data.route is string &&
-        data.route.size() >= 1 &&
-        data.route.size() <= 200 &&
-        (!('componentStack' in data) ||
-          data.componentStack == null ||
-          (data.componentStack is string && data.componentStack.size() <= 1000)) &&
-        (!('planActivo' in data) ||
-          data.planActivo == null ||
-          (data.planActivo is string && data.planActivo.size() <= 20)) &&
-        isValidAppLogUid(data) &&
-        (!('context' in data) || isValidAppLogContext(data.context)) &&
-        data.createdAt is timestamp &&
-        data.createdAt == request.time;
-    }
-
-    // ===============================================================
-    // Catalog Schema & Domain Validators
-    // ===============================================================
-
-    function isValidCatalogMeta(data) {
-      return hasRequiredFields(['plans', 'updatedAt']) &&
-        hasOnlyAllowedFields(['plans', 'updatedAt', 'updatedBy']) &&
-        data.plans is map &&
-        data.plans.size() <= 50 &&
-        data.updatedAt is timestamp &&
-        data.updatedAt == request.time &&
-        (!('updatedBy' in data) ||
-          data.updatedBy == null ||
-          (data.updatedBy is string && data.updatedBy.size() <= 128));
-    }
-
-    function isValidCatalogPlan(data) {
-      return hasRequiredFields(['plan_numero', 'version', 'materias', 'updatedAt']) &&
-        hasOnlyAllowedFields([
-          'plan_numero',
-          'carrera',
-          'version',
-          'materias',
-          'changelogMessage',
-          'codeMappings',
-          'updatedAt',
-          'updatedBy'
+    function validAppLogCreate(data) {
+      return hasRequiredFields(data, ['level', 'errorCode', 'errorMessage', 'route', 'createdAt']) &&
+        hasOnlyFields(data, [
+          'level', 'errorCode', 'errorMessage', 'route', 'createdAt',
+          'componentStack', 'planActivo', 'uid', 'context'
         ]) &&
-        data.plan_numero is string &&
-        data.plan_numero.size() >= 1 &&
-        data.plan_numero.size() <= 20 &&
-        (!('carrera' in data) ||
-          data.carrera == null ||
-          (data.carrera is string && data.carrera.size() <= 160)) &&
-        data.version is int &&
-        data.version >= 1 &&
-        data.materias is list &&
-        data.materias.size() >= 1 &&
-        data.materias.size() <= 150 &&
-        (!('changelogMessage' in data) ||
-          data.changelogMessage == null ||
-          (data.changelogMessage is string && data.changelogMessage.size() <= 500)) &&
-        (!('codeMappings' in data) ||
-          data.codeMappings == null ||
-          (data.codeMappings is map && data.codeMappings.size() <= 150)) &&
-        data.updatedAt is timestamp &&
-        data.updatedAt == request.time &&
-        (!('updatedBy' in data) ||
-          data.updatedBy == null ||
+        data.level is string && data.level in ['error', 'warning'] &&
+        data.errorCode is string && data.errorCode.size() >= 1 && data.errorCode.size() <= 100 &&
+        data.errorMessage is string && data.errorMessage.size() >= 1 && data.errorMessage.size() <= 500 &&
+        data.route is string && data.route.size() >= 1 && data.route.size() <= 200 &&
+        (!('componentStack' in data) || data.componentStack == null ||
+          (data.componentStack is string && data.componentStack.size() <= 1000)) &&
+        (!('planActivo' in data) || data.planActivo == null ||
+          (data.planActivo is string && data.planActivo.size() <= 20)) &&
+        validAppLogUid(data) &&
+        (!('context' in data) || validAppLogContext(data.context)) &&
+        data.createdAt is timestamp && data.createdAt == request.time;
+    }
+
+    // === Catalogo ===
+    function validCatalogMeta(data) {
+      return hasRequiredFields(data, ['plans', 'updatedAt']) &&
+        hasOnlyFields(data, ['plans', 'updatedAt', 'updatedBy']) &&
+        data.plans is map && data.plans.size() <= 50 &&
+        data.updatedAt is timestamp && data.updatedAt == request.time &&
+        (!('updatedBy' in data) || data.updatedBy == null ||
           (data.updatedBy is string && data.updatedBy.size() <= 128));
     }
 
-    // ===============================================================
-    // Collection Rules
-    // ===============================================================
+    function validCatalogPlan(data, planId) {
+      return hasRequiredFields(data, ['plan_numero', 'version', 'materias', 'updatedAt']) &&
+        hasOnlyFields(data, [
+          'plan_numero', 'version', 'materias', 'carrera', 'changelogMessage',
+          'codeMappings', 'updatedAt', 'updatedBy'
+        ]) &&
+        data.plan_numero is string && data.plan_numero == planId &&
+        data.plan_numero.size() >= 1 && data.plan_numero.size() <= 20 &&
+        data.version is int && data.version >= 1 &&
+        data.materias is list && data.materias.size() >= 1 && data.materias.size() <= 150 &&
+        (!('carrera' in data) || data.carrera == null ||
+          (data.carrera is string && data.carrera.size() <= 160)) &&
+        (!('changelogMessage' in data) || data.changelogMessage == null ||
+          (data.changelogMessage is string && data.changelogMessage.size() <= 500)) &&
+        (!('codeMappings' in data) || data.codeMappings == null ||
+          (data.codeMappings is map && data.codeMappings.size() <= 150)) &&
+        data.updatedAt is timestamp && data.updatedAt == request.time &&
+        (!('updatedBy' in data) || data.updatedBy == null ||
+          (data.updatedBy is string && data.updatedBy.size() <= 128));
+    }
 
-    // Private per-user profile and unified academic sync document
+    function validCatalogPlanUpdate(data, planId) {
+      return validCatalogPlan(data, planId) &&
+        resource.data.version is int &&
+        data.version == resource.data.version + 1;
+    }
+
+    // === Permisos ===
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && isValidUserCreate(request.resource.data, userId);
-      allow update: if isOwner(userId) && isValidUserUpdate(request.resource.data, resource.data, userId);
+      allow create: if isOwner(userId) && validUserCreate(request.resource.data, userId);
+      allow update: if isOwner(userId) &&
+        validUserUpdate(request.resource.data, resource.data, userId);
       allow delete: if false;
     }
 
-    // Read-only self role lookup (managed exclusively via Admin SDK / Firebase Console)
     match /roles/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
       allow write: if false;
     }
 
-    // Application error/warning telemetry (immutable after creation; admin-only read/delete)
+    // La creacion anonima se conserva por compatibilidad con ErrorBoundary.
+    // NO es defensa anti-spam: requiere App Check/endpoint con rate limiting.
     match /app_logs/{logId} {
-      allow create: if isValidAppLogCreate(request.resource.data);
+      allow create: if validAppLogCreate(request.resource.data);
       allow get, list, delete: if isAdmin();
       allow update: if false;
     }
 
-    // Public catalog version index (single-doc 'index' readable; admin-only management)
     match /catalog_meta/{docId} {
       allow get: if docId == 'index';
       allow list: if isAdmin();
-      allow create, update: if isAdmin() && isValidCatalogMeta(request.resource.data);
-      allow delete: if isAdmin();
+      allow create, update: if docId == 'index' && isAdmin() &&
+        validCatalogMeta(request.resource.data);
+      allow delete: if false;
     }
 
-    // Public curriculum plan definitions (get by ID; admin-only listing and management)
     match /catalog_plans/{planId} {
       allow get: if true;
       allow list: if isAdmin();
-      allow create, update: if isAdmin() && isValidCatalogPlan(request.resource.data);
-      allow delete: if isAdmin();
+      allow create: if isAdmin() && validCatalogPlan(request.resource.data, planId);
+      // Cada publicacion debe aumentar version +1.
+      allow update: if isAdmin() && validCatalogPlanUpdate(request.resource.data, planId);
+      // No se borra directamente un plan publicado desde SDK cliente.
+      allow delete: if false;
     }
 
-    // Default deny for all other collections and subcollections
+    // Espacio reservado para auditoria confiable emitida desde backend.
+    // Ningun SDK cliente puede crear, modificar ni borrar eventos.
+    // Admin SDK omite las rules; habilitar lectura solo si backend redacta PII.
+    match /audit_logs/{eventId} {
+      allow get, list: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

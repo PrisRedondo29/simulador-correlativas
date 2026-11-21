@@ -11,9 +11,6 @@ import {
     isAcademicBundleEmpty,
 } from '../utils/Sync/syncStateMachine';
 
-/** @typedef {import('../types/domain').ProgresoMap} ProgresoMap */
-/** @typedef {import('../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
-/** @typedef {import('../types/domain').CursadaPlanData} CursadaPlanData */
 /** @typedef {import('../types/domain').UserCloudConfig} UserCloudConfig */
 /** @typedef {import('../types/domain').AcademicSyncBundle} AcademicSyncBundle */
 /** @typedef {import('../types/domain').CommitSyncTransactionResult} CommitSyncTransactionResult */
@@ -39,75 +36,6 @@ export const ACADEMIC_SYNC_MERGE_FIELDS = [
     'cursada',
     'simulaciones',
 ];
-
-/**
- * Guarda el progreso del usuario de forma atómica (y opcionalmente detalles y cursada).
- * Usa setDoc con merge:true para preservar claves de plan con punto (ej: "17.14").
- * @param {string} uid
- * @param {string} plan
- * @param {ProgresoMap | Record<string, unknown>} progreso
- * @param {ProgresoDetallesMap | Record<string, unknown> | null} [detalles]
- * @param {CursadaPlanData | null} [cursada]
- * @returns {Promise<void>}
- */
-export const saveUserProgreso = async (uid, plan, progreso, detalles = null, cursada = null) => {
-    if (!uid || !plan || !progreso) return;
-
-    const userRef = doc(db, 'users', uid);
-    const currentUser = auth.currentUser;
-
-    /** @type {Record<string, unknown>} */
-    const updates = {
-        uid,
-        email: currentUser?.email || '',
-        schemaVersion: SCHEMA_VERSION,
-        progresoUpdatedAt: serverTimestamp(),
-        progreso: {
-            [plan]: progreso,
-        },
-    };
-
-    if (detalles) {
-        updates.progresoDetalles = {
-            [plan]: detalles,
-        };
-    }
-
-    if (cursada) {
-        updates.cursada = {
-            [plan]: cursada,
-        };
-        updates.cursadaUpdatedAt = serverTimestamp();
-    }
-
-    await setDoc(userRef, updates, { merge: true });
-};
-
-/**
- * Guarda los datos de Mi Cursada (horarios, eventos y bitácora) de un plan en Firestore.
- * @param {string} uid
- * @param {string} plan
- * @param {CursadaPlanData} cursada
- * @returns {Promise<void>}
- */
-export const saveUserCursada = async (uid, plan, cursada) => {
-    if (!uid || !plan || !cursada) return;
-
-    const userRef = doc(db, 'users', uid);
-    const currentUser = auth.currentUser;
-
-    const updates = {
-        uid,
-        email: currentUser?.email || '',
-        schemaVersion: SCHEMA_VERSION,
-        cursadaUpdatedAt: serverTimestamp(),
-        cursada: {
-            [plan]: cursada,
-        },
-    };
-
-    await setDoc(userRef, updates, { merge: true });
-};
 
 /**
  * Consulta el rol de un usuario en la colección 'roles'.
@@ -174,32 +102,6 @@ export const updateUserConfig = async (uid, config) => {
         schemaVersion: SCHEMA_VERSION,
         configUpdatedAt: serverTimestamp(),
         config: configData,
-    };
-
-    await setDoc(userRef, updates, { merge: true });
-};
-
-/**
- * Guarda una simulación del usuario.
- * @param {string} uid
- * @param {string} plan
- * @param {unknown} simulacion
- * @returns {Promise<void>}
- */
-export const saveUserSimulacion = async (uid, plan, simulacion) => {
-    if (!uid || !plan || !simulacion) return;
-
-    const userRef = doc(db, 'users', uid);
-    const currentUser = auth.currentUser;
-
-    const updates = {
-        uid,
-        email: currentUser?.email || '',
-        schemaVersion: SCHEMA_VERSION,
-        simulacionUpdatedAt: serverTimestamp(),
-        simulaciones: {
-            [plan]: simulacion,
-        },
     };
 
     await setDoc(userRef, updates, { merge: true });

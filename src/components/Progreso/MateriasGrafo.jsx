@@ -12,26 +12,20 @@ import {
 import '@xyflow/react/dist/style.css';
 import MateriaNode from './MateriaNode';
 import { Button, ButtonGroup } from '@heroui/react';
-import { ArrowRight, ArrowDown, ZoomIn, ZoomOut, Home } from 'lucide-react';
+import { ZoomIn, ZoomOut, Home } from 'lucide-react';
 
 /**
  * SemesterNode: Encabezados y separadores de cuatrimestre con estado visual claro
  * (`current` = cuatrimestre siendo simulado, `past` = completado, `future` = proyectado, `neutral` = explorar).
  */
 const SemesterNode = ({ data }) => {
-  const isHorizontal = data.direction === 'LR';
-
   if (data.variant === 'separator') {
     return (
       <div className="pointer-events-none select-none flex items-center justify-center">
-        {isHorizontal ? (
-          <div
-            className="border-primary/30 dark:border-primary/20 border-dashed border-l-2"
-            style={{ height: `${data.height || 900}px` }}
-          />
-        ) : (
-          <div className="border-primary/30 dark:border-primary/20 border-dashed border-t-2 w-[255px] sm:w-[275px]" />
-        )}
+        <div
+          className="border-primary/30 dark:border-primary/20 border-dashed border-l-2"
+          style={{ height: `${data.height || 900}px` }}
+        />
       </div>
     );
   }
@@ -87,10 +81,9 @@ const nodeTypes = {
 };
 
 /**
- * getLayoutedElements: Organiza materias en grilla según dirección.
+ * getLayoutedElements: Organiza materias en grilla horizontal por cuatrimestre.
  */
-const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = null, interactionMode = 'planificar') => {
-  const isHorizontal = direction === 'LR';
+const getLayoutedElements = (nodes, edges, projectionData = null, interactionMode = 'planificar') => {
   const { items, labels, maxCol } = projectionData || { items: {}, labels: {}, maxCol: 0 };
 
   let currentCol = projectionData?.currentCol ?? null;
@@ -127,8 +120,8 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
   });
 
   const cardWidth = 275;
-  const gapX = isHorizontal ? 345 : 320;
-  const gapY = isHorizontal ? 170 : 270;
+  const gapX = 345;
+  const gapY = 170;
   const maxNodesInCol = Math.max(...Object.values(materiasPorColumna).map((arr) => arr.length), 5);
   const separatorHeight = Math.max(850, maxNodesInCol * gapY + 120);
 
@@ -136,87 +129,40 @@ const getLayoutedElements = (nodes, edges, direction = 'LR', projectionData = nu
   const startCol = 1;
   const endCol = maxCol || Math.max(...Object.keys(materiasPorColumna).map(Number), 0);
 
-  if (isHorizontal) {
-    for (let col = startCol; col <= endCol; col++) {
-      const colIdx = col - startCol;
-      const label = labels?.[col] || `Cuatrimestre ${col}`;
+  for (let col = startCol; col <= endCol; col++) {
+    const colIdx = col - startCol;
+    const label = labels?.[col] || `Cuatrimestre ${col}`;
 
+    newNodes.push({
+      id: `header-${col}`,
+      type: 'semester',
+      data: { label, direction: 'LR', variant: 'header', status: getHeaderStatus(col) },
+      position: { x: colIdx * gapX, y: -80 },
+      zIndex: -1,
+      draggable: false,
+    });
+
+    if (colIdx > 0) {
       newNodes.push({
-        id: `header-${col}`,
+        id: `sep-${col}`,
         type: 'semester',
-        data: { label, direction, variant: 'header', status: getHeaderStatus(col) },
-        position: { x: colIdx * gapX, y: -80 },
-        zIndex: -1,
+        data: { direction: 'LR', variant: 'separator', height: separatorHeight },
+        position: { x: colIdx * gapX - Math.round((gapX - cardWidth) / 2) - 1, y: -80 },
+        zIndex: -2,
         draggable: false,
       });
-
-      if (colIdx > 0) {
-        newNodes.push({
-          id: `sep-${col}`,
-          type: 'semester',
-          data: { direction, variant: 'separator', height: separatorHeight },
-          position: { x: colIdx * gapX - Math.round((gapX - cardWidth) / 2) - 1, y: -80 },
-          zIndex: -2,
-          draggable: false,
-        });
-      }
-
-      const nodesInCol = materiasPorColumna[col] || [];
-      nodesInCol.forEach((node, nodeIdx) => {
-        newNodes.push({
-          ...node,
-          targetPosition: 'left',
-          sourcePosition: 'right',
-          position: { x: colIdx * gapX, y: nodeIdx * gapY },
-          draggable: false,
-        });
-      });
     }
-  } else {
-    // Malla Vertical para Móvil (Feed continuo de cuatrimestres en 1 columna)
-    let currentY = 0;
 
-    for (let col = startCol; col <= endCol; col++) {
-      const colIdx = col - startCol;
-      const label = labels?.[col] || `Cuatrimestre ${col}`;
-      const nodesInCol = materiasPorColumna[col] || [];
-
-      // Header del cuatrimestre
+    const nodesInCol = materiasPorColumna[col] || [];
+    nodesInCol.forEach((node, nodeIdx) => {
       newNodes.push({
-        id: `header-${col}`,
-        type: 'semester',
-        data: { label, direction, variant: 'header', status: getHeaderStatus(col) },
-        position: { x: 20, y: currentY },
-        zIndex: -1,
+        ...node,
+        targetPosition: 'left',
+        sourcePosition: 'right',
+        position: { x: colIdx * gapX, y: nodeIdx * gapY },
         draggable: false,
       });
-
-      if (colIdx > 0) {
-        newNodes.push({
-          id: `sep-${col}`,
-          type: 'semester',
-          data: { direction, variant: 'separator' },
-          position: { x: 20, y: currentY - 25 },
-          zIndex: -2,
-          draggable: false,
-        });
-      }
-
-      currentY += 60; // Espacio entre header y primera materia
-
-      nodesInCol.forEach((node) => {
-        newNodes.push({
-          ...node,
-          targetPosition: 'top',
-          sourcePosition: 'bottom',
-          position: { x: 20, y: currentY },
-          draggable: false,
-        });
-        currentY += 150; // Espacio entre materias del mismo cuatrimestre
-      });
-
-      currentY += 50; // Espacio entre cuatrimestres
-    }
+    });
   }
 
   return { nodes: newNodes, edges };
@@ -238,11 +184,6 @@ const FlowInner = ({
   bottomRightContent = null,
   rounded = true,
 }) => {
-  const [direction, setDirection] = useState(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 768) return 'TB';
-    return 'LR';
-  });
-
   const [hoveredNode, setHoveredNode] = useState(null);
   const { zoomIn: rfZoomIn, zoomOut: rfZoomOut, fitView, setViewport } = useReactFlow();
   const nodesInitialized = useNodesInitialized();
@@ -315,11 +256,11 @@ const FlowInner = ({
 
   useEffect(() => {
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      initialNodes, initialEdges, direction, projection, interactionMode
+      initialNodes, initialEdges, projection, interactionMode
     );
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [initialNodes, initialEdges, direction, setNodes, setEdges, projection, interactionMode]);
+  }, [initialNodes, initialEdges, setNodes, setEdges, projection, interactionMode]);
 
   const focusInitialColumns = useCallback(
     (maxCols = 3) => {
@@ -359,17 +300,13 @@ const FlowInner = ({
   );
 
   useEffect(() => {
-    hasCenteredRef.current = false;
-  }, [direction]);
-
-  useEffect(() => {
     if (!nodesInitialized || nodes.length === 0 || hasCenteredRef.current) return;
     hasCenteredRef.current = true;
-    focusInitialColumns(direction === 'TB' ? 2 : 3);
-  }, [nodesInitialized, nodes.length, direction, focusInitialColumns]);
+    focusInitialColumns(3);
+  }, [nodesInitialized, nodes.length, focusInitialColumns]);
 
   const handleGoHome = () => {
-    focusInitialColumns(direction === 'TB' ? 2 : 3);
+    focusInitialColumns(3);
   };
 
   const onNodeMouseEnter = useCallback((event, node) => setHoveredNode(node.id), []);
@@ -405,37 +342,12 @@ const FlowInner = ({
     });
   }, [edges, activeNodeId]);
 
-  const zoomAndDirectionControls = (
-    <>
-      <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
-        <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
-        <Button isIconOnly onPress={() => rfZoomOut()} aria-label="Alejar" title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={15} /></Button>
-        <Button isIconOnly onPress={handleGoHome} aria-label="Centrar inicio" title="Centrar inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
-      </ButtonGroup>
-
-      <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
-        <Button
-          isIconOnly
-          color={direction === 'LR' ? 'primary' : 'default'}
-          onPress={() => setDirection('LR')}
-          aria-label="Vista horizontal"
-          title="Horizontal"
-          className="min-w-8 h-8 sm:min-w-9 sm:h-9"
-        >
-          <ArrowRight size={15} />
-        </Button>
-        <Button
-          isIconOnly
-          color={direction === 'TB' ? 'primary' : 'default'}
-          onPress={() => setDirection('TB')}
-          aria-label="Vista vertical"
-          title="Vertical"
-          className="min-w-8 h-8 sm:min-w-9 sm:h-9"
-        >
-          <ArrowDown size={15} />
-        </Button>
-      </ButtonGroup>
-    </>
+  const zoomControls = (
+    <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
+      <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
+      <Button isIconOnly onPress={() => rfZoomOut()} aria-label="Alejar" title="Alejar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomOut size={15} /></Button>
+      <Button isIconOnly onPress={handleGoHome} aria-label="Centrar inicio" title="Centrar inicio" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><Home size={15} /></Button>
+    </ButtonGroup>
   );
 
   return (
@@ -457,7 +369,7 @@ const FlowInner = ({
         <div className="absolute top-2.5 left-2.5 right-2.5 z-20 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
           {controlsPosition === 'top-left' && (
             <div className="flex items-center gap-1.5 pointer-events-auto">
-              {zoomAndDirectionControls}
+              {zoomControls}
             </div>
           )}
 
@@ -471,7 +383,7 @@ const FlowInner = ({
 
       {controlsPosition === 'bottom-left' && (
         <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 pointer-events-auto">
-          {zoomAndDirectionControls}
+          {zoomControls}
         </div>
       )}
 

@@ -21,14 +21,26 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Configurar Java para Firebase Emulator
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
       - name: Instalar dependencias
         run: npm ci
+
+      - name: Verificar linter (ESLint)
+        run: npm run lint
 
       - name: Verificar tipos de dominio (TypeScript)
         run: npm run typecheck
 
       - name: Ejecutar tests unitarios
         run: npm test
+
+      - name: Ejecutar tests de Security Rules (Firebase Emulator)
+        run: npm run test:emulator
 
       - name: Compilar bundle de producción
         run: npm run build
