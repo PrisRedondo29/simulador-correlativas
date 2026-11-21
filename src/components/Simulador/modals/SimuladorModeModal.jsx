@@ -14,8 +14,12 @@ export default function SimuladorModeModal({ isOpen, onSelectMode }) {
       hideCloseButton
       isDismissable={false}
       size="lg"
-      backdrop="blur"
+      backdrop="opaque"
       placement="center"
+      classNames={{
+        backdrop: "bg-slate-900/55 backdrop-blur-xs",
+        wrapper: "p-4",
+      }}
     >
       <ModalContent className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540]">
         <ModalHeader className="flex flex-col gap-1 border-b border-[#E2E8F0] dark:border-[#2A3540]">
