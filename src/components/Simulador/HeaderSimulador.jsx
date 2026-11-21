@@ -24,8 +24,8 @@ function HeaderSimulador({
             : 'Elegí qué materias cursar en cada cuatrimestre y avanzá para proyectar cuándo te recibís.';
 
     return (
-        <header className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-4 sm:p-5 shadow-2xs flex flex-col gap-3.5">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <header className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-3 sm:p-4 lg:py-2.5 lg:px-4 shadow-2xs flex flex-col gap-2.5 sm:gap-3 shrink-0">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 lg:gap-3">
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                         <h1 className="text-xl sm:text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">

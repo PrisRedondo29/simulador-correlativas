@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 
 /**
  * MateriasMallaEstatica: Malla Curricular Nativa en HTML/CSS.
@@ -20,6 +20,7 @@ function MateriasMallaEstatica({
 
     const [hoveredCodigo, setHoveredCodigo] = useState(null);
     const activeCodigo = selectedCodigo || hoveredCodigo;
+    const scrollContainerRef = useRef(null);
 
     const colActiva = useMemo(() => {
         if (!items) return null;
@@ -134,13 +135,19 @@ function MateriasMallaEstatica({
     };
 
     return (
-        <div className="w-full overflow-x-auto snap-x snap-mandatory flex gap-3 sm:gap-4 p-3 sm:p-5 select-none touch-pan-x min-h-[580px] max-h-[800px] pb-28 bg-[#F8FAFC] dark:bg-[#0F1419]">
+        <div className="w-full h-full min-h-0 flex-1 flex flex-col bg-[#F8FAFC] dark:bg-[#0F1419]">
+            <div
+                ref={scrollContainerRef}
+                className="w-full h-full flex-1 min-h-0 overflow-x-auto snap-x snap-mandatory flex gap-3 sm:gap-4 p-3 select-none touch-pan-x scrollbar-thin"
+            >
             {colKeys.map((colNum) => {
                 const materiasCol = columnasMap[colNum] || [];
                 const anioCalculado = Math.ceil(colNum / 2);
                 const cuatriCalculado = colNum % 2 === 0 ? 2 : 1;
-                const colLabel = labels?.[colNum] || `${colNum}° Cuatrimestre`;
-                const esColActiva = colActiva === colNum;
+                const colLabel = interactionMode === 'explorar'
+                    ? `${anioCalculado}° Año · ${cuatriCalculado}° C`
+                    : (labels?.[colNum] || `${colNum}° Cuatrimestre`);
+                const esColActiva = interactionMode === 'planificar' && colActiva === colNum;
 
                 const totalHorasSem = materiasCol.reduce((sum, m) => sum + (Number(m.horas_semanales) || 0), 0);
 
@@ -158,7 +165,8 @@ function MateriasMallaEstatica({
                 return (
                     <div
                         key={`malla-col-${colNum}`}
-                        className={`flex-none shrink-0 w-[calc(52vw-20px)] min-w-[165px] max-w-[220px] sm:max-w-none sm:w-[275px] snap-start flex flex-col gap-2.5 p-2.5 rounded-2xl transition-colors ${
+                        data-malla-col={colNum}
+                        className={`flex-none shrink-0 w-[calc(52vw-20px)] min-w-[165px] max-w-[220px] sm:max-w-none sm:w-[275px] h-full snap-start flex flex-col gap-2.5 p-2.5 rounded-2xl transition-colors ${
                             esColActiva
                                 ? 'bg-white dark:bg-[#161D24] border-2 border-[#005A36] dark:border-[#4A9D68] shadow-xs'
                                 : 'bg-white/80 dark:bg-[#161D24]/80 border border-[#E2E8F0] dark:border-[#2A3540]'
@@ -221,7 +229,7 @@ function MateriasMallaEstatica({
                         </div>
 
                         {/* Lista Vertical de Materias del Cuatrimestre */}
-                        <div className="flex-1 overflow-y-auto flex flex-col gap-2 pb-20">
+                        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2 pb-2 pr-1 scrollbar-thin">
                             {materiasCol.map((materia) => {
                                 const { label, icon, badgeClass, borderClass } = getEstadoStyles(materia);
                                 const hasCorrelativas = materia.correlativas && materia.correlativas.length > 0;
@@ -298,6 +306,7 @@ function MateriasMallaEstatica({
                     </div>
                 );
             })}
+            </div>
         </div>
     );
 }

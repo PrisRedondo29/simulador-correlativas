@@ -313,7 +313,7 @@ function Simulador({ plan: initialPlan }) {
     };
 
     return (
-        <div className="flex flex-col gap-5 py-5 sm:py-6 px-4 sm:px-6 md:px-10 max-w-7xl mx-auto min-h-screen w-full">
+        <div className="flex flex-col gap-3 sm:gap-4 py-3 sm:py-4 px-3 sm:px-6 md:px-8 max-w-7xl mx-auto w-full lg:h-[calc(100vh-3.5rem)] lg:max-h-[calc(100vh-3.5rem)] lg:overflow-hidden min-h-screen lg:min-h-0">
             <ConfiguracionSimulador
                 isOpen={isConfigOpen}
                 onOpenChange={onConfigOpenChange}
@@ -394,7 +394,7 @@ function Simulador({ plan: initialPlan }) {
             )}
 
             {plan && (
-                <div className="animate-in fade-in duration-300 flex flex-col gap-4">
+                <div className="animate-in fade-in duration-300 flex flex-col gap-3 flex-1 min-h-0">
                     <InteractiveTourOverlay
                         tour={TUTORIAL_TOURS[TOUR_IDS.SIMULADOR]}
                         ready={Boolean(plan) && !cargando && !isModeModalOpen}
@@ -415,11 +415,11 @@ function Simulador({ plan: initialPlan }) {
                     />
 
                     {cargando ? (
-                        <div className="flex justify-center py-20">
+                        <div className="flex justify-center py-20 flex-1 items-center">
                             <Spinner size="lg" label="Preparando simulación..." color="primary" labelColor="primary" />
                         </div>
                     ) : (
-                        <div className="flex flex-col gap-4 relative">
+                        <div className="flex flex-col gap-2.5 flex-1 min-h-0 relative">
                             <HistorialAcademico
                                 historialSemestres={historialSemestres}
                                 openedAccordions={openedAccordions}
@@ -429,7 +429,7 @@ function Simulador({ plan: initialPlan }) {
                                 materias={materias}
                             />
 
-                            <div>
+                            <div className="flex-1 min-h-0 flex flex-col">
                                 {simulacionTerminada ? (
                                     <CarreraFinalizada
                                         anioActual={anioActual}
@@ -444,9 +444,9 @@ function Simulador({ plan: initialPlan }) {
                                         descargandoPDF={descargandoPDF}
                                     />
                                 ) : viewMode === 'malla' ? (
-                                    <div className="space-y-3">
-                                        {renderModeControlBar()}
-                                        <div className="relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs rounded-2xl overflow-hidden flex flex-col bg-white dark:bg-[#161D24]">
+                                    <div className="space-y-2 flex-1 min-h-0 flex flex-col">
+                                        <div className="shrink-0">{renderModeControlBar()}</div>
+                                        <div className="relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs rounded-2xl overflow-hidden flex-1 min-h-0 flex flex-col bg-white dark:bg-[#161D24]">
                                             <MateriasMallaEstatica
                                                 materias={materias}
                                                 progreso={progresoSimulado}
@@ -460,17 +460,17 @@ function Simulador({ plan: initialPlan }) {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="space-y-3">
-                                        {renderModeControlBar()}
+                                    <div className="space-y-2 flex-1 min-h-0 flex flex-col">
+                                        <div className="shrink-0">{renderModeControlBar()}</div>
                                         <div
                                             ref={grafoContainerRef}
-                                            className={`relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs transition-all duration-300 flex flex-col bg-white dark:bg-[#161D24] ${
+                                            className={`relative border border-[#E2E8F0] dark:border-[#2A3540] shadow-2xs transition-all duration-300 flex-1 min-h-[420px] lg:min-h-0 flex flex-col bg-white dark:bg-[#161D24] ${
                                                 isFullScreen
                                                     ? 'fixed inset-0 z-[1000] p-0 rounded-none w-screen h-screen'
-                                                    : 'h-[620px] sm:h-[720px] rounded-2xl overflow-hidden'
+                                                    : 'h-[580px] lg:h-full rounded-2xl overflow-hidden'
                                             }`}
                                         >
-                                            <div className="flex-1 min-h-0">
+                                            <div className="flex-1 min-h-0 h-full">
                                                 <MateriasGrafo
                                                     materias={materias}
                                                     progreso={progresoSimulado}
@@ -479,7 +479,7 @@ function Simulador({ plan: initialPlan }) {
                                                     selectedNodeId={interactionMode === 'explorar' ? selectedCodigo : null}
                                                     topRightContent={
                                                     <>
-                                                        {progresoIntermedio.totales > 0 && (
+                                                        {interactionMode === 'planificar' && progresoIntermedio.totales > 0 && (
                                                             <div
                                                                 className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[11px] font-semibold flex items-center gap-1.5 border ${
                                                                     isIntermedioCompletado

@@ -336,7 +336,7 @@ const FlowInner = ({
   }, [edges, activeNodeId]);
 
   return (
-    <div className="w-full h-full min-h-[580px] sm:min-h-[680px] relative overflow-hidden bg-[#F8FAFC] dark:bg-[#0F1419] rounded-2xl">
+    <div className="w-full h-full min-h-0 relative overflow-hidden bg-[#F8FAFC] dark:bg-[#0F1419] rounded-2xl">
       {nodes.length === 0 && (
         <div className="absolute inset-0 z-20 bg-background/90 backdrop-blur-xs flex flex-col items-center justify-center p-8 gap-4 animate-pulse">
           <div className="flex items-center gap-3">
@@ -346,7 +346,7 @@ const FlowInner = ({
         </div>
       )}
 
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-30 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-20 flex flex-wrap items-center justify-between gap-1.5 pointer-events-none">
         <div className="flex items-center gap-1.5 pointer-events-auto">
           <ButtonGroup size="sm" variant="flat" className="bg-white dark:bg-[#161D24] shadow-xs border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl">
             <Button isIconOnly onPress={() => rfZoomIn()} aria-label="Acercar" title="Acercar" className="min-w-8 h-8 sm:min-w-9 sm:h-9"><ZoomIn size={15} /></Button>
@@ -384,15 +384,6 @@ const FlowInner = ({
           </div>
         )}
       </div>
-
-      {!activeNodeId && nodes.length > 0 && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-          <div className="bg-white/95 dark:bg-[#161D24]/95 text-[#64748B] dark:text-[#94A3B8] text-[11px] font-medium px-3 py-1 rounded-full shadow-2xs border border-[#E2E8F0] dark:border-[#2A3540] flex items-center gap-1.5 whitespace-nowrap">
-            <i className="fa-solid fa-hand-pointer text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
-            Pasá o tocá una materia para ver sus correlativas
-          </div>
-        </div>
-      )}
 
       <ReactFlow
         nodes={nodes}

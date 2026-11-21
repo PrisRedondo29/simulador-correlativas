@@ -366,7 +366,7 @@ export function TopUtilityBar({ plan }) {
     const activePlan = plan || DEFAULT_PLAN;
 
     return (
-        <header className="hidden lg:flex h-14 sticky top-0 z-30 bg-white/95 dark:bg-[#161D24]/95 border-b border-[#E2E8F0] dark:border-[#2A3540] px-8 items-center justify-between">
+        <header className="hidden lg:flex h-14 sticky top-0 z-40 bg-white dark:bg-[#161D24] border-b border-[#E2E8F0] dark:border-[#2A3540] px-8 items-center justify-between">
             <div className="flex items-center gap-2.5 min-w-0">
                 <span className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] truncate">
                     {pageTitle}
