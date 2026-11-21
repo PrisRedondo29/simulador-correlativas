@@ -72,7 +72,7 @@ export const TUTORIAL_TOURS = {
     },
     [TOUR_IDS.SIMULADOR]: {
         id: TOUR_IDS.SIMULADOR,
-        version: 1,
+        version: 2,
         route: '/simulador',
         title: 'Simulador de Avance',
         steps: [
@@ -88,7 +88,7 @@ export const TUTORIAL_TOURS = {
                 target: '[data-tour="simulador-controles"]',
                 title: 'Controlá tu simulación',
                 description:
-                    'Desde acá avanzás o retrocedés cuatrimestres, importás tus materias reales o probás aprobar la materia fijada.',
+                    'Desde acá avanzás o retrocedés cuatrimestres en Planificar, o inspeccionás los requisitos previos y materias habilitadas de la materia fijada en Explorar.',
             },
             {
                 id: 'simulador_importar',
@@ -103,6 +103,13 @@ export const TUTORIAL_TOURS = {
                 title: 'Configurar plan e inicio',
                 description:
                     'Desde Configurar podés cambiar el plan de estudios y el año o cuatrimestre desde el que querés simular.',
+            },
+            {
+                id: 'simulador_diseno',
+                target: '[data-tour="simulador-diseno"]',
+                title: 'Elegí tu diseño favorito',
+                description:
+                    'Probá alternar entre Panel lateral (controles a la derecha y lista de correlativas) y HUD flotante (mapa a pantalla completa) para quedarte con el que te resulte más cómodo.',
             },
         ],
     },

@@ -281,8 +281,17 @@ function Simulador({ plan: initialPlan }) {
         </div>
     );
 
+    const mobileSimuladorTour = React.useMemo(() => {
+        const base = TUTORIAL_TOURS[TOUR_IDS.SIMULADOR];
+        return {
+            ...base,
+            steps: base.steps.filter((s) => s.id !== 'simulador_diseno'),
+        };
+    }, []);
+
     const renderLayoutComparisonSwitcher = () => (
         <div
+            data-tour="simulador-diseno"
             aria-label="Elegir diseño de escritorio"
             className="bg-white/95 dark:bg-[#161D24]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-[#2A3540] shadow-sm rounded-xl p-1 flex items-center gap-1"
         >
@@ -708,7 +717,7 @@ function Simulador({ plan: initialPlan }) {
             {plan && !isDesktopGrafo && (
                 <div className="animate-in fade-in duration-300 flex flex-col gap-3 flex-1 min-h-0">
                     <InteractiveTourOverlay
-                        tour={TUTORIAL_TOURS[TOUR_IDS.SIMULADOR]}
+                        tour={mobileSimuladorTour}
                         ready={Boolean(plan) && !cargando && !isModeModalOpen}
                         triggerPlacement="inline"
                     />
