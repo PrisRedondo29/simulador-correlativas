@@ -91,11 +91,18 @@ export const TUTORIAL_TOURS = {
                     'Desde acá avanzás o retrocedés cuatrimestres, importás tus materias reales o probás aprobar la materia fijada.',
             },
             {
+                id: 'simulador_importar',
+                target: '[data-tour="simulador-importar"]',
+                title: 'Importá tu progreso real',
+                description:
+                    'Traé en 1 clic tus materias aprobadas y regulares desde Mis Materias para simular a partir de tu estado actual.',
+            },
+            {
                 id: 'simulador_opciones',
                 target: '[data-tour="simulador-opciones"]',
-                title: 'Importar y configurar',
+                title: 'Configurar plan e inicio',
                 description:
-                    'En Opciones podés traer tu progreso desde Mis Materias en 1 clic o cambiar el plan y cuatrimestre de inicio.',
+                    'Desde Configurar podés cambiar el plan de estudios y el año o cuatrimestre desde el que querés simular.',
             },
         ],
     },

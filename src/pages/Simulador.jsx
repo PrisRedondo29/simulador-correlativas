@@ -17,7 +17,7 @@ import useSimuladorEstado from '../hooks/Simulador/useSimuladorEstado';
 import useSimuladorMaterias from '../hooks/Simulador/useSimuladorMaterias';
 import useSimuladorPDF from '../hooks/Simulador/useSimuladorPDF';
 import usePlanData from '../hooks/usePlanData';
-import { CheckCircle2, CloudDownload, Maximize2, Minimize2, Pin, X } from 'lucide-react';
+import { CloudDownload, Maximize2, Minimize2, Pin, X } from 'lucide-react';
 import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
@@ -199,33 +199,6 @@ function Simulador({ plan: initialPlan }) {
         return { reqs, unlocks };
     }, [selectedMateria, materias]);
 
-    const isSelectedSimulatedApproved = Boolean(
-        selectedCodigo &&
-            (progresoSimulado?.[selectedCodigo] === 'Aprobado' ||
-                progresoSimulado?.[selectedCodigo] === 'Promocionado' ||
-                progresoSimulado?.[selectedCodigo] === 'Cursado'),
-    );
-
-    const handleToggleSelectedApproval = () => {
-        if (!selectedCodigo) return;
-        const nextEstado = isSelectedSimulatedApproved ? 'Disponible' : 'Aprobado';
-        setProgresoSimulado((prev) => ({
-            ...(prev || {}),
-            [selectedCodigo]: nextEstado,
-        }));
-    };
-
-    const hasRealProgressToImport = React.useMemo(
-        () =>
-            Boolean(
-                progresoReal &&
-                    Object.values(progresoReal).some((v) =>
-                        ['Aprobado', 'Promocionado', 'Regular', 'Cursando'].includes(v),
-                    ),
-            ),
-        [progresoReal],
-    );
-
     const elegidasEsteCuatri = React.useMemo(
         () =>
             materiasCursables.filter((m) => {
@@ -278,26 +251,12 @@ function Simulador({ plan: initialPlan }) {
                             <div className="flex items-center gap-2 shrink-0">
                                 <Button
                                     size="sm"
-                                    color={isSelectedSimulatedApproved ? 'default' : 'success'}
-                                    variant={isSelectedSimulatedApproved ? 'bordered' : 'solid'}
-                                    className={
-                                        isSelectedSimulatedApproved
-                                            ? 'h-8 text-xs font-medium'
-                                            : 'h-8 text-xs font-semibold bg-[#005A36] text-white'
-                                    }
-                                    startContent={<CheckCircle2 size={14} />}
-                                    onPress={handleToggleSelectedApproval}
-                                >
-                                    {isSelectedSimulatedApproved ? 'Quitar aprobación' : 'Simular aprobar'}
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="light"
-                                    className="h-8 text-xs text-[#64748B]"
+                                    variant="bordered"
+                                    className="h-8 text-xs font-medium border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1]"
                                     startContent={<X size={14} />}
                                     onPress={() => setSelectedCodigo(null)}
                                 >
-                                    Limpiar
+                                    Deseleccionar
                                 </Button>
                             </div>
                         </>
@@ -349,18 +308,6 @@ function Simulador({ plan: initialPlan }) {
                         <span className="text-xs sm:text-sm">Siguiente</span>
                     </Button>
                 </div>
-
-                {historialSemestres.length === 0 && hasRealProgressToImport && (
-                    <Button
-                        size="sm"
-                        variant="flat"
-                        onPress={handleImportarProgreso}
-                        className="font-semibold rounded-xl text-xs h-9 bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]"
-                        startContent={<CloudDownload size={14} />}
-                    >
-                        Importar desde Mis Materias
-                    </Button>
-                )}
             </div>
         );
     };

@@ -70,7 +70,7 @@ export default function SimuladorModeModal({ isOpen, onSelectMode }) {
                   Explorar correlativas
                 </p>
                 <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                  Dejá fijada cualquier materia para ver sus requisitos previos (ámbar) y qué materias habilita aprobarla (verde).
+                  Dejá fijada cualquier materia para visualizar sus requisitos previos (ámbar) y qué materias habilita (verde).
                 </p>
               </div>
             </div>

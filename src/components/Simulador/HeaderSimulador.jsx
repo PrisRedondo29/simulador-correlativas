@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button, ButtonGroup, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger } from '@heroui/react';
-import { CalendarRange, CloudDownload, GitBranch, MoreVertical, SlidersHorizontal } from 'lucide-react';
+import { Button, ButtonGroup } from '@heroui/react';
+import { CalendarRange, CloudDownload, GitBranch, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 function HeaderSimulador({
@@ -20,7 +20,7 @@ function HeaderSimulador({
 
     const modeDescription =
         interactionMode === 'explorar'
-            ? 'Tocá cualquier materia para fijar sus correlativas previas (ámbar) y las que habilita (verde), o simulá aprobarla libremente.'
+            ? 'Tocá cualquier materia para fijarla y ver sus requisitos previos (ámbar) y las que habilita (verde).'
             : 'Elegí qué materias cursar en cada cuatrimestre y avanzá para proyectar cuándo te recibís.';
 
     return (
@@ -84,38 +84,31 @@ function HeaderSimulador({
                         </ButtonGroup>
                     </div>
 
-                    {/* Menú compacto de opciones */}
-                    <Dropdown>
-                        <DropdownTrigger>
+                    {/* Acciones principales: Importar y Configurar */}
+                    <div className="flex items-center gap-1.5">
+                        {onImportarProgreso && (
                             <Button
-                                data-tour="simulador-opciones"
+                                data-tour="simulador-importar"
                                 size="sm"
-                                variant="bordered"
-                                className="font-medium rounded-xl text-xs h-9 border-[#E2E8F0] dark:border-[#2A3540] text-[#334155] dark:text-[#E2E8F0]"
-                                startContent={<MoreVertical size={14} />}
+                                variant="flat"
+                                onPress={onImportarProgreso}
+                                className="font-semibold rounded-xl text-xs h-9 bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]"
+                                startContent={<CloudDownload size={14} />}
                             >
-                                Opciones
+                                Importar desde Mis Materias
                             </Button>
-                        </DropdownTrigger>
-                        <DropdownMenu aria-label="Opciones del simulador">
-                            {onImportarProgreso && (
-                                <DropdownItem
-                                    key="importar"
-                                    startContent={<CloudDownload size={15} />}
-                                    onPress={onImportarProgreso}
-                                >
-                                    Importar desde Mis Materias
-                                </DropdownItem>
-                            )}
-                            <DropdownItem
-                                key="configurar"
-                                startContent={<SlidersHorizontal size={15} />}
-                                onPress={onOpenConfig}
-                            >
-                                Configurar plan e inicio
-                            </DropdownItem>
-                        </DropdownMenu>
-                    </Dropdown>
+                        )}
+                        <Button
+                            data-tour="simulador-opciones"
+                            size="sm"
+                            variant="bordered"
+                            onPress={onOpenConfig}
+                            className="font-medium rounded-xl text-xs h-9 border-[#E2E8F0] dark:border-[#2A3540] text-[#334155] dark:text-[#E2E8F0]"
+                            startContent={<SlidersHorizontal size={14} />}
+                        >
+                            Configurar
+                        </Button>
+                    </div>
                 </div>
             </div>
         </header>
