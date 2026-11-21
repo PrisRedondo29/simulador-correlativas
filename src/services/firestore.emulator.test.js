@@ -9,12 +9,14 @@ import {
 import {
     collection,
     deleteDoc,
+    deleteField,
     doc,
     getDoc,
     getDocs,
     runTransaction,
     serverTimestamp,
     setDoc,
+    Timestamp,
     updateDoc,
     addDoc,
 } from 'firebase/firestore';
@@ -101,8 +103,8 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
         await assertSucceeds(getDoc(doc(dbA, 'roles', 'uid-A')));
         await assertFails(setDoc(doc(dbA, 'roles', 'uid-A'), { role: 'admin' }));
 
-        // app_logs: rechaza payloads malformados o con spoofing de uid, acepta el esquema válido de ErrorBoundary,
-        // y solo permite lectura/listado/borrado a usuarios con roles/{uid}.role == 'admin'
+        // app_logs: rechaza payloads malformados, spoofing de uid, timestamps falsificados y context no acotado;
+        // acepta el esquema válido de logService (anónimo y autenticado), y solo admin puede leer/listar/eliminar (sin editar)
         await assertFails(addDoc(collection(dbA, 'app_logs'), { level: 'error', msg: 'test' }));
         await assertFails(
             addDoc(collection(dbA, 'app_logs'), {
@@ -111,6 +113,58 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
                 errorMessage: 'Intento de spoofing de uid',
                 route: '/progreso',
                 uid: 'uid-B', // Spoofing! dbA es uid-A
+                createdAt: serverTimestamp(),
+            }),
+        );
+        await assertFails(
+            addDoc(collection(dbA, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Usuario autenticado fingiendo ser anónimo',
+                route: '/progreso',
+                uid: null,
+                createdAt: serverTimestamp(),
+            }),
+        );
+        await assertFails(
+            addDoc(collection(unauthDb, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Anónimo intentando atribuir a un uid real',
+                route: '/progreso',
+                uid: 'uid-A',
+                createdAt: serverTimestamp(),
+            }),
+        );
+        await assertFails(
+            addDoc(collection(unauthDb, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Timestamp falsificado en el pasado',
+                route: '/progreso',
+                uid: null,
+                createdAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')),
+            }),
+        );
+        await assertFails(
+            addDoc(collection(unauthDb, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Clave no permitida dentro de context',
+                route: '/progreso',
+                uid: null,
+                context: { bomb: 'x'.repeat(2000) },
+                createdAt: serverTimestamp(),
+            }),
+        );
+        await assertFails(
+            addDoc(collection(unauthDb, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Clave permitida en context pero excede el tamaño máximo',
+                route: '/progreso',
+                uid: null,
+                context: { scope: 'x'.repeat(100) },
                 createdAt: serverTimestamp(),
             }),
         );
@@ -129,12 +183,26 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
             }),
         );
 
+        const createdAuthLogRef = await assertSucceeds(
+            addDoc(collection(dbA, 'app_logs'), {
+                level: 'error',
+                errorCode: 'ui/error-boundary',
+                errorMessage: 'Fallo capturado en producción (sesión autenticada)',
+                route: '/simulador',
+                componentStack: null,
+                planActivo: '17.14',
+                uid: 'uid-A',
+                context: { scope: 'page', route: '/simulador' },
+                createdAt: serverTimestamp(),
+            }),
+        );
+
         // Usuario normal y anónimo NO pueden leer ni listar app_logs
         await assertFails(getDoc(doc(unauthDb, 'app_logs', createdLogRef.id)));
         await assertFails(getDoc(doc(dbA, 'app_logs', createdLogRef.id)));
         await assertFails(getDocs(collection(dbA, 'app_logs')));
 
-        // Usuario con rol admin SÍ puede leer, listar y eliminar logs desde el Panel Admin
+        // Usuario con rol admin SÍ puede leer, listar y eliminar logs desde el Panel Admin, pero NO editarlos (inmutables)
         await testEnv.withSecurityRulesDisabled(async (ctx) => {
             await setDoc(doc(ctx.firestore(), 'roles', 'uid-admin'), { role: 'admin' });
         });
@@ -143,7 +211,11 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
             .firestore();
         await assertSucceeds(getDoc(doc(dbAdmin, 'app_logs', createdLogRef.id)));
         await assertSucceeds(getDocs(collection(dbAdmin, 'app_logs')));
+        await assertFails(
+            updateDoc(doc(dbAdmin, 'app_logs', createdLogRef.id), { errorMessage: 'Editado' }),
+        );
         await assertSucceeds(deleteDoc(doc(dbAdmin, 'app_logs', createdLogRef.id)));
+        await assertSucceeds(deleteDoc(doc(dbAdmin, 'app_logs', createdAuthLogRef.id)));
 
         // catalog_meta y catalog_plans: solo admin puede publicar/actualizar/eliminar;
         // cualquier cliente (incluso anónimo) puede hacer get de catalog_meta/index y catalog_plans/{planId}
@@ -195,13 +267,22 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
         const dbA = testEnv.authenticatedContext('uid-A', { email: 'a@unlu.edu.ar' }).firestore();
         const userRef = doc(dbA, 'users', 'uid-A');
 
-        // 1. Create con campo prohibido (isAdmin/role) -> denegado
+        // 1. Create con campo prohibido (isAdmin/role) o createdAt falsificado -> denegado
         await assertFails(
             setDoc(userRef, {
                 uid: 'uid-A',
                 email: 'a@unlu.edu.ar',
                 isAdmin: true,
                 createdAt: serverTimestamp(),
+                schemaVersion: 1,
+                syncRevision: 0,
+            }),
+        );
+        await assertFails(
+            setDoc(userRef, {
+                uid: 'uid-A',
+                email: 'a@unlu.edu.ar',
+                createdAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')),
                 schemaVersion: 1,
                 syncRevision: 0,
             }),
@@ -220,10 +301,18 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
             }),
         );
 
-        // 3. Update intentando inyectar rol o mutar createdAt / uid -> denegado
+        // 3. Update intentando inyectar rol, mutar/eliminar uid, createdAt o schemaVersion, o falsificar configUpdatedAt -> denegado
         await assertFails(updateDoc(userRef, { role: 'admin' }));
         await assertFails(updateDoc(userRef, { uid: 'uid-B' }));
+        await assertFails(updateDoc(userRef, { uid: deleteField() }));
         await assertFails(updateDoc(userRef, { createdAt: serverTimestamp() }));
+        await assertFails(updateDoc(userRef, { createdAt: deleteField() }));
+        await assertFails(updateDoc(userRef, { schemaVersion: deleteField() }));
+        await assertFails(
+            updateDoc(userRef, {
+                configUpdatedAt: Timestamp.fromDate(new Date('2020-01-01T00:00:00Z')),
+            }),
+        );
 
         // 4. Config con tema inválido o alias demasiado largo -> denegado
         await assertFails(

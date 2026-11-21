@@ -16,14 +16,14 @@ rules_version = '2';
 //   - email: string | null (optional, empty string or valid email, max 254 chars)
 //   - displayName: string | null (optional, max 120 chars)
 //   - photoURL: string | null (optional, empty string or valid http/https URL, max 1000 chars)
-//   - createdAt: timestamp (optional on create, immutable once set; cannot be added/modified/deleted on update)
-//   - schemaVersion: int (optional, range 1..10)
+//   - createdAt: timestamp (optional on create, must equal request.time when set; immutable once set; cannot be added/modified/deleted on update)
+//   - schemaVersion: int (optional, range 1..10; cannot be deleted once set)
 //   - syncRevision: int (optional; on create: 1 if academic payload is present, else 0..1;
 //                        on update: must increment strictly by +1 from previous revision
 //                        whenever any academic sync field changes, otherwise must remain unchanged)
 //   - academicHash: string (optional, 1..64 chars, deterministic content hash e.g. "v1:<16 hex>")
-//   - academicUpdatedAt: timestamp (optional, server timestamp of last academic sync)
-//   - configUpdatedAt: timestamp (optional, server timestamp of last config update)
+//   - academicUpdatedAt: timestamp (optional, must equal request.time on create or when modified; cannot be deleted)
+//   - configUpdatedAt: timestamp (optional, must equal request.time on create or when modified; cannot be deleted)
 //   - config: map (optional, keys strictly limited to ['alias', 'planActivo', 'tema']):
 //       - alias: string (optional, max 80 chars)
 //       - planActivo: string | null (optional, max 20 chars)
@@ -52,19 +52,23 @@ rules_version = '2';
 // Document ID: {logId} (auto-generated)
 // Access: Client error/warning telemetry (e.g., ErrorBoundary crashes).
 //         Anyone (anonymous or authenticated) may create strictly validated log
-//         entries with bounded field sizes and anti-spoofing uid verification.
+//         entries with server-enforced request.time, bounded field sizes, closed
+//         bounded context schema, and strict uid attribution (authenticated callers
+//         MUST set uid == request.auth.uid; unauthenticated callers MUST omit uid
+//         or set uid == null). Documents are strictly immutable after creation
+//         (update is denied for everyone, including admins).
 //         Only verified admins (/roles/{uid}.role == 'admin') may get, list,
-//         update, or delete log documents from the Admin Panel.
+//         or delete log documents from the Admin Panel.
 // Fields:
 //   - level: string (required, enum: 'error' | 'warning')
 //   - errorCode: string (required, 1..100 chars)
 //   - errorMessage: string (required, 1..500 chars)
 //   - route: string (required, 1..200 chars)
-//   - createdAt: timestamp (required)
+//   - createdAt: timestamp (required, must equal request.time)
 //   - componentStack: string | null (optional, max 1000 chars)
 //   - planActivo: string | null (optional, max 20 chars)
-//   - uid: string | null (optional; if non-null, caller must be authenticated and uid == request.auth.uid)
-//   - context: map (optional, max 10 entries)
+//   - uid: string | null (required == request.auth.uid when authenticated; absent or null when unauthenticated)
+//   - context: map (optional, closed keys ['scope', 'route', 'plan', 'source', 'action', 'retries', 'offline'] with strict types/bounds)
 //
 // Collection: catalog_meta
 // Document ID: {docId} (publicly readable only for 'index')
@@ -74,7 +78,7 @@ rules_version = '2';
 //         update (with schema validation), or delete catalog metadata.
 // Fields:
 //   - plans: map (required, max 50 entries)
-//   - updatedAt: timestamp (required)
+//   - updatedAt: timestamp (required, must equal request.time)
 //   - updatedBy: string | null (optional, max 128 chars; prefer non-PII admin UID)
 //
 // Collection: catalog_plans
@@ -89,7 +93,7 @@ rules_version = '2';
 //   - materias: list (required, 1..150 items)
 //   - changelogMessage: string | null (optional, max 500 chars)
 //   - codeMappings: map | null (optional, max 150 entries)
-//   - updatedAt: timestamp (required)
+//   - updatedAt: timestamp (required, must equal request.time)
 //   - updatedBy: string | null (optional, max 128 chars; prefer non-PII admin UID)
 //
 // All other collections and subcollections:
@@ -326,13 +330,22 @@ service cloud.firestore {
       return hasOnlyAllowedFields(allowedUserCreateFields()) &&
         uidUnchanged() &&
         isValidUser(data, userId) &&
-        isValidInitialSyncRevision(data);
+        isValidInitialSyncRevision(data) &&
+        (!('createdAt' in data) || data.createdAt == request.time) &&
+        (!('academicUpdatedAt' in data) || data.academicUpdatedAt == request.time) &&
+        (!('configUpdatedAt' in data) || data.configUpdatedAt == request.time);
     }
 
     function isValidUserUpdate(newData, existingData, userId) {
-      return newData.diff(existingData).affectedKeys().hasOnly(allowedUserMutableFields()) &&
+      let affected = newData.diff(existingData).affectedKeys();
+      return affected.hasOnly(allowedUserMutableFields()) &&
         areImmutableFieldsUnchanged(['createdAt']) &&
         (!('createdAt' in existingData) || newData.createdAt == existingData.createdAt) &&
+        (!('schemaVersion' in existingData) || 'schemaVersion' in newData) &&
+        (!('academicUpdatedAt' in affected) ||
+          ('academicUpdatedAt' in newData && newData.academicUpdatedAt == request.time)) &&
+        (!('configUpdatedAt' in affected) ||
+          ('configUpdatedAt' in newData && newData.configUpdatedAt == request.time)) &&
         uidNotModified() &&
         isValidUser(newData, userId) &&
         isValidSyncRevisionTransition(newData, existingData);
@@ -366,6 +379,24 @@ service cloud.firestore {
       ];
     }
 
+    function isValidAppLogContext(ctx) {
+      return ctx is map &&
+        ctx.keys().hasOnly(['scope', 'route', 'plan', 'source', 'action', 'retries', 'offline']) &&
+        (!('scope' in ctx) || (ctx.scope is string && ctx.scope.size() <= 40)) &&
+        (!('route' in ctx) || (ctx.route is string && ctx.route.size() <= 200)) &&
+        (!('plan' in ctx) || ctx.plan == null || (ctx.plan is string && ctx.plan.size() <= 20)) &&
+        (!('source' in ctx) || (ctx.source is string && ctx.source.size() <= 60)) &&
+        (!('action' in ctx) || (ctx.action is string && ctx.action.size() <= 60)) &&
+        (!('retries' in ctx) || (ctx.retries is int && ctx.retries >= 0 && ctx.retries <= 100)) &&
+        (!('offline' in ctx) || ctx.offline is bool);
+    }
+
+    function isValidAppLogUid(data) {
+      return isAuthenticated()
+        ? ('uid' in data && data.uid is string && data.uid == request.auth.uid)
+        : (!('uid' in data) || data.uid == null);
+    }
+
     function isValidAppLogCreate(data) {
       return hasRequiredFields(requiredAppLogFields()) &&
         hasOnlyAllowedFields(allowedAppLogFields()) &&
@@ -386,12 +417,10 @@ service cloud.firestore {
         (!('planActivo' in data) ||
           data.planActivo == null ||
           (data.planActivo is string && data.planActivo.size() <= 20)) &&
-        (!('uid' in data) ||
-          data.uid == null ||
-          (isAuthenticated() && data.uid is string && data.uid == request.auth.uid)) &&
-        (!('context' in data) ||
-          (data.context is map && data.context.size() <= 10)) &&
-        data.createdAt is timestamp;
+        isValidAppLogUid(data) &&
+        (!('context' in data) || isValidAppLogContext(data.context)) &&
+        data.createdAt is timestamp &&
+        data.createdAt == request.time;
     }
 
     // ===============================================================
@@ -404,6 +433,7 @@ service cloud.firestore {
         data.plans is map &&
         data.plans.size() <= 50 &&
         data.updatedAt is timestamp &&
+        data.updatedAt == request.time &&
         (!('updatedBy' in data) ||
           data.updatedBy == null ||
           (data.updatedBy is string && data.updatedBy.size() <= 128));
@@ -439,6 +469,7 @@ service cloud.firestore {
           data.codeMappings == null ||
           (data.codeMappings is map && data.codeMappings.size() <= 150)) &&
         data.updatedAt is timestamp &&
+        data.updatedAt == request.time &&
         (!('updatedBy' in data) ||
           data.updatedBy == null ||
           (data.updatedBy is string && data.updatedBy.size() <= 128));
@@ -464,10 +495,11 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Application error/warning telemetry (strictly validated create; admin-only management)
+    // Application error/warning telemetry (immutable after creation; admin-only read/delete)
     match /app_logs/{logId} {
       allow create: if isValidAppLogCreate(request.resource.data);
-      allow get, list, update, delete: if isAdmin();
+      allow get, list, delete: if isAdmin();
+      allow update: if false;
     }
 
     // Public catalog version index (single-doc 'index' readable; admin-only management)
