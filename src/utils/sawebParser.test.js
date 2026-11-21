@@ -116,6 +116,10 @@ describe('sawebParser', () => {
             cuatrimestre: 1,
         });
         expect(result.progresoDetalles['11075'].intentosFinal).toHaveLength(2);
+        expect(result.progresoDetalles['11075'].intentosFinal[0].condicion).toBe('Regular');
+
+        expect(result.progreso['11074']).toBe('Aprobado');
+        expect(result.progresoDetalles['11074'].intentosFinal[0].condicion).toBe('Libre');
     });
 
     it('soporta equivalencias (E/X), múltiples aplazos y omite materias fuera del plan nuevo (17.14)', () => {

@@ -155,17 +155,21 @@ export default function useDetalleMateria(infoMateria, progresoDetalles, setProg
             const intentosActuales = currentData.intentosFinal || [];
             const desaprobadosActuales = intentosActuales.filter(i => i.estado === 'reprobado').length;
             const yaAprobado = intentosActuales.some(i => i.estado === 'aprobado');
-            if (desaprobadosActuales >= reglas.limites.intentos_final || yaAprobado) return currentData;
+            const esIntentoLibre = estadoActual === 'Libre' || Boolean(currentData.rendidaLibre);
+            if ((!esIntentoLibre && desaprobadosActuales >= reglas.limites.intentos_final) || yaAprobado) {
+                return currentData;
+            }
 
             const newIntentos = [...intentosActuales, {
                 nota: notaParsed,
                 estado: status,
-                fecha: fechaIntento
+                fecha: fechaIntento,
+                ...(esIntentoLibre ? { condicion: 'Libre' } : {})
             }];
 
             if (status === 'aprobado') {
                 setTimeout(() => cambioDeEstado(infoMateria.codigo, 'Aprobado'), 0);
-            } else {
+            } else if (!esIntentoLibre) {
                 const estadoActualizado = regularidadUtils.calcularEstadoConsolidado(
                     "Regular",
                     currentData.fechaRegularidad,
@@ -179,7 +183,10 @@ export default function useDetalleMateria(infoMateria, progresoDetalles, setProg
             return {
                 ...currentData,
                 intentosFinal: newIntentos,
-                ...(status === 'aprobado' && { notaFinal: notaParsed })
+                ...(status === 'aprobado' && {
+                    notaFinal: notaParsed,
+                    ...(esIntentoLibre ? { rendidaLibre: true } : {})
+                })
             };
         });
 

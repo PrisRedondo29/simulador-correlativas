@@ -353,6 +353,7 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
                     nota: i.nota,
                     estado: /** @type {'aprobado'|'reprobado'} */ (i.nota >= 4 ? 'aprobado' : 'reprobado'),
                     fecha: i.fecha,
+                    condicion: /** @type {'Regular'|'Libre'} */ (i.tipo === 'L' ? 'Libre' : 'Regular'),
                 })),
             ...ausentesOrdenados.map((a) => ({
                 nota: null,

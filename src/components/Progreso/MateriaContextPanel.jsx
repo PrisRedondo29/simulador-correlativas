@@ -245,6 +245,8 @@ export function MateriaContextContent({
 }) {
   const estadoActual = materia ? progreso[materia.codigo] || "Disponible" : "Disponible";
   const detalles = (materia && progresoDetalles?.[materia.codigo]) || {};
+  const [habilitaExpandedFor, setHabilitaExpandedFor] = useState(null);
+  const showHabilita = Boolean(materia && habilitaExpandedFor === materia.codigo);
 
   const {
     showNotaForm,
@@ -375,6 +377,10 @@ export function MateriaContextContent({
     (i) => i.estado === "reprobado",
   ).length;
   const tieneIntentoAprobado = intentosFinal.some((i) => i.estado === "aprobado");
+  const usaTopeRegularidad =
+    !esRendidaLibre &&
+    estadoActual !== "Libre" &&
+    desaprobadosCount <= maxDesaprobaciones;
   const isTesinaBloqueada = Boolean(materia.tesis) && estadoActual === "Bloqueado";
   const faltaInfo = esMateriaIncompleta(materia, estadoActual, detalles);
 
@@ -428,6 +434,15 @@ export function MateriaContextContent({
               <i className={`${estadoConfig.icono} text-[11px]`} aria-hidden="true" />
               {estadoActual}
             </span>
+            {esRendidaLibre && estadoActual !== "Libre" && !esEquivalencia && (
+              <Chip
+                size="sm"
+                variant="flat"
+                className="bg-[#FEF2F2] text-[#991B1B] dark:bg-[#2D1619] dark:text-[#FCA5A5] font-medium"
+              >
+                Rendida libre
+              </Chip>
+            )}
             {detalles.notaFinal != null &&
               (estadoActual === "Aprobado" || estadoActual === "Promocionado") && (
                 <Chip
@@ -517,17 +532,74 @@ export function MateriaContextContent({
       </section>
 
       <section aria-label="Correlativas" className="space-y-2 pt-1">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8]">
             Correlativas requeridas
           </h3>
           {habilitaA.length > 0 && (
-            <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-              Habilita a {habilitaA.length}{" "}
-              {habilitaA.length === 1 ? "materia" : "materias"}
-            </span>
+            <button
+              type="button"
+              aria-expanded={showHabilita}
+              onClick={() =>
+                setHabilitaExpandedFor((prev) =>
+                  prev === materia.codigo ? null : materia.codigo,
+                )
+              }
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline cursor-pointer"
+            >
+              <span>
+                Habilita a {habilitaA.length}{" "}
+                {habilitaA.length === 1 ? "materia" : "materias"}
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-150 ${
+                  showHabilita ? "rotate-180" : ""
+                }`}
+                aria-hidden="true"
+              />
+            </button>
           )}
         </div>
+
+        {showHabilita && habilitaA.length > 0 && (
+          <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] space-y-1.5">
+            <p className="text-[11px] font-semibold text-[#64748B] dark:text-[#94A3B8]">
+              Materias que habilita:
+            </p>
+            <div className="space-y-1">
+              {habilitaA.map((hab) => {
+                const estHab = progreso[hab.codigo] || "Bloqueado";
+                const cfgHab =
+                  estadoUtils.ESTADO_CONFIG[estHab] || estadoUtils.ESTADO_CONFIG.Bloqueado;
+                return (
+                  <button
+                    key={hab.codigo}
+                    type="button"
+                    onClick={() => onSelectMateria?.(hab.codigo)}
+                    className="w-full text-left flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] hover:border-[#005A36]/50 dark:hover:border-[#4A9D68]/50 transition-colors cursor-pointer"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-[#1E293B] dark:text-[#F1F5F9] truncate">
+                        {hab.nombre}
+                      </p>
+                      <span className="text-[10px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
+                        {hab.codigo}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${cfgHab.badgeClass}`}
+                      >
+                        {estHab}
+                      </span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#94A3B8]" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {correlativas.length === 0 ? (
           <p className="text-xs text-[#475569] dark:text-[#94A3B8] bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] rounded-lg px-3 py-2">
@@ -655,7 +727,7 @@ export function MateriaContextContent({
             </div>
           )}
 
-          {!esRendidaLibre && !esEquivalencia && (
+          {!esRendidaLibre && !esEquivalencia ? (
             <div className="grid grid-cols-2 gap-2.5">
               <Select
                 size="sm"
@@ -686,7 +758,20 @@ export function MateriaContextContent({
                 onValueChange={handleCambioNotaCursada}
               />
             </div>
-          )}
+          ) : esRendidaLibre && !esEquivalencia ? (
+            <div className="p-2.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] flex flex-wrap items-center justify-between gap-2 text-xs text-[#475569] dark:text-[#94A3B8]">
+              <span>
+                Aprobada por final en <strong>condición Libre</strong> (sin cursada regular).
+              </span>
+              <button
+                type="button"
+                onClick={() => handleToggleLibre(false)}
+                className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline cursor-pointer shrink-0"
+              >
+                Cargar cursada
+              </button>
+            </div>
+          ) : null}
 
           {!esEquivalencia && (
             <div className="p-3 rounded-xl bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] space-y-2.5">
@@ -696,14 +781,31 @@ export function MateriaContextContent({
                     Intentos de examen final
                   </p>
                   <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
-                    {desaprobadosCount} de {maxDesaprobaciones} desaprobaciones
-                    {estadoActual === "Regular"
-                      ? ` · ${statusPlan.cuatrimestresRestantes} cuatris restantes`
-                      : ""}
+                    {usaTopeRegularidad ? (
+                      <>
+                        {desaprobadosCount} de {maxDesaprobaciones} desaprobaciones
+                        {estadoActual === "Regular"
+                          ? ` · ${statusPlan.cuatrimestresRestantes} cuatris restantes`
+                          : ""}
+                      </>
+                    ) : desaprobadosCount > maxDesaprobaciones ? (
+                      <>
+                        {desaprobadosCount} desaprobaciones acumuladas · Tras {maxDesaprobaciones}{" "}
+                        aplazos de regularidad se rinde en condición Libre
+                      </>
+                    ) : (
+                      <>
+                        Condición Libre (sin tope de {maxDesaprobaciones} aplazos) ·{" "}
+                        {desaprobadosCount}{" "}
+                        {desaprobadosCount === 1 ? "desaprobación" : "desaprobaciones"}
+                      </>
+                    )}
                   </p>
                 </div>
 
-                {desaprobadosCount < maxDesaprobaciones &&
+                {(estadoActual === "Libre" ||
+                  esRendidaLibre ||
+                  desaprobadosCount < maxDesaprobaciones) &&
                   !tieneIntentoAprobado &&
                   estadoActual !== "Promocionado" && (
                   <Button
@@ -718,20 +820,22 @@ export function MateriaContextContent({
                 )}
               </div>
 
-              <Progress
-                size="sm"
-                aria-label="Desaprobaciones de final acumuladas"
-                value={(desaprobadosCount / maxDesaprobaciones) * 100}
-                classNames={{
-                  indicator:
-                    desaprobadosCount >= maxDesaprobaciones
-                      ? "bg-[#DC2626]"
-                      : desaprobadosCount >= Math.ceil(maxDesaprobaciones / 2)
-                        ? "bg-[#D97706]"
-                        : "bg-[#478559]",
-                  track: "bg-[#E2E8F0] dark:bg-[#24303C]",
-                }}
-              />
+              {usaTopeRegularidad && (
+                <Progress
+                  size="sm"
+                  aria-label="Desaprobaciones de final acumuladas"
+                  value={(desaprobadosCount / maxDesaprobaciones) * 100}
+                  classNames={{
+                    indicator:
+                      desaprobadosCount >= maxDesaprobaciones
+                        ? "bg-[#DC2626]"
+                        : desaprobadosCount >= Math.ceil(maxDesaprobaciones / 2)
+                          ? "bg-[#D97706]"
+                          : "bg-[#478559]",
+                    track: "bg-[#E2E8F0] dark:bg-[#24303C]",
+                  }}
+                />
+              )}
 
               {showNotaForm && (
                 <div className="p-3 rounded-lg bg-[#FFFFFF] dark:bg-[#161D24] border border-[#005A36]/35 space-y-2.5">
@@ -826,6 +930,11 @@ export function MateriaContextContent({
                               ? "Ausente"
                               : `${intento.estado === "aprobado" ? "Aprobado" : "Desaprobado"} (${intento.nota ?? "-"})`}
                           </span>
+                          {intento.condicion === "Libre" && (
+                            <span className="ml-1.5 px-1.5 py-0.2 rounded bg-[#FEF2F2] text-[#991B1B] dark:bg-[#2D1619] dark:text-[#FCA5A5] text-[10px] font-medium">
+                              Libre
+                            </span>
+                          )}
                           {intento.fecha && (
                             <span className="ml-1.5 text-[11px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
                               {intento.fecha}

@@ -271,4 +271,58 @@ describe('MateriaContextContent - Reglas v2 en UI e intercepción de cascada al 
         );
         expect(selectAnio.value).toBe('2023');
     });
+
+    it('permite desplegar las materias habilitadas al clickear "Habilita a X materias" y maneja Libre / >4 desaprobaciones', () => {
+        const onSelectMateria = vi.fn();
+        const setProgresoDetalles = vi.fn();
+
+        const intentos7 = Array.from({ length: 7 }, (_, i) => ({
+            nota: 2,
+            estado: /** @type {const} */ ('reprobado'),
+            fecha: `2023-0${i + 1}-10`,
+            condicion: i >= 4 ? /** @type {const} */ ('Libre') : /** @type {const} */ ('Regular'),
+        }));
+
+        render(
+            <MateriaContextContent
+                materia={MATERIAS_V2[0]}
+                materias={MATERIAS_V2}
+                progreso={{ C1: 'Aprobado', C2: 'Regular', C3: 'Disponible' }}
+                progresoDetalles={{
+                    C1: {
+                        notaFinal: 5,
+                        rendidaLibre: true,
+                        esEquivalencia: false,
+                        intentosFinal: [
+                            ...intentos7,
+                            { nota: 5, estado: 'aprobado', fecha: '2025-12-01', condicion: 'Libre' },
+                        ],
+                    },
+                }}
+                setProgresoDetalles={setProgresoDetalles}
+                plan="17.14"
+                cambioDeEstado={vi.fn()}
+                onChangeEstado={vi.fn()}
+                onSelectMateria={onSelectMateria}
+            />,
+        );
+
+        // 1. Botón "Habilita a 1 materia" despliega C3 (Física II) y permite seleccionarla
+        const btnHabilita = screen.getByRole('button', { name: /Habilita a 1 materia/i });
+        expect(screen.queryByText('Física II')).toBeNull();
+        fireEvent.click(btnHabilita);
+        expect(screen.getByText('Física II')).toBeTruthy();
+        fireEvent.click(screen.getByText('Física II'));
+        expect(onSelectMateria).toHaveBeenCalledWith('C3');
+
+        // 2. Muestra chip Rendida libre y opción rápida "Cargar cursada"
+        expect(screen.getByText('Rendida libre')).toBeTruthy();
+        fireEvent.click(screen.getByRole('button', { name: /Cargar cursada/i }));
+        expect(setProgresoDetalles).toHaveBeenCalled();
+
+        // 3. No muestra el contador desbordado "7 de 4 desaprobaciones"
+        expect(screen.queryByText(/7 de 4 desaprobaciones/i)).toBeNull();
+        expect(screen.getByText(/7 desaprobaciones acumuladas/i)).toBeTruthy();
+        expect(screen.getAllByText('Libre').length).toBeGreaterThanOrEqual(4);
+    });
 });

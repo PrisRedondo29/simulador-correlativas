@@ -215,6 +215,7 @@ export interface IntentoFinal {
     fecha?: string;
     nota?: number | string | null;
     estado: EstadoIntentoFinal;
+    condicion?: 'Regular' | 'Libre';
     libro?: string;
     folio?: string;
 }
