@@ -27,6 +27,46 @@ const FINAL_TABLE_ROW_REGEX =
 
 const PLAN_REGEX = /Plan\s+(\d{4}|\d{2}\.\d{2})/i;
 const INGRESO_REGEX = /ingres[oó]\s+a\s+la\s+Universidad\s+en\s+el(?:\s+a[nñ]o)?\s+(\d{4})/i;
+const OPTATIVA_MARKER_REGEX = /\(\s*OPT(?:ATIVA)?\.?\s*\)|\bOPTATIVA\b/i;
+
+/**
+ * Determina si un registro externo corresponde a una materia optativa (`(OPT.)`, `(OPT)`, `(OPTATIVA)`).
+ * @param {{ nombre?: string | null } | null | undefined} rec
+ * @returns {boolean}
+ */
+function isOptativaRecord(rec) {
+    return Boolean(rec?.nombre && OPTATIVA_MARKER_REGEX.test(rec.nombre));
+}
+
+/**
+ * Extrae el nombre real de una materia optativa removiendo la etiqueta `(OPT.)` / `(OPTATIVA)`.
+ * @param {string | null | undefined} rawName
+ * @returns {string}
+ */
+function extractNombreOptativa(rawName) {
+    if (!rawName) return '';
+    return String(rawName)
+        .replace(/\(\s*OPT(?:ATIVA)?\.?\s*\)/gi, '')
+        .replace(/(?:^|\s*[-–]\s*|\s+)OPTATIVA\s*$/i, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+/**
+ * Obtiene la fecha de referencia cronológica de una evaluación para ordenar optativas.
+ * @param {NonNullable<ReturnType<typeof resolveRecordWithStrategy>>} evalRes
+ * @returns {string}
+ */
+function getOptativaSortDate(evalRes) {
+    if (evalRes?.detalles?.fechaAprobacion) {
+        return evalRes.detalles.fechaAprobacion;
+    }
+    const intentos = evalRes?.detalles?.intentosFinal || [];
+    if (intentos.length > 0) {
+        return intentos[intentos.length - 1]?.fecha || '';
+    }
+    return '';
+}
 
 /**
  * Normaliza un número de plan de SAWeb (`1713` -> `17.13`, `17.14` -> `17.14`).
@@ -553,6 +593,118 @@ function tokenizeSawebInputs(rawInputs) {
 }
 
 /**
+ * Etapa 2b: Detecta asignaturas optativas (`(OPT.)`) con código propio en SAWeb y las asigna
+ * cronológicamente a los slots optativos del plan (`OP1`, `OP2`, `OP3`) o, si el plan usa
+ * `AO-1714` (Plan 17.14), las mapea virtualmente a `OP1..OP3` para su evaluación en homologación.
+ *
+ * @param {{
+ *   materiasPlan: Materia[],
+ *   materiasByCode: Map<string, Materia>,
+ *   recordsByCode: Map<string, { nombre: string }>,
+ *   externalRecords: Array<{ codigo: string, nombre: string }>,
+ *   evaluatedExternalByCode: Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>,
+ *   progreso: ProgresoMap,
+ *   progresoDetalles: ProgresoDetallesMap,
+ *   counts: { Promocionado: number, Aprobado: number, Equivalencia: number, Regular: number, Libre: number, Aplazos: number, Omitidas: number },
+ * }} params
+ * @returns {{
+ *   consumedOptativaCodes: Set<string>,
+ *   virtualSlotToSourceCode: Map<string, string>,
+ * }}
+ */
+function assignOptativaRecordsToSlots({
+    materiasPlan,
+    materiasByCode,
+    recordsByCode,
+    externalRecords,
+    evaluatedExternalByCode,
+    progreso,
+    progresoDetalles,
+    counts,
+}) {
+    const consumedOptativaCodes = new Set();
+    /** @type {Map<string, string>} */
+    const virtualSlotToSourceCode = new Map();
+
+    const optativaExternals = externalRecords
+        .filter(
+            (ext) =>
+                isOptativaRecord(recordsByCode.get(ext.codigo) || ext) &&
+                evaluatedExternalByCode.has(ext.codigo),
+        )
+        .map((ext) => ({
+            ext,
+            evalRes: /** @type {NonNullable<ReturnType<typeof resolveRecordWithStrategy>>} */ (
+                evaluatedExternalByCode.get(ext.codigo)
+            ),
+        }))
+        .sort((a, b) => {
+            const dateA = getOptativaSortDate(a.evalRes) || '9999-99-99';
+            const dateB = getOptativaSortDate(b.evalRes) || '9999-99-99';
+            return dateA.localeCompare(dateB) || a.ext.codigo.localeCompare(b.ext.codigo);
+        });
+
+    if (optativaExternals.length === 0) {
+        return { consumedOptativaCodes, virtualSlotToSourceCode };
+    }
+
+    const optativaSlots = (materiasPlan || [])
+        .filter((m) => Boolean(m.es_optativa) || /^OP\d+$/i.test(String(m.codigo).trim()))
+        .sort((a, b) => (Number(a.cuatrimestre) || 99) - (Number(b.cuatrimestre) || 99));
+
+    if (optativaSlots.length > 0) {
+        for (const { ext, evalRes } of optativaExternals) {
+            const targetSlot = optativaSlots.find((slot) => !progreso[slot.codigo]);
+            if (!targetSlot) break;
+
+            const cleanName = extractNombreOptativa(ext.nombre) || ext.nombre;
+            progreso[targetSlot.codigo] = evalRes.estado;
+            progresoDetalles[targetSlot.codigo] = {
+                ...evalRes.detalles,
+                intentosFinal: [...(evalRes.detalles.intentosFinal || [])],
+                nombreOptativa: cleanName,
+                codigoOptativa: ext.codigo,
+            };
+            counts[evalRes.kind] += 1;
+            counts.Aplazos += evalRes.aplazosCount;
+            consumedOptativaCodes.add(ext.codigo);
+        }
+        return { consumedOptativaCodes, virtualSlotToSourceCode };
+    }
+
+    // Plan 17.14 con slot consolidado AO-1714 (equivalencia sobre OP1, OP2 y OP3)
+    if (materiasByCode.has('AO-1714')) {
+        const virtualSlotCodes = ['OP1', 'OP2', 'OP3'];
+        let slotIdx = 0;
+        for (const { ext, evalRes } of optativaExternals) {
+            while (
+                slotIdx < virtualSlotCodes.length &&
+                evaluatedExternalByCode.has(virtualSlotCodes[slotIdx])
+            ) {
+                slotIdx += 1;
+            }
+            if (slotIdx >= virtualSlotCodes.length) break;
+
+            const virtualCode = virtualSlotCodes[slotIdx];
+            const cleanName = extractNombreOptativa(ext.nombre) || ext.nombre;
+            evaluatedExternalByCode.set(virtualCode, {
+                ...evalRes,
+                detalles: {
+                    ...evalRes.detalles,
+                    intentosFinal: [...(evalRes.detalles.intentosFinal || [])],
+                    nombreOptativa: cleanName,
+                    codigoOptativa: ext.codigo,
+                },
+            });
+            virtualSlotToSourceCode.set(virtualCode, ext.codigo);
+            slotIdx += 1;
+        }
+    }
+
+    return { consumedOptativaCodes, virtualSlotToSourceCode };
+}
+
+/**
  * Etapa 3: Motor de homologación entre planes (`17.13 → 17.14`).
  * Transfiere el acta completa (estado, nota, cursada e intentos) solo a la materia troncal
  * primaria en el plan destino y registra los talleres / desdoblamientos como Equivalencia
@@ -562,6 +714,7 @@ function tokenizeSawebInputs(rawInputs) {
  *   materiasByCode: Map<string, Materia>,
  *   externalRecords: Array<{ codigo: string, nombre: string }>,
  *   evaluatedExternalByCode: Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>,
+ *   virtualSlotToSourceCode?: Map<string, string>,
  *   progreso: ProgresoMap,
  *   progresoDetalles: ProgresoDetallesMap,
  *   counts: { Promocionado: number, Aprobado: number, Equivalencia: number, Regular: number, Libre: number, Aplazos: number, Omitidas: number },
@@ -572,6 +725,7 @@ function homologateCrossPlanRecords({
     materiasByCode,
     externalRecords,
     evaluatedExternalByCode,
+    virtualSlotToSourceCode,
     progreso,
     progresoDetalles,
     counts,
@@ -648,6 +802,10 @@ function homologateCrossPlanRecords({
         for (const { reqCode, isExternal } of sourceEntries) {
             if (isExternal) {
                 consumedExternalCodes.add(reqCode);
+                const mappedSourceCode = virtualSlotToSourceCode?.get(reqCode);
+                if (mappedSourceCode) {
+                    consumedExternalCodes.add(mappedSourceCode);
+                }
             }
         }
 
@@ -838,10 +996,26 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         counts.Aplazos += evalRes.aplazosCount;
     }
 
-    homologateCrossPlanRecords({
+    const { consumedOptativaCodes, virtualSlotToSourceCode } = assignOptativaRecordsToSlots({
+        materiasPlan,
         materiasByCode,
+        recordsByCode,
         externalRecords,
         evaluatedExternalByCode,
+        progreso,
+        progresoDetalles,
+        counts,
+    });
+
+    const remainingExternalRecords = externalRecords.filter(
+        (ext) => !consumedOptativaCodes.has(ext.codigo),
+    );
+
+    homologateCrossPlanRecords({
+        materiasByCode,
+        externalRecords: remainingExternalRecords,
+        evaluatedExternalByCode,
+        virtualSlotToSourceCode,
         progreso,
         progresoDetalles,
         counts,

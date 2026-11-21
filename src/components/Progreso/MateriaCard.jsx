@@ -9,6 +9,7 @@ import estadoUtils from "../../utils/Progreso/estadoUtils";
 export default function MateriaCard({
   materia,
   estado = "Disponible",
+  detalles = null,
   isIncomplete = false,
   isSelected = false,
   vista = "grid",
@@ -17,13 +18,16 @@ export default function MateriaCard({
   const config =
     estadoUtils.ESTADO_CONFIG[estado] || estadoUtils.ESTADO_CONFIG.Disponible;
   const isBlocked = estado === "Bloqueado";
+  const displayTitle = detalles?.nombreOptativa
+    ? `${materia.nombre}: ${detalles.nombreOptativa}`
+    : materia.nombre;
 
   return (
     <button
       type="button"
       onClick={() => onSelect?.(materia.codigo)}
       aria-pressed={isSelected}
-      aria-label={`${materia.nombre} (${materia.codigo}), estado ${estado}${
+      aria-label={`${displayTitle} (${materia.codigo}), estado ${estado}${
         isIncomplete ? ", datos académicos incompletos" : ""
       }`}
       className={`group w-full text-left rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 px-3.5 py-3 min-h-[60px] ${
@@ -44,11 +48,14 @@ export default function MateriaCard({
               : "text-[#1E293B] dark:text-[#F1F5F9]"
           }`}
         >
-          {materia.nombre}
+          {displayTitle}
         </p>
 
         <div className="flex items-center gap-2 text-xs text-[#64748B] dark:text-[#94A3B8] tabular-nums">
-          <span>{materia.codigo}</span>
+          <span>
+            {materia.codigo}
+            {detalles?.codigoOptativa ? ` · Cód. ${detalles.codigoOptativa}` : ""}
+          </span>
           {isIncomplete && (
             <span
               className="inline-flex items-center gap-1 text-[11px] font-medium text-[#B45309] dark:text-[#FBBF24]"

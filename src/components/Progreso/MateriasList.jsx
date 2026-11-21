@@ -88,6 +88,7 @@ export default function MateriasList({
         <MateriaCard
           materia={materia}
           estado={estado}
+          detalles={detalles}
           isIncomplete={isIncomplete}
           isSelected={selectedCodigo === materia.codigo}
           vista={vista}

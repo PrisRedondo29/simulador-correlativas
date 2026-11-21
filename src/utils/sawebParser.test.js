@@ -434,4 +434,129 @@ ACTIVIDADES ACADEMICAS RECONOCIDAS POR EQUIVALENCIA O EXIMIDAS
             ).toBe(false);
         }
     });
+
+    it('detecta optativas con sufijo (OPT.) en Plan 17.13 (analítico Lucas) y las asigna a OP1 con su nombre real y promedio exacto', () => {
+        const plan1713Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.13')?.materias || [];
+        const lucasAnalitico = `
+Universidad Nacional de Luján
+correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1713:
+ingresó a la Universidad en el año 2019
+ACTIVIDAD ACADEMICA NOTA LIBRO-FOLIO FECHA
+21056 P-INTROD. A LOS SISTEMAS DE INFORMACION 7(SIETE) 1115-007 27-06-2019
+11071 R-INTRODUCCION A LA PROGRAMACION 5(CINCO) 0478-025 13-07-2019
+11072 L-ALGEBRA Y LOGICA COMPUTACIONAL 3(TRES) 0479-075 17-07-2019
+11072 L-ALGEBRA Y LOGICA COMPUTACIONAL 6(SEIS) 0482-018 07-08-2019
+31971 P-INGLES I 7(SIETE) 0374-033 02-12-2019
+11074 R-PROGRAMACION I 9(NUEVE) 0489-035 14-12-2019
+41407 P-ORGANIZACION DE COMPUTADORAS 8(OCHO) 0249-034 17-07-2020
+31972 P-INGLES II 8(OCHO) 0387-086 30-08-2020
+41406 P-ARQUITECTURA DE COMPUTADORAS 7(SIETE) 0251-002 29-12-2020
+11056 R-SISTEMAS DE INFORMACION I 7(SIETE) 0504-061 24-02-2021
+11081 P-ANALISIS MATEMATICO I 7(SIETE) 0517-052 12-07-2021
+21057 P-ASPECTOS PROFESIONALES Y SOCIALES 8(OCHO) 1225-043 06-12-2021
+11073 R-MATEMATICA DISCRETA 7(SIETE) 0523-084 22-12-2021
+11075 R-PROGRAMACION II 4(CUATRO) 0535-002 11-07-2022
+11079 R-PROGRAMACION FUNCIONAL Y LOGICA 7(SIETE) 0536-071 15-07-2022
+11083 R-ESTADISTICA Y PROBABILIDAD 2(DOS) 0539-004 04-08-2022
+11082 R-ANALISIS MATEMATICO II 6(SEIS) 0546-023 21-12-2022
+11410 R-SISTEMAS OPERATIVOS 6(SEIS) 0547-066 10-02-2023
+11077 R-BASE DE DATOS I 2(DOS) 0549-059 18-02-2023
+10040 R-TELEINFORMATICA Y REDES 7(SIETE) 0561-005 03-08-2023
+11083 R-ESTADISTICA Y PROBABILIDAD 2(DOS) 0566-081 14-12-2023
+11083 R-ESTADISTICA Y PROBABILIDAD 7(SIETE) 0571-071 15-02-2024
+41408 P-MODELOS, SIMUL. Y TEORIA DE LA DECISION 8(OCHO) 0291-050 19-06-2024
+11077 R-BASE DE DATOS I 2(DOS) 0582-004 13-07-2024
+11077 R-BASE DE DATOS I 9(NUEVE) 0584-094 03-08-2024
+11076 R-PROGRAMACION ORIENTADA A OBJETOS 6(SEIS) 0586-077 27-09-2024
+11412 P-TEORIA DE LA COMPUTACION I 8(OCHO) 0593-002 26-11-2024
+11058 R-SISTEMAS DE INFORMACION II 7(SIETE) 0590-047 18-12-2024
+11059 R-SISTEMAS DE INFORMACION III 8(OCHO) 0598-016 26-02-2025
+11078 R-BASE DE DATOS II 7(SIETE) 0600-094 17-05-2025
+11089 P-SISTEMAS INTELIGENTES 9(NUEVE) 0603-054 30-06-2025
+11060 R-SISTEMAS DE INFORMACION IV 9(NUEVE) 0602-002 10-07-2025
+11087 R-SEMINARIO DE INTEGRACION PROFESIONAL 7(SIETE) 0606-021 16-07-2025
+11085 R-ADMINISTRACION Y GESTION DE REDES 7(SIETE) 0613-043 11-12-2025
+11086 R-PROGRAMACION EN AMBIENTE WEB 8(OCHO) 0618-045 18-12-2025
+11092 R-SEGURIDAD DE LA INFORMACION 8(OCHO) 0619-095 11-02-2026
+41409 R-SISTEMAS DISTRIBUIDOS Y PROGRAM.PARALELA 7(SIETE) 0313-053 27-02-2026
+11809 P-COMPILADORES (OPT.) 9(NUEVE) 0628-069 25-06-2026
+Promedio (incluyendo aplazos): 6,60 (SEIS CON SESENTA CENTESIMOS)
+        `;
+
+        const parsed = parseSawebTexts(lucasAnalitico, plan1713Materias);
+
+        expect(parsed.detectedPlan).toBe('17.13');
+        expect(parsed.anioIngreso).toBe(2019);
+        expect(parsed.counts.Omitidas).toBe(0);
+        expect(parsed.omittedCodes).toEqual([]);
+        expect(parsed.totalMatched).toBe(33);
+        expect(parsed.counts.Promocionado).toBe(11);
+        expect(parsed.counts.Aprobado).toBe(22);
+        expect(parsed.counts.Aplazos).toBe(5);
+
+        expect(parsed.progreso['OP1']).toBe('Promocionado');
+        expect(parsed.progresoDetalles['OP1']).toMatchObject({
+            notaFinal: 9,
+            notaRegularizacion: 9,
+            fechaAprobacion: '2026-06-25',
+            nombreOptativa: 'COMPILADORES',
+            codigoOptativa: '11809',
+        });
+
+        const merged = mergeSawebImportWithExisting(parsed, {}, {}, plan1713Materias);
+        expect(merged.progreso['OP1']).toBe('Promocionado');
+        expect(merged.progresoDetalles['OP1']).toMatchObject({
+            notaFinal: 9,
+            nombreOptativa: 'COMPILADORES',
+            codigoOptativa: '11809',
+        });
+
+        const promedio = calcularPromedioGeneral(merged.progresoDetalles, merged.progreso);
+        expect(promedio.materiasContadas).toBe(33);
+        expect(promedio.totalNotas).toBe(240);
+        expect(promedio.promedioSinAplazos).toBe(7.27); // 240 / 33
+        expect(promedio.promedioConAplazos).toBe(6.61); // 251 / 38 = 6.6052...
+    });
+
+    it('ordena múltiples optativas (OPT.) cronológicamente en OP1, OP2 y OP3 y homologa AO-1714 al reunir 3 en Plan 17.14', () => {
+        const plan1713Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.13')?.materias || [];
+        const plan1714Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.14')?.materias || [];
+
+        const multiOptText = `
+correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1713:
+11811 R-ROBOTICA APLICADA (OPT.) 8(OCHO) 0640-010 15-12-2026
+11809 P-COMPILADORES (OPT.) 9(NUEVE) 0628-069 25-06-2026
+11812 P-BIOINFORMATICA (OPTATIVA) 10(DIEZ) 0650-001 10-03-2027
+        `;
+
+        const parsed1713 = parseSawebTexts(multiOptText, plan1713Materias);
+        expect(parsed1713.counts.Omitidas).toBe(0);
+        expect(parsed1713.progreso['OP1']).toBe('Promocionado');
+        expect(parsed1713.progresoDetalles['OP1']).toMatchObject({
+            nombreOptativa: 'COMPILADORES',
+            codigoOptativa: '11809',
+            notaFinal: 9,
+        });
+        expect(parsed1713.progreso['OP2']).toBe('Aprobado');
+        expect(parsed1713.progresoDetalles['OP2']).toMatchObject({
+            nombreOptativa: 'ROBOTICA APLICADA',
+            codigoOptativa: '11811',
+            notaFinal: 8,
+        });
+        expect(parsed1713.progreso['OP3']).toBe('Promocionado');
+        expect(parsed1713.progresoDetalles['OP3']).toMatchObject({
+            nombreOptativa: 'BIOINFORMATICA',
+            codigoOptativa: '11812',
+            notaFinal: 10,
+        });
+
+        // En Plan 17.14 las 3 optativas externas se homologan en AO-1714 sin quedar como omitidas
+        const parsed1714 = parseSawebTexts(multiOptText, plan1714Materias);
+        expect(parsed1714.counts.Omitidas).toBe(0);
+        expect(parsed1714.progreso['AO-1714']).toBe('Aprobado');
+        expect(parsed1714.progresoDetalles['AO-1714']?.notaFinal).toBe(9);
+    });
 });

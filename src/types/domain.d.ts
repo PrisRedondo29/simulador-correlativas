@@ -96,6 +96,7 @@ export interface Materia {
     notas?: string[];
     tesis?: boolean;
     taller?: boolean;
+    es_optativa?: boolean;
     mostrarCodigo?: boolean;
 }
 
@@ -235,6 +236,8 @@ export interface MateriaDetalle {
     notaFinal?: number | string | null;
     esEquivalencia?: boolean;
     rendidaLibre?: boolean;
+    nombreOptativa?: string | null;
+    codigoOptativa?: string | null;
     intentosFinal?: IntentoFinal[];
     historial?: CursadaHistorial[];
 }

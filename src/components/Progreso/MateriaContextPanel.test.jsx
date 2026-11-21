@@ -325,4 +325,40 @@ describe('MateriaContextContent - Reglas v2 en UI e intercepción de cascada al 
         expect(screen.getByText(/7 desaprobaciones acumuladas/i)).toBeTruthy();
         expect(screen.getAllByText('Libre').length).toBeGreaterThanOrEqual(4);
     });
+
+    it('muestra el nombre y código de acta de la optativa cursada cuando está cargado en detalles', () => {
+        const materiaOptativa = {
+            codigo: 'OP1',
+            nombre: 'Optativa I',
+            anio: 4,
+            cuatrimestre: 8,
+            horas_totales: 64,
+            correlativas: [],
+            es_optativa: true,
+        };
+
+        render(
+            <MateriaContextContent
+                materia={materiaOptativa}
+                materias={[materiaOptativa]}
+                progreso={{ OP1: 'Promocionado' }}
+                progresoDetalles={{
+                    OP1: {
+                        notaFinal: 9,
+                        notaRegularizacion: 9,
+                        nombreOptativa: 'COMPILADORES',
+                        codigoOptativa: '11809',
+                    },
+                }}
+                setProgresoDetalles={vi.fn()}
+                plan="17.13"
+                cambioDeEstado={vi.fn()}
+                onChangeEstado={vi.fn()}
+                onSelectMateria={vi.fn()}
+            />,
+        );
+
+        expect(screen.getByText(/OP1 · Acta 11809/i)).toBeTruthy();
+        expect(screen.getByText(/Optativa cursada: COMPILADORES/i)).toBeTruthy();
+    });
 });

@@ -427,6 +427,7 @@ export function MateriaContextContent({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-semibold text-[#64748B] dark:text-[#94A3B8] tabular-nums">
               {materia.codigo}
+              {detalles?.codigoOptativa ? ` · Acta ${detalles.codigoOptativa}` : ""}
             </span>
             <span
               className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${estadoConfig.badgeClass}`}
@@ -467,6 +468,12 @@ export function MateriaContextContent({
           <h2 className="text-base sm:text-lg font-bold text-[#1E293B] dark:text-[#F1F5F9] leading-snug">
             {materia.nombre}
           </h2>
+
+          {detalles?.nombreOptativa && (
+            <p className="text-xs font-medium text-[#005A36] dark:text-[#6EE7B7]">
+              Optativa cursada: {detalles.nombreOptativa}
+            </p>
+          )}
 
           <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
             {materia.taller
