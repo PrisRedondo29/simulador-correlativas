@@ -18,17 +18,17 @@ export const TUTORIAL_TOURS = {
             },
             {
                 id: 'solo_incompletas',
-                target: '[data-tour="progreso-solo-incompletas"]',
+                target: '[data-tour="progreso-search-filters"]',
                 title: 'Buscá y filtrá rápido',
                 description:
-                    'Encontrá cualquier materia por nombre o activá "Solo incompletas" para detectar a cuáles les falta nota o fecha.',
+                    'Encontrá cualquier materia en el buscador, filtrá por estado o activá "Solo incompletas" para ver a cuáles les falta nota o fecha.',
             },
             {
                 id: 'lista_materias',
-                target: '[data-tour="progreso-materias-list"]',
+                target: '[data-tour="progreso-materia-card"], [data-tour="progreso-materias-list"]',
                 title: 'Tocá una materia para editarla',
                 description:
-                    'Desde cada tarjeta podés cambiar su estado en 1 toque, cargar notas de cursada o finales y ver qué correlativas te destraba.',
+                    'Hacé clic en una tarjeta para cambiar su estado en 1 toque, cargar notas de cursada o finales y ver qué correlativas te destraba.',
             },
             {
                 id: 'aprobar_hasta',

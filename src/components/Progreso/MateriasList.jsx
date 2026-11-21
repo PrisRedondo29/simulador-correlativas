@@ -80,15 +80,16 @@ export default function MateriasList({
     const isIncomplete = esMateriaIncompleta(materia, estado, detalles);
 
     return (
-      <MateriaCard
-        key={materia.codigo}
-        materia={materia}
-        estado={estado}
-        isIncomplete={isIncomplete}
-        isSelected={selectedCodigo === materia.codigo}
-        vista={vista}
-        onSelect={onSelectMateria}
-      />
+      <div key={materia.codigo} data-tour="progreso-materia-card">
+        <MateriaCard
+          materia={materia}
+          estado={estado}
+          isIncomplete={isIncomplete}
+          isSelected={selectedCodigo === materia.codigo}
+          vista={vista}
+          onSelect={onSelectMateria}
+        />
+      </div>
     );
   };
 

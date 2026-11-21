@@ -199,13 +199,16 @@ export default function InteractiveTourOverlay({ tour, ready = true }) {
 
   let desktopStyle = {};
   if (isDesktop && targetRect) {
-    const placeAbove = targetRect.top + targetRect.height + 210 > viewportHeight;
+    const spaceBelow = viewportHeight - (targetRect.top + targetRect.height);
+    const placeAbove = spaceBelow < 220 && targetRect.top > 220;
     const clampedLeft = Math.max(16, Math.min(targetRect.left, viewportWidth - 360));
+    const computedTop = placeAbove
+      ? Math.max(16, targetRect.top - 210)
+      : Math.max(16, Math.min(viewportHeight - 220, targetRect.top + targetRect.height + 12));
+
     desktopStyle = {
       left: `${clampedLeft}px`,
-      ...(placeAbove
-        ? { bottom: `${Math.max(16, viewportHeight - targetRect.top + 12)}px` }
-        : { top: `${Math.min(viewportHeight - 210, targetRect.top + targetRect.height + 12)}px` }),
+      top: `${computedTop}px`,
     };
   }
 

@@ -69,6 +69,7 @@ export default function ProgresoSearchFilters({
 
   return (
     <section
+      data-tour="progreso-search-filters"
       aria-label="Filtros y acciones de materias"
       className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-3 sm:p-4 space-y-3 shadow-xs"
     >
@@ -102,10 +103,7 @@ export default function ProgresoSearchFilters({
 
         <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2 shrink-0">
           {/* Solo incompletas */}
-          <div
-            data-tour="progreso-solo-incompletas"
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C]"
-          >
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C]">
             <Switch
               size="sm"
               isSelected={soloIncompletas}
