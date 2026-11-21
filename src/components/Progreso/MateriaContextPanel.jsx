@@ -1040,7 +1040,7 @@ export default function MateriaContextPanel(props) {
   return (
     <aside
       aria-label={`Detalle de ${materia.nombre}`}
-      className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-4 shadow-sm max-h-[calc(100vh-5.5rem)] overflow-y-auto"
+      className="rounded-xl bg-[#FFFFFF] dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] p-4 shadow-sm max-h-[calc(100vh-8.75rem)] overflow-y-auto"
     >
       <MateriaContextContent key={materia.codigo} {...props} />
     </aside>
