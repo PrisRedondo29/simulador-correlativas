@@ -24,6 +24,7 @@ function renderDetalleHook({
     initialDetalles = {},
     estadoActual = 'Regular',
     cambioDeEstado = vi.fn(),
+    plan = '17.14',
 } = {}) {
     const progreso = { '11071': estadoActual };
     return {
@@ -35,7 +36,7 @@ function renderDetalleHook({
                     sampleMateria,
                     detalles,
                     setDetalles,
-                    '17.14',
+                    plan,
                     progreso,
                     cambioDeEstado,
                     estado,
@@ -232,5 +233,21 @@ describe('useDetalleMateria - Reglas académicas de notas, intentos de final e h
             result.current.handleEliminarCursadaHistorial(0);
         });
         expect(result.current.detalles['11071'].historial).toEqual([]);
+    });
+
+    it('en modo DEMO aísla la edición local sin invocar updateAuthProgreso', () => {
+        const { result } = renderDetalleHook({ plan: 'DEMO' });
+
+        act(() => {
+            result.current.handleCambioNotaCursada('8');
+        });
+        expect(result.current.detalles['11071'].notaRegularizacion).toBe(8);
+        expect(mockUpdateAuthProgreso).not.toHaveBeenCalled();
+
+        act(() => {
+            result.current.handleToggleEquivalencia(true);
+        });
+        expect(result.current.detalles['11071'].esEquivalencia).toBe(true);
+        expect(mockUpdateAuthProgreso).not.toHaveBeenCalled();
     });
 });

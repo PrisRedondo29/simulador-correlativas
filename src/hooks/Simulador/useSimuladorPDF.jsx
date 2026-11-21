@@ -66,13 +66,21 @@ const useSimuladorPDF = ({ historialSemestres, plan, openedAccordions, setOpened
             pdf.addImage(dataUrl, 'PNG', 0, 0, img.width * 0.75, img.height * 0.75)
             pdf.save(`Simulacion_${plan}.pdf`)
 
-            try { addToast({ title: '¡PDF Descargado!', description: 'Has guardado una copia de tu recorrido', color: 'success' }) } catch (_) { }
+            try {
+                addToast({ title: '¡PDF Descargado!', description: 'Has guardado una copia de tu recorrido', color: 'success' })
+            } catch {
+                /* Toast opcional */
+            }
             trackDescargaPDF({ plan })
 
             setOpenedAccordions(acordeonesPrevios)
         } catch (err) {
             logError(err, { route: '/simulador', context: { plan } })
-            try { addToast({ title: 'Error', description: 'Ocurrió un problema generando el documento.', color: 'danger' }) } catch (_) { }
+            try {
+                addToast({ title: 'Error', description: 'Ocurrió un problema generando el documento.', color: 'danger' })
+            } catch {
+                /* Toast opcional */
+            }
         } finally {
             setDescargandoPDF(false)
         }

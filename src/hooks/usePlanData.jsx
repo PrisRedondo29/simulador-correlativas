@@ -13,11 +13,11 @@ export default function usePlanData(plan) {
     const [materias, setMaterias] = useState([]);
     const [progreso, setProgreso] = useState({});
     const [progresoDetalles, setProgresoDetalles] = useState({});
-    const [cargandoPlan, setCargandoPlan] = useState(true);
+    const [resolvedPlan, setResolvedPlan] = useState(null);
+    const cargandoPlan = Boolean(plan) && resolvedPlan !== plan;
 
     useEffect(() => {
         if (!plan) {
-            setCargandoPlan(false);
             return;
         }
 
@@ -25,7 +25,6 @@ export default function usePlanData(plan) {
         
         const loadData = () => {
             if (!isMounted) return;
-            setCargandoPlan(true);
 
             planService.getMateriasByPlan(plan).then(materiasDelPlan => {
                 if (!isMounted) return;
@@ -52,7 +51,7 @@ export default function usePlanData(plan) {
 
                 setProgreso(localProgreso);
                 setProgresoDetalles(localDetalles || {});
-                setCargandoPlan(false);
+                setResolvedPlan(plan);
             }).catch(err => {
                 if (import.meta.env.DEV) console.error("Error al cargar el plan académico:", err);
                 if (isMounted) {
@@ -61,7 +60,7 @@ export default function usePlanData(plan) {
                         description: `No se pudo cargar el plan "${plan}".`, 
                         color: 'danger' 
                     });
-                    setCargandoPlan(false);
+                    setResolvedPlan(plan);
                 }
             });
         };

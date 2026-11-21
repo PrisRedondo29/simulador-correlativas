@@ -63,7 +63,7 @@ const useSimuladorMaterias = (materias, progreso, cuatri, setProgreso, progresoB
         });
 
         return { materiasCursables: cursables, materiasBloqueadas: bloqueadas };
-    }, [cuatri, anioActual, materias, progresoBase, semestreActualPlan])
+    }, [cuatri, materias, progresoBase, semestreActualPlan])
 
     const cambioDeEstado = (codigoMateria) => {
         const nuevoEstado = progreso[codigoMateria] === "Cursado" ? "No Cursado" : "Cursado"

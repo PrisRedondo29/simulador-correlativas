@@ -13,7 +13,11 @@ function GuardarSimulacion({ isOpen, onOpenChange, onClose, plan, historialSemes
             historialSemestres, progresoSimulado, progresoBase, anioActual, cuatri, simulacionTerminada
         });
         trackGuardarSimulacion({ plan, semestresCompletados: historialSemestres.length })
-        try { addToast({ title: 'Éxito', description: 'Simulación sobrescrita exitosamente.', color: 'success' }) } catch (_) { }
+        try {
+            addToast({ title: 'Éxito', description: 'Simulación sobrescrita exitosamente.', color: 'success' })
+        } catch {
+            /* Toast opcional si ToastProvider no está montado */
+        }
         onClose()
     }
 

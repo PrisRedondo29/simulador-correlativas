@@ -46,7 +46,7 @@ export default function useDetalleMateria(infoMateria, progresoDetalles, setProg
         if (infoMateria && plan && plan !== 'DEMO') {
             updateAuthProgreso(plan, progreso, progresoDetalles);
         }
-    }, [progresoDetalles, plan, progreso]);
+    }, [infoMateria, plan, progreso, progresoDetalles, updateAuthProgreso]);
 
     const handleCambioAnio = (e) => {
         const anioN = Number(e.target.value);

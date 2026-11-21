@@ -15,6 +15,7 @@ const LoginModal = ({ isOpen, onClose, onConfirm }) => {
             const success = await onConfirm(rememberMe);
             if (success) onClose();
         } catch {
+            /* El error se muestra en authError desde AuthContext */
         } finally {
             setLoading(false);
         }
