@@ -303,7 +303,11 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                         <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-snug">
                             {meta.statusTitle}
                         </p>
-                        {isAuthenticated && (formattedLastSync || syncState.syncRevision) && (
+                        {isAuthenticated &&
+                            Boolean(
+                                formattedLastSync ||
+                                    (typeof syncState.syncRevision === 'number' && syncState.syncRevision > 0),
+                            ) && (
                             <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] mt-0.5">
                                 {formattedLastSync ? `Último guardado: ${formattedLastSync}` : 'Sin guardados aún'}
                                 {typeof syncState.syncRevision === 'number' && syncState.syncRevision > 0
