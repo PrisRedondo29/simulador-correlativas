@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { addToast, Button, Spinner, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody } from '@heroui/react';
+import { addToast, Button, Spinner, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@heroui/react';
 
 import HeaderSimulador from '../components/Simulador/HeaderSimulador';
 import HistorialAcademico from '../components/Simulador/HistorialAcademico';
@@ -20,11 +20,12 @@ import useSimuladorEstado from '../hooks/Simulador/useSimuladorEstado';
 import useSimuladorMaterias from '../hooks/Simulador/useSimuladorMaterias';
 import useSimuladorPDF from '../hooks/Simulador/useSimuladorPDF';
 import usePlanData from '../hooks/usePlanData';
-import { CloudDownload, Columns2, Layers, Maximize2, Minimize2, PanelRightOpen, Pin, X } from 'lucide-react';
+import { CloudDownload, Columns2, FileDown, GraduationCap, Layers, Maximize2, Minimize2, PanelRightOpen, Pin, Save, X } from 'lucide-react';
 import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
-import { trackCambioVista } from '../services/analyticsService';
+import { useAuth } from '../context/AuthContext';
+import { trackCambioVista, trackGuardarSimulacion } from '../services/analyticsService';
 import storageRepository from '../services/storageRepository';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 
@@ -95,6 +96,7 @@ function Simulador({ plan: initialPlan }) {
         return () => document.removeEventListener('fullscreenchange', handleFSChange);
     }, []);
 
+    const { setSimulacionLocal } = useAuth();
     const {
         progreso: progresoReal,
         progresoDetalles: progresoDetallesReal,
@@ -103,7 +105,7 @@ function Simulador({ plan: initialPlan }) {
     const { isOpen: isConfigOpen, onClose: onConfigClose, onOpenChange: onConfigOpenChange, onOpen: onConfigOpen } = useDisclosure();
     const { isOpen: isGuardarOpen, onClose: onGuardarClose, onOpenChange: onGuardarOpenChange, onOpen: onGuardarOpen } = useDisclosure();
     const { isOpen: isConfirmImportOpen, onOpenChange: onConfirmImportOpenChange, onOpen: onConfirmImportOpen } = useDisclosure();
-    const { isOpen: isHistoryOpen, onOpen: onHistoryOpen, onOpenChange: onHistoryOpenChange } = useDisclosure();
+    const { isOpen: isHistoryOpen, onOpen: onHistoryOpen, onClose: onHistoryClose, onOpenChange: onHistoryOpenChange } = useDisclosure();
 
     const {
         materias,
@@ -253,6 +255,35 @@ function Simulador({ plan: initialPlan }) {
     };
 
     const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
+
+    const handleGuardarSimulacion = () => {
+        const existe = storageRepository.getSimulacion(plan, null);
+        if (existe) {
+            onHistoryClose();
+            setIsFinishModalOpen(false);
+            onGuardarOpen();
+            return;
+        }
+        setSimulacionLocal(plan, {
+            historialSemestres,
+            progresoSimulado,
+            progresoBase,
+            anioActual,
+            cuatri,
+            simulacionTerminada,
+        });
+        trackGuardarSimulacion({ plan, semestresCompletados: historialSemestres.length });
+        try {
+            addToast({ title: 'Éxito', description: 'Simulación guardada', color: 'success' });
+        } catch {
+            /* Toast opcional */
+        }
+    };
+
+    const handleDownloadPDFFromHistory = () => {
+        onHistoryClose();
+        handleDownloadPDF();
+    };
 
     React.useEffect(() => {
         if (!simulacionTerminada || viewMode !== 'grafo') {
@@ -471,6 +502,7 @@ function Simulador({ plan: initialPlan }) {
                 progresoBase={progresoBase}
                 simulacionTerminada={simulacionTerminada}
                 onGuardarOpen={onGuardarOpen}
+                onGuardarSimulacion={handleGuardarSimulacion}
                 handleDownloadPDF={handleDownloadPDF}
                 descargandoPDF={descargandoPDF}
                 onOpenHistory={() => {
@@ -481,27 +513,61 @@ function Simulador({ plan: initialPlan }) {
 
             <Modal isOpen={isHistoryOpen} onOpenChange={onHistoryOpenChange} size="3xl" scrollBehavior="inside">
                 <ModalContent>
-                    <ModalHeader className="flex items-center justify-between gap-2 pr-10 border-b border-[#E2E8F0] dark:border-[#24303C]">
-                        <span className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
-                            Historial Académico
-                        </span>
-                        {plan && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold">
-                                Plan {plan}
-                            </span>
-                        )}
-                    </ModalHeader>
-                    <ModalBody className="py-4">
-                        <HistorialAcademico
-                            historialSemestres={historialSemestres}
-                            openedAccordions={openedAccordions}
-                            setOpenedAccordions={setOpenedAccordions}
-                            descargandoPDF={descargandoPDF}
-                            plan={plan}
-                            materias={materias}
-                            embedded={true}
-                        />
-                    </ModalBody>
+                    {(onClose) => (
+                        <>
+                            <ModalHeader className="flex items-center justify-between gap-2 pr-10 border-b border-[#E2E8F0] dark:border-[#24303C]">
+                                <span className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                                    Historial Académico
+                                </span>
+                                {plan && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold">
+                                        Plan {plan}
+                                    </span>
+                                )}
+                            </ModalHeader>
+                            <ModalBody className="py-4">
+                                <HistorialAcademico
+                                    historialSemestres={historialSemestres}
+                                    openedAccordions={openedAccordions}
+                                    setOpenedAccordions={setOpenedAccordions}
+                                    descargandoPDF={descargandoPDF}
+                                    plan={plan}
+                                    materias={materias}
+                                    embedded={true}
+                                />
+                            </ModalBody>
+                            {historialSemestres.length > 0 && (
+                                <ModalFooter className="border-t border-[#E2E8F0] dark:border-[#24303C] flex flex-wrap items-center justify-end gap-2">
+                                    <Button
+                                        size="sm"
+                                        onPress={handleGuardarSimulacion}
+                                        startContent={<Save size={15} />}
+                                        className="font-semibold rounded-xl h-9 px-4 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
+                                    >
+                                        Guardar simulación
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="flat"
+                                        onPress={handleDownloadPDFFromHistory}
+                                        isLoading={descargandoPDF}
+                                        startContent={!descargandoPDF && <FileDown size={15} className="text-[#005A36] dark:text-[#6EE7B7]" />}
+                                        className="font-semibold rounded-xl h-9 px-4 bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-[#1E293B] dark:text-[#F1F5F9]"
+                                    >
+                                        {descargandoPDF ? 'Generando...' : 'Descargar PDF'}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="light"
+                                        onPress={onClose}
+                                        className="font-medium rounded-xl h-9 text-[#64748B] dark:text-[#94A3B8]"
+                                    >
+                                        Cerrar
+                                    </Button>
+                                </ModalFooter>
+                            )}
+                        </>
+                    )}
                 </ModalContent>
             </Modal>
 
@@ -608,6 +674,17 @@ function Simulador({ plan: initialPlan }) {
                                                 >
                                                     {isFullScreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                                                 </Button>
+                                                {simulacionTerminada && !isSidePanelOpen && !isFullScreen && (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="flat"
+                                                        onPress={() => setIsFinishModalOpen(true)}
+                                                        startContent={<GraduationCap size={14} />}
+                                                        className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold h-8 sm:h-9 rounded-xl"
+                                                    >
+                                                        Guardar / PDF
+                                                    </Button>
+                                                )}
                                                 {!isSidePanelOpen && !isFullScreen && (
                                                     <Button
                                                         size="sm"
@@ -761,6 +838,7 @@ function Simulador({ plan: initialPlan }) {
                                         cuatri={cuatri}
                                         simulacionTerminada={simulacionTerminada}
                                         onGuardarOpen={onGuardarOpen}
+                                        onGuardarSimulacion={handleGuardarSimulacion}
                                         handleDownloadPDF={handleDownloadPDF}
                                         descargandoPDF={descargandoPDF}
                                     />

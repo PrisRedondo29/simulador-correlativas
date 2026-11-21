@@ -20,11 +20,16 @@ function SimulacionFinalizadaModal({
     progresoBase,
     simulacionTerminada,
     onGuardarOpen,
+    onGuardarSimulacion,
     handleDownloadPDF,
     descargandoPDF,
     onOpenHistory,
 }) {
     const handleGuardar = () => {
+        if (onGuardarSimulacion) {
+            onGuardarSimulacion();
+            return;
+        }
         const existe = storageRepository.getSimulacion(plan, null);
         if (existe) {
             onGuardarOpen();

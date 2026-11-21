@@ -6,8 +6,12 @@ import storageRepository from '../../services/storageRepository';
  * Pantalla de carrera finalizada: muestra el año de egreso estimado
  * y permite guardar o descargar el PDF del historial.
  */
-function CarreraFinalizada({ anioActual, plan, historialSemestres, progresoSimulado, progresoBase, cuatri, simulacionTerminada, onGuardarOpen, handleDownloadPDF, descargandoPDF }) {
+function CarreraFinalizada({ anioActual, plan, historialSemestres, progresoSimulado, progresoBase, cuatri, simulacionTerminada, onGuardarOpen, onGuardarSimulacion, handleDownloadPDF, descargandoPDF }) {
     const handleGuardar = () => {
+        if (onGuardarSimulacion) {
+            onGuardarSimulacion();
+            return;
+        }
         const existe = storageRepository.getSimulacion(plan, null);
         if (existe) {
             onGuardarOpen();
