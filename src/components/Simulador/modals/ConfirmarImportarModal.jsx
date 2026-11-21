@@ -1,32 +1,55 @@
 import { Button, Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Progress } from '@heroui/react'
 import React, { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import { esMateriaIncompleta } from '../../../utils/Progreso/materiasUtils'
 
 function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal, progresoDetalles, materias }) {
+    const navigate = useNavigate();
 
     // Calcular completitud de datos
     const stats = useMemo(() => {
         if (!progresoReal || !materias?.length) return null;
 
-        // Materias que tienen algún progreso (no "Disponible" ni "Bloqueado")
-        const materiasConProgreso = materias.filter(m => {
-            const estado = progresoReal[m.codigo];
-            return estado && estado !== 'Disponible' && estado !== 'Bloqueado';
-        });
+        // Solo las materias en Regular, Aprobado o Promocionado se reconstruyen en el historial del Simulador
+        const materiasImportables = materias.filter((m) =>
+            ['Regular', 'Aprobado', 'Promocionado'].includes(progresoReal[m.codigo])
+        );
+        const materiasConProgreso =
+            materiasImportables.length > 0
+                ? materiasImportables
+                : materias.filter((m) => {
+                      const estado = progresoReal[m.codigo];
+                      return estado && estado !== 'Disponible' && estado !== 'Bloqueado';
+                  });
 
         const total = materiasConProgreso.length;
         if (total === 0) return null;
 
-        // Materias que tienen fecha de regularidad cargada
-        const conFecha = materiasConProgreso.filter(m => {
+        // Materias que tienen fecha cargada (cursada, aprobación o equivalencia)
+        const conFecha = materiasConProgreso.filter((m) => {
             const detalles = progresoDetalles?.[m.codigo];
-            return detalles?.fechaRegularidad?.anio || detalles?.intentosFinal?.some(i => i.fecha) || detalles?.esEquivalencia;
+            const fechaReg = detalles?.fechaRegularidad;
+            const tieneFechaReg =
+                typeof fechaReg === 'object'
+                    ? Boolean(fechaReg?.anio)
+                    : typeof fechaReg === 'string' && fechaReg.trim().length > 0;
+            return Boolean(
+                tieneFechaReg ||
+                detalles?.intentosFinal?.some((i) => i.fecha) ||
+                detalles?.fechaAprobacion ||
+                detalles?.fechaRegularizacion ||
+                detalles?.esEquivalencia
+            );
         }).length;
+
+        const incompletasCount = materias.filter((m) =>
+            esMateriaIncompleta(m, progresoReal[m.codigo], progresoDetalles?.[m.codigo])
+        ).length;
 
         const sinFecha = total - conFecha;
         const porcentaje = Math.round((conFecha / total) * 100);
 
-        return { total, conFecha, sinFecha, porcentaje };
+        return { total, conFecha, sinFecha, porcentaje, incompletasCount };
     }, [progresoReal, progresoDetalles, materias]);
 
     const completitudBaja = stats && stats.porcentaje < 60;
@@ -86,13 +109,30 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                                             </span>
                                         </div>
 
-                                        {completitudBaja && (
-                                            <div className="pt-1 border-t border-warning-200/50 dark:border-warning-500/10">
-                                                <p className="text-[11px] text-warning-700 dark:text-warning-300 leading-relaxed">
-                                                    <strong>💡 Consejo:</strong> Cuantas más fechas cargues en <Link to="/mis-materias" className="underline font-bold hover:text-warning-600" onClick={onClose}>Mis Materias</Link>, más precisa será la reconstrucción de tu historial.
-                                                </p>
-                                            </div>
-                                        )}
+                                        <div className={`pt-2.5 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${completitudBaja ? 'border-warning-200/60 dark:border-warning-500/20' : 'border-success-200/60 dark:border-success-500/20'}`}>
+                                            <p className={`text-[11px] leading-relaxed ${completitudBaja ? 'text-warning-800 dark:text-warning-300' : 'text-foreground/70'}`}>
+                                                {stats.sinFecha > 0 || stats.incompletasCount > 0
+                                                    ? 'Completá las fechas o notas faltantes en Mis Materias para mejorar la reconstrucción.'
+                                                    : '¿Querés revisar tus materias con datos pendientes en Mis Materias?'}
+                                            </p>
+                                            <Button
+                                                size="sm"
+                                                variant="flat"
+                                                data-testid="btn-completar-fechas"
+                                                onPress={() => {
+                                                    onClose();
+                                                    navigate('/mis-materias', { state: { soloIncompletas: true } });
+                                                }}
+                                                className={`shrink-0 font-semibold text-xs ${
+                                                    completitudBaja
+                                                        ? 'bg-warning-500/15 text-warning-800 dark:text-warning-300'
+                                                        : 'bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7]'
+                                                }`}
+                                                startContent={<i className="fa-regular fa-calendar-plus text-[11px]" aria-hidden="true" />}
+                                            >
+                                                Completar fechas
+                                            </Button>
+                                        </div>
                                     </div>
                                 )}
 

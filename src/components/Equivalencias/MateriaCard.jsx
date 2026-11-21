@@ -17,11 +17,11 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                 };
             case 'Cursando':
                 return {
-                    border: 'border-[#A5B4FC] dark:border-[#4338CA]',
-                    sideBar: 'bg-[#4F46E5]',
-                    bg: 'bg-[#EEF2FF] dark:bg-[#1E1B4B]/75',
-                    accent: 'text-[#3730A3] dark:text-[#C7D2FE]',
-                    badgeClass: 'bg-[#E0E7FF] text-[#3730A3] dark:bg-[#312E81] dark:text-[#C7D2FE]',
+                    border: 'border-[#C084FC] dark:border-[#7E22CE]',
+                    sideBar: 'bg-[#7E22CE] dark:bg-[#A855F7]',
+                    bg: 'bg-[#FAF5FF] dark:bg-[#2E1065]/75',
+                    accent: 'text-[#6B21A8] dark:text-[#E9D5FF]',
+                    badgeClass: 'bg-[#7E22CE] text-white dark:bg-[#9333EA] dark:text-white',
                     icon: <Clock size={11} strokeWidth={2.5} />,
                     label: 'Cursando',
                 };

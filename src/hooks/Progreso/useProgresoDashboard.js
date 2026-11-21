@@ -24,6 +24,7 @@ export default function useProgresoDashboard({
     setProgreso,
     progresoDetalles,
     setProgresoDetalles,
+    initialSoloIncompletas = false,
 }) {
     const { updateAuthProgreso } = useAuth();
     const { cambioDeEstado, cambioDeEstadoMultiple } = useProgresoMaterias(
@@ -36,7 +37,7 @@ export default function useProgresoDashboard({
 
     const [busqueda, setBusqueda] = useState('');
     const [estadoFiltro, setEstadoFiltro] = useState('todas');
-    const [soloIncompletas, setSoloIncompletas] = useState(false);
+    const [soloIncompletas, setSoloIncompletas] = useState(() => Boolean(initialSoloIncompletas));
     const [vista, setVista] = useState(() => storageRepository.getRaw(STORAGE_KEYS.PROGRESO_VISTA, 'grid'));
     const [selection, setSelection] = useState({ plan, codigo: null });
     const selectedCodigo = selection.plan === plan ? selection.codigo : null;

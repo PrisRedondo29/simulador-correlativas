@@ -27,8 +27,8 @@ const ESTADO_CONFIG = {
         icono: 'fa-solid fa-lock-open',
     },
     Cursando: {
-        estilo: 'bg-[#EEF2FF] dark:bg-[#1E1B4B]/75 border-[#818CF8] dark:border-[#6366F1]/70 hover:border-[#4F46E5] dark:hover:border-[#818CF8] text-[#3730A3] dark:text-[#C7D2FE]',
-        badgeClass: 'bg-[#E0E7FF] text-[#3730A3] dark:bg-[#312E81] dark:text-[#C7D2FE]',
+        estilo: 'bg-[#FAF5FF] dark:bg-[#2E1065]/75 border-[#A855F7] dark:border-[#9333EA]/75 hover:border-[#7E22CE] dark:hover:border-[#C084FC] text-[#6B21A8] dark:text-[#E9D5FF]',
+        badgeClass: 'bg-[#7E22CE] text-white dark:bg-[#9333EA] dark:text-white',
         color: 'primary',
         icono: 'fa-solid fa-pen',
     },
@@ -58,8 +58,8 @@ const ESTADO_CONFIG = {
     },
     // --- Estados para el Simulador ---
     Seleccionada: {
-        estilo: 'bg-[#EEF2FF] dark:bg-[#1E1B4B]/80 border-2 border-[#4F46E5] dark:border-[#6366F1] text-[#3730A3] dark:text-[#C7D2FE]',
-        badgeClass: 'bg-[#4F46E5] text-white dark:bg-[#6366F1] dark:text-white',
+        estilo: 'bg-[#FAF5FF] dark:bg-[#2E1065]/80 border-2 border-[#7E22CE] dark:border-[#A855F7] text-[#6B21A8] dark:text-[#E9D5FF]',
+        badgeClass: 'bg-[#7E22CE] text-white dark:bg-[#9333EA] dark:text-white',
         color: 'primary',
         icono: 'fa-solid fa-check-double',
     },

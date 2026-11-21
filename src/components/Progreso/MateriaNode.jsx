@@ -16,8 +16,8 @@ const MateriaNode = ({ data, targetPosition = Position.Left, sourcePosition = Po
                 return {
                     label: 'Cursando',
                     icon: 'fa-solid fa-play',
-                    badgeClass: 'bg-[#4F46E5] text-white dark:bg-[#6366F1]',
-                    borderClass: 'border-2 border-[#4F46E5] dark:border-[#6366F1] bg-[#EEF2FF] dark:bg-[#1E1B4B]/80',
+                    badgeClass: 'bg-[#7E22CE] text-white dark:bg-[#9333EA]',
+                    borderClass: 'border-2 border-[#7E22CE] dark:border-[#A855F7] bg-[#FAF5FF] dark:bg-[#2E1065]/80',
                 };
             case 'Aprobado':
             case 'Aprobada':

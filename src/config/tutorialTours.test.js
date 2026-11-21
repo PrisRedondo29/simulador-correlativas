@@ -13,17 +13,19 @@ describe('Tutorial Mis Materias y paleta unificada de estado Cursando', () => {
         expect(syncStep.target).toBe('[data-tour="sync-status-menu"]');
     });
 
-    it('diferencia visualmente Cursando en tono índigo lejos del verde de Aprobado/Promocionado', () => {
+    it('diferencia visualmente Cursando en tono morado lejos de Disponible y del verde de Aprobado/Promocionado', () => {
         const config = estadoUtils.ESTADO_CONFIG.Cursando;
-        expect(config.estilo).toContain('#EEF2FF');
-        expect(config.badgeClass).toContain('#E0E7FF');
-        expect(config.badgeClass).toContain('#3730A3');
+        const disponibleConfig = estadoUtils.ESTADO_CONFIG.Disponible;
+        expect(config.estilo).toContain('#FAF5FF');
+        expect(config.badgeClass).toContain('#7E22CE');
+        expect(config.badgeClass).not.toBe(disponibleConfig.badgeClass);
+        expect(disponibleConfig.badgeClass).toContain('#E0F2FE');
         expect(config.estilo).not.toContain('#F0FDF4');
         expect(config.badgeClass).not.toContain('#005A36');
 
         const estilo = materiasUtils.obtenerEstiloPorEstado('Cursando');
-        expect(estilo.bgSoft).toContain('#E0E7FF');
-        expect(estilo.colorText).toContain('#3730A3');
+        expect(estilo.bgSoft).toContain('#F3E8FF');
+        expect(estilo.colorText).toContain('#7E22CE');
         expect(estilo.colorText).not.toContain('#005A36');
     });
 });

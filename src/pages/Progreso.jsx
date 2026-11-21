@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import { Spinner } from "@heroui/react";
 import { useActivePlan, usePlanCapabilities } from "../context/PlanContext";
 import usePlanData from "../hooks/usePlanData";
@@ -19,6 +20,7 @@ import { TOUR_IDS, TUTORIAL_TOURS } from "../config/tutorialTours";
  * Master-Detail (acordeones por año + panel contextual con divulgación progresiva) -> Leyenda.
  */
 export default function Progreso() {
+  const location = useLocation();
   const { plan, setPlan } = useActivePlan();
   const { policy } = usePlanCapabilities();
 
@@ -38,6 +40,7 @@ export default function Progreso() {
     setProgreso,
     progresoDetalles,
     setProgresoDetalles,
+    initialSoloIncompletas: Boolean(location.state?.soloIncompletas),
   });
 
   const handleBeforeTourStep = useCallback(

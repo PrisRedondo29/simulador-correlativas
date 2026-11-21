@@ -217,4 +217,30 @@ describe('useProgresoDashboard + ConfirmarCambioModal - Confirmación de cascada
             fechaRegularidad: { anio: 2024, cuatrimestre: 1 },
         });
     });
+
+    it('inicializa el filtro soloIncompletas en true cuando recibe initialSoloIncompletas y filtra las materias incompletas', () => {
+        const currentProgreso = {
+            M1: 'Regular',
+            M2: 'Aprobado',
+        };
+        const currentDetalles = {
+            M2: { notaFinal: 8, fechaRegularidad: { anio: 2025, cuatrimestre: 1 } },
+        };
+
+        const { result } = renderHook(() =>
+            useProgresoDashboard({
+                plan: '17.14',
+                materias: MATERIAS_MOCK,
+                progreso: currentProgreso,
+                setProgreso: vi.fn(),
+                progresoDetalles: currentDetalles,
+                setProgresoDetalles: vi.fn(),
+                initialSoloIncompletas: true,
+            }),
+        );
+
+        expect(result.current.soloIncompletas).toBe(true);
+        expect(result.current.isFiltering).toBe(true);
+        expect(result.current.filteredMaterias.map((m) => m.codigo)).toEqual(['M1']);
+    });
 });

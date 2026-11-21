@@ -13,8 +13,8 @@ function MateriaCard({ materia, actualizarEstados, estado }) {
             name: 'Seleccionada',
             isCursado: true,
             color: 'primary',
-            icon: 'fa-solid fa-check-double text-[#4F46E5] dark:text-[#A5B4FC]',
-            background: 'bg-[#EEF2FF] dark:bg-[#1E1B4B]/80 border-2 border-[#4F46E5] dark:border-[#6366F1]',
+            icon: 'fa-solid fa-check-double text-[#7E22CE] dark:text-[#D8B4FE]',
+            background: 'bg-[#FAF5FF] dark:bg-[#2E1065]/80 border-2 border-[#7E22CE] dark:border-[#A855F7]',
         },
     ];
 
@@ -59,7 +59,11 @@ function MateriaCard({ materia, actualizarEstados, estado }) {
                                     actualizarEstados();
                                 }
                             }}
-                            className="cursor-pointer h-7 px-2 font-medium text-xs"
+                            className={`cursor-pointer h-7 px-2 font-medium text-xs ${
+                                isCursado && est.isCursado
+                                    ? 'bg-[#7E22CE] text-white dark:bg-[#9333EA]'
+                                    : ''
+                            }`}
                         >
                             {est.name}
                         </Chip>
