@@ -13,6 +13,7 @@ import {
 import {
   AlertTriangle,
   CheckCircle2,
+  ExternalLink,
   FileCheck2,
   FileUp,
   Sparkles,
@@ -206,7 +207,17 @@ export default function ImportarSawebModal({
                 </p>
                 <ol className="list-decimal list-inside space-y-1 text-[#475569] dark:text-[#94A3B8]">
                   <li>
-                    En SAWeb entrá al botón <strong>Analítico</strong> y descargá el archivo{" "}
+                    Ingresá a{" "}
+                    <a
+                      href="https://www.unlu.edu.ar/acceso-inf-acad.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 font-semibold text-[#005A36] dark:text-[#6EE7B7] underline underline-offset-2 hover:opacity-80"
+                    >
+                      SAWeb (Acceso a Información Académica)
+                      <ExternalLink className="w-3 h-3 shrink-0" aria-hidden="true" />
+                    </a>
+                    , entrá al botón <strong>Analítico</strong> y descargá el archivo{" "}
                     <strong>.pdf</strong>.
                   </li>
                   <li>
