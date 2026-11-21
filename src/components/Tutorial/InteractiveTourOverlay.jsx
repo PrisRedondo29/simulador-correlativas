@@ -13,7 +13,11 @@ import { trackTutorial } from "../../services/analyticsService";
  * - Cuando está cerrado, ofrece un acceso discreto "Recorrido rápido" que puede ocultarse
  *   y relanzarse en cualquier momento desde /como-usar.
  */
-export default function InteractiveTourOverlay({ tour, ready = true }) {
+export default function InteractiveTourOverlay({
+  tour,
+  ready = true,
+  triggerPlacement = "inline",
+}) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -166,12 +170,12 @@ export default function InteractiveTourOverlay({ tour, ready = true }) {
   if (!isOpen) {
     if (prefs.pillHidden) return null;
 
-    return (
-      <div className="fixed bottom-4 right-4 z-30 flex items-center rounded-full bg-white/95 dark:bg-[#161D24]/95 border border-[#E2E8F0] dark:border-[#2A3540] shadow-md backdrop-blur-sm">
+    const pillContent = (
+      <div className="inline-flex items-center rounded-full bg-white/95 dark:bg-[#161D24]/95 border border-[#E2E8F0] dark:border-[#2A3540] shadow-xs">
         <button
           type="button"
           onClick={() => startTour(0)}
-          className="inline-flex items-center gap-1.5 pl-3 pr-2 py-2 text-xs font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:opacity-80 cursor-pointer"
+          className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:opacity-80 cursor-pointer"
         >
           <Compass className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
           <span>Recorrido rápido</span>
@@ -181,12 +185,18 @@ export default function InteractiveTourOverlay({ tour, ready = true }) {
           onClick={handleHidePill}
           aria-label="Ocultar acceso de recorrido rápido"
           title="Ocultar"
-          className="pr-2.5 pl-1 py-2 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] cursor-pointer"
+          className="pr-2.5 pl-1 py-1.5 text-[#64748B] hover:text-[#1E293B] dark:hover:text-[#F1F5F9] cursor-pointer"
         >
           <X className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
       </div>
     );
+
+    if (triggerPlacement === "floating") {
+      return <div className="fixed bottom-4 left-4 z-30">{pillContent}</div>;
+    }
+
+    return <div className="flex justify-end">{pillContent}</div>;
   }
 
   const isFirst = stepIndex === 0;
@@ -333,4 +343,5 @@ InteractiveTourOverlay.propTypes = {
     ).isRequired,
   }),
   ready: PropTypes.bool,
+  triggerPlacement: PropTypes.oneOf(["inline", "floating"]),
 };

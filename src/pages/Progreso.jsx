@@ -63,6 +63,12 @@ export default function Progreso() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5">
+      <InteractiveTourOverlay
+        tour={TUTORIAL_TOURS[TOUR_IDS.MIS_MATERIAS]}
+        ready={!cargandoPlan && materias.length > 0}
+        triggerPlacement="inline"
+      />
+
       <ProgresoTotal
         carrera={policy?.carrera}
         plan={plan}
@@ -153,11 +159,6 @@ export default function Progreso() {
         plan={plan}
         materias={materias}
         onApplyImport={dashboard.importarDesdeSaweb}
-      />
-
-      <InteractiveTourOverlay
-        tour={TUTORIAL_TOURS[TOUR_IDS.MIS_MATERIAS]}
-        ready={!cargandoPlan && materias.length > 0}
       />
     </div>
   );
