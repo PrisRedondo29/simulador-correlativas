@@ -3,13 +3,17 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { isAnalyticsHostAllowed } from '../utils/analyticsAttribution';
 
+const isTestEnv = import.meta.env.MODE === 'test' || Boolean(import.meta.env.VITEST);
+
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (isTestEnv ? 'test-api-key' : undefined),
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (isTestEnv ? 'localhost' : undefined),
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || (isTestEnv ? 'demo-simulador-unlu' : undefined),
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    appId:
+        import.meta.env.VITE_FIREBASE_APP_ID ||
+        (isTestEnv ? '1:000000000000:web:000000000000' : undefined),
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
