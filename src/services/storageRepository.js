@@ -44,6 +44,8 @@ export const STORAGE_KEYS = {
     PROGRESO_VISTA: 'materias_vista_preferida',
     PROGRESO_EXPANDED_YEARS: 'progreso_expanded_years:v2',
     OCULTAR_CONFIRMACION_CASCADA: 'ocultar_confirmacion_cascada:v1',
+    TUTORIAL_VERSIONS: 'unlu_tutorial_versions:v1',
+    TUTORIAL_PREFS: 'unlu_tutorial_prefs:v1',
     SIMULADOR_VISTA: 'simulador_vista_preferida',
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
@@ -788,6 +790,57 @@ export function createStorageRepository(storage = getBrowserStorage()) {
             if (!plan) return false;
             if (!notice) return remove(STORAGE_KEYS.planUpdateNotice(plan), options);
             return setJSON(STORAGE_KEYS.planUpdateNotice(plan), notice, options);
+        },
+
+        /**
+         * @param {string} tourId
+         * @returns {number}
+         */
+        getTutorialVersionSeen: (tourId) => {
+            if (!tourId) return 0;
+            const map = getJSON(STORAGE_KEYS.TUTORIAL_VERSIONS, /** @type {Record<string, number>} */ ({}));
+            const val = Number(map?.[tourId] ?? 0);
+            return Number.isFinite(val) && val > 0 ? val : 0;
+        },
+
+        /**
+         * @param {string} tourId
+         * @param {number} version
+         */
+        setTutorialVersionSeen: (tourId, version) => {
+            if (!tourId) return false;
+            const map = getJSON(STORAGE_KEYS.TUTORIAL_VERSIONS, /** @type {Record<string, number>} */ ({}));
+            return setJSON(STORAGE_KEYS.TUTORIAL_VERSIONS, {
+                ...map,
+                [tourId]: Number(version) || 1,
+            });
+        },
+
+        /**
+         * @returns {{ autoDisabled: boolean, pillHidden: boolean }}
+         */
+        getTutorialPrefs: () => {
+            const prefs = getJSON(STORAGE_KEYS.TUTORIAL_PREFS, /** @type {{ autoDisabled?: boolean, pillHidden?: boolean }} */ ({}));
+            return {
+                autoDisabled: Boolean(prefs?.autoDisabled),
+                pillHidden: Boolean(prefs?.pillHidden),
+            };
+        },
+
+        /**
+         * @param {{ autoDisabled?: boolean, pillHidden?: boolean }} nextPrefs
+         */
+        setTutorialPrefs: (nextPrefs) => {
+            const current = getJSON(STORAGE_KEYS.TUTORIAL_PREFS, /** @type {{ autoDisabled?: boolean, pillHidden?: boolean }} */ ({}));
+            return setJSON(STORAGE_KEYS.TUTORIAL_PREFS, {
+                ...current,
+                ...nextPrefs,
+            });
+        },
+
+        resetAllTutorials: () => {
+            remove(STORAGE_KEYS.TUTORIAL_VERSIONS);
+            return remove(STORAGE_KEYS.TUTORIAL_PREFS);
         },
     };
 }

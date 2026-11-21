@@ -102,7 +102,10 @@ export default function ProgresoSearchFilters({
 
         <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2 shrink-0">
           {/* Solo incompletas */}
-          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C]">
+          <div
+            data-tour="progreso-solo-incompletas"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C]"
+          >
             <Switch
               size="sm"
               isSelected={soloIncompletas}
@@ -178,6 +181,7 @@ export default function ProgresoSearchFilters({
               <Dropdown>
                 <DropdownTrigger>
                   <Button
+                    data-tour="progreso-aprobar-hasta"
                     size="sm"
                     variant="flat"
                     className="bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-medium min-h-9"
@@ -212,6 +216,7 @@ export default function ProgresoSearchFilters({
             {/* Importar desde Analítico SAWeb (disponible en celular y escritorio) */}
             {onOpenSawebImport && (
               <Button
+                data-tour="progreso-import-analitico"
                 size="sm"
                 variant="flat"
                 onPress={onOpenSawebImport}

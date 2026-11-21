@@ -9,6 +9,8 @@ import MateriaContextPanel from "../components/Progreso/MateriaContextPanel";
 import LeyendaEstados from "../components/Progreso/LeyendaEstados";
 import PlanSelectionModal from "../components/Progreso/modals/PlanSelectionModal";
 import ImportarSawebModal from "../components/Progreso/modals/ImportarSawebModal";
+import InteractiveTourOverlay from "../components/Tutorial/InteractiveTourOverlay";
+import { TOUR_IDS, TUTORIAL_TOURS } from "../config/tutorialTours";
 
 /**
  * Pantalla principal "Mis Materias".
@@ -88,7 +90,7 @@ export default function Progreso() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        <div className="lg:col-span-8 min-w-0">
+        <div data-tour="progreso-materias-list" className="lg:col-span-8 min-w-0">
           <MateriasList
             progreso={progreso}
             progresoDetalles={progresoDetalles}
@@ -151,6 +153,11 @@ export default function Progreso() {
         plan={plan}
         materias={materias}
         onApplyImport={dashboard.importarDesdeSaweb}
+      />
+
+      <InteractiveTourOverlay
+        tour={TUTORIAL_TOURS[TOUR_IDS.MIS_MATERIAS]}
+        ready={!cargandoPlan && materias.length > 0}
       />
     </div>
   );

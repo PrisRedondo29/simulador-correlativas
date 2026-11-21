@@ -1,11 +1,14 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Divider } from '@heroui/react';
+import { addToast, Button, Divider } from '@heroui/react';
+import { Compass, RotateCcw } from 'lucide-react';
 import QuickStartStepper from '../components/Tutorial/sections/QuickStartStepper';
 import FeatureGuideCard from '../components/Tutorial/sections/FeatureGuideCard';
 import FAQSection from '../components/Tutorial/sections/FAQSection';
 import InteractiveMateriaDemo from '../components/Tutorial/sections/InteractiveMateriaDemo';
 import { usePlanCapabilities } from '../context/PlanContext';
+import { TUTORIAL_TOURS } from '../config/tutorialTours';
+import storageRepository from '../services/storageRepository';
 
 export default function ComoUsar() {
     const navigate = useNavigate();
@@ -29,6 +32,54 @@ export default function ComoUsar() {
                 </header>
 
                 <QuickStartStepper />
+
+                {/* ─── RECORRIDOS INTERACTIVOS ─── */}
+                <section className="my-6 p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                            <Compass className="w-4 h-4 text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+                            <span>Recorridos interactivos por pantalla</span>
+                        </div>
+                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                            ¿Ocultaste el acceso rápido o querés repasar las funciones? Podés iniciar cualquier guía interactiva desde acá.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                        {Object.values(TUTORIAL_TOURS).map((tour) => (
+                            <Button
+                                key={tour.id}
+                                size="sm"
+                                color="success"
+                                variant="flat"
+                                className="bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-semibold"
+                                startContent={<Compass className="w-3.5 h-3.5" />}
+                                onPress={() =>
+                                    navigate(tour.route, {
+                                        state: { startTour: tour.id },
+                                    })
+                                }
+                            >
+                                Recorrido: {tour.title}
+                            </Button>
+                        ))}
+                        <Button
+                            size="sm"
+                            variant="bordered"
+                            className="border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1]"
+                            startContent={<RotateCcw className="w-3.5 h-3.5" />}
+                            onPress={() => {
+                                storageRepository.resetAllTutorials();
+                                addToast({
+                                    title: 'Guías restablecidas',
+                                    description: 'Los recorridos volverán a aparecer la próxima vez que entres a cada sección.',
+                                    color: 'success',
+                                });
+                            }}
+                        >
+                            Restablecer guías
+                        </Button>
+                    </div>
+                </section>
 
                 <Divider className="my-4 bg-[#E2E8F0] dark:bg-[#2A3540]" />
 
