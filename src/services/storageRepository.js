@@ -48,6 +48,7 @@ export const STORAGE_KEYS = {
     TUTORIAL_PREFS: 'unlu_tutorial_prefs:v1',
     SIMULADOR_VISTA: 'simulador_vista_preferida',
     SIMULADOR_MODE_SELECTED: 'unlu_simulador_mode_selected:v1',
+    SIMULADOR_DESKTOP_LAYOUT: 'unlu_simulador_desktop_layout:v1',
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
     CATALOG_META_CACHE: 'unlu_catalog_meta:v1',
@@ -857,6 +858,20 @@ export function createStorageRepository(storage = getBrowserStorage()) {
          */
         setSimuladorModeSelected: (mode) =>
             setRaw(STORAGE_KEYS.SIMULADOR_MODE_SELECTED, mode),
+
+        /**
+         * @returns {'panel' | 'hud'}
+         */
+        getSimuladorDesktopLayout: () => {
+            const val = getRaw(STORAGE_KEYS.SIMULADOR_DESKTOP_LAYOUT, null);
+            return val === 'hud' ? 'hud' : 'panel';
+        },
+
+        /**
+         * @param {'panel' | 'hud'} layout
+         */
+        setSimuladorDesktopLayout: (layout) =>
+            setRaw(STORAGE_KEYS.SIMULADOR_DESKTOP_LAYOUT, layout),
     };
 }
 

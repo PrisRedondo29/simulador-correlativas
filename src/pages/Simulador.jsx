@@ -41,13 +41,21 @@ function Simulador({ plan: initialPlan }) {
         () => !storageRepository.getSimuladorModeSelected(),
     );
     const [selectedCodigo, setSelectedCodigo] = useState(null);
-    const [desktopLayout, setDesktopLayout] = useState('panel'); // 'panel' (Alt 2) | 'hud' (Alt 3)
+    const [desktopLayout, setDesktopLayout] = useState(
+        () => storageRepository.getSimuladorDesktopLayout(),
+    ); // 'panel' (Alt 2) | 'hud' (Alt 3)
     const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
     const [tourOpenKey, setTourOpenKey] = useState(0);
     const [viewMode] = useState(() => {
         if (typeof window !== 'undefined' && window.innerWidth < 768) return 'malla';
         return 'grafo';
     });
+
+    const handleChangeDesktopLayout = (nextLayout) => {
+        setDesktopLayout(nextLayout);
+        storageRepository.setSimuladorDesktopLayout(nextLayout);
+        trackCambioVista({ tipo: 'diseno_simulador', valor: nextLayout });
+    };
 
     const handleChangeInteractionMode = (nextMode) => {
         setInteractionMode(nextMode);
@@ -263,7 +271,7 @@ function Simulador({ plan: initialPlan }) {
 
     const renderLayoutComparisonSwitcher = () => (
         <div
-            aria-label="Comparar diseños de escritorio"
+            aria-label="Elegir diseño de escritorio"
             className="bg-white/95 dark:bg-[#161D24]/95 backdrop-blur-md border border-[#E2E8F0] dark:border-[#2A3540] shadow-sm rounded-xl p-1 flex items-center gap-1"
         >
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[#64748B] dark:text-[#94A3B8] px-1.5 hidden xl:inline">
@@ -272,7 +280,7 @@ function Simulador({ plan: initialPlan }) {
             <Button
                 size="sm"
                 variant="flat"
-                onPress={() => setDesktopLayout('panel')}
+                onPress={() => handleChangeDesktopLayout('panel')}
                 startContent={<Columns2 size={13} />}
                 className={`h-7 text-[11px] font-medium rounded-lg px-2 ${
                     desktopLayout === 'panel'
@@ -285,7 +293,7 @@ function Simulador({ plan: initialPlan }) {
             <Button
                 size="sm"
                 variant="flat"
-                onPress={() => setDesktopLayout('hud')}
+                onPress={() => handleChangeDesktopLayout('hud')}
                 startContent={<Layers size={13} />}
                 className={`h-7 text-[11px] font-medium rounded-lg px-2 ${
                     desktopLayout === 'hud'
@@ -433,10 +441,17 @@ function Simulador({ plan: initialPlan }) {
 
             <Modal isOpen={isHistoryOpen} onOpenChange={onHistoryOpenChange} size="3xl" scrollBehavior="inside">
                 <ModalContent>
-                    <ModalHeader className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
-                        Historial de cuatrimestres simulados
+                    <ModalHeader className="flex items-center justify-between gap-2 pr-10 border-b border-[#E2E8F0] dark:border-[#24303C]">
+                        <span className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+                            Historial Académico
+                        </span>
+                        {plan && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold">
+                                Plan {plan}
+                            </span>
+                        )}
                     </ModalHeader>
-                    <ModalBody className="pb-6">
+                    <ModalBody className="py-4">
                         <HistorialAcademico
                             historialSemestres={historialSemestres}
                             openedAccordions={openedAccordions}
@@ -444,6 +459,7 @@ function Simulador({ plan: initialPlan }) {
                             descargandoPDF={descargandoPDF}
                             plan={plan}
                             materias={materias}
+                            embedded={true}
                         />
                     </ModalBody>
                 </ModalContent>

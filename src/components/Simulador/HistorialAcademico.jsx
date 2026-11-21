@@ -1,225 +1,311 @@
-import React from 'react'
-import { Button, Accordion, AccordionItem, Card, CardBody, Chip } from '@heroui/react'
-import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils'
-import { getPlanPolicy } from '../../config/planPolicies'
+import React from 'react';
+import { Accordion, AccordionItem, Button } from '@heroui/react';
+import {
+    CalendarRange,
+    CheckCircle2,
+    ChevronsUpDown,
+    Clock,
+    CloudDownload,
+    GraduationCap,
+} from 'lucide-react';
+import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
+import { getPlanPolicy } from '../../config/planPolicies';
 
 /**
- * Muestra el historial de semestres completados como una línea de tiempo con acordeones.
+ * Muestra el historial de cuatrimestres simulados alineado al sistema visual UNLu.
+ * Preserva el contrato DOM requerido por `useSimuladorPDF` (`#historial-container` y `data-html2canvas-ignore`).
  */
-function HistorialAcademico({ historialSemestres, openedAccordions, setOpenedAccordions, descargandoPDF, plan, materias }) {
-    if (historialSemestres.length === 0) return null
+function HistorialAcademico({
+    historialSemestres,
+    openedAccordions,
+    setOpenedAccordions,
+    descargandoPDF,
+    plan,
+    materias,
+    embedded = false,
+}) {
+    if (!historialSemestres || historialSemestres.length === 0) return null;
 
     const planPolicy = getPlanPolicy(plan);
     const tituloIntermedioNombre = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
     const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
 
-    // Encontrar en qué índice de historial se alcanza el título intermedio
+    // Determinar en qué cuatrimestre del historial se alcanza el título intermedio
     let indiceIntermedio = -1;
     if (materiasIntermedio.length > 0) {
         for (let i = 0; i < historialSemestres.length; i++) {
             const snap = historialSemestres[i].progresoSnapshot;
-            // Convertimos el progreso del simulador (Cursado/No Cursado) al formato esperado por la utilidad (Aprobado/Promocionado)
-            // O adaptamos la utilidad para que acepte un mapeo de estados.
-            // En el simulador usamos 'Cursado'.
             const mappedProgreso = {};
-            Object.keys(snap).forEach(key => {
+            Object.keys(snap).forEach((key) => {
                 if (snap[key] === 'Cursado') mappedProgreso[key] = 'Aprobado';
             });
 
-            const { completadas, totales } = tituloIntermedioUtils.calcularProgresoIntermedio(materiasIntermedio, mappedProgreso);
-            if (completadas === totales) {
+            const { completadas, totales } = tituloIntermedioUtils.calcularProgresoIntermedio(
+                materiasIntermedio,
+                mappedProgreso,
+            );
+            if (totales > 0 && completadas === totales) {
                 indiceIntermedio = i;
                 break;
             }
         }
     }
 
+    const materiasCursadasTotal = historialSemestres.reduce((acc, item) => {
+        const count = item.materiasDelSemestre.filter(
+            (m) =>
+                item.progresoSnapshot[m.codigo] === 'Cursado' &&
+                item.progresoBaseSnapshot[m.codigo] !== 'Cursado',
+        ).length;
+        return acc + count;
+    }, 0);
+
+    const allOpened = openedAccordions.size >= historialSemestres.length;
+
+    const handleToggleAll = () => {
+        if (allOpened) {
+            setOpenedAccordions(new Set());
+        } else {
+            setOpenedAccordions(new Set(historialSemestres.map((_, i) => String(i))));
+        }
+    };
+
+    const containerClass =
+        embedded && !descargandoPDF
+            ? 'flex flex-col gap-3 w-full'
+            : `flex flex-col gap-4 relative p-4 sm:p-5 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#24303C] rounded-2xl ${
+                  descargandoPDF ? 'w-[800px] max-w-none mx-0' : 'w-full mb-4'
+              }`;
+
     return (
-        <div
-            id="historial-container"
-            className={`flex flex-col mb-4 relative px-5 md:px-8 py-5 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl m-0 ${descargandoPDF ? 'w-[800px] max-w-none mx-0' : 'w-full'}`}
-        >
-            {/* Encabezado del PDF (solo visible al capturar) */}
+        <div id="historial-container" className={containerClass}>
+            {/* Encabezado exclusivo para la captura PDF */}
             {descargandoPDF && (
-                <div className="w-full text-center py-6 mb-4 border-b-2 border-[#005A36]/20">
-                    <h1 className="text-3xl font-bold text-[#1E293B] tracking-tight">Registro de Avance Universitario</h1>
+                <div className="w-full text-center py-6 mb-2 border-b-2 border-[#005A36]/20">
+                    <h1 className="text-3xl font-bold text-[#1E293B] tracking-tight">
+                        Registro de Avance Universitario
+                    </h1>
                     <h2 className="text-base font-medium text-[#005A36] mt-1 uppercase tracking-wider">
                         {planPolicy.carrera} — Plan {plan}
                     </h2>
                 </div>
             )}
 
-            {/* Línea vertical de la timeline */}
-            <div
-                className={`absolute top-6 bottom-6 left-[19px] md:left-[31px] w-[2px] bg-[#E2E8F0] dark:bg-[#2A3540] ${descargandoPDF ? 'top-[150px]' : ''}`}
-                data-html2canvas-ignore
-            />
-
-            {/* Barra de acciones */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-3 pl-5" data-html2canvas-ignore>
-                <h3 className="text-xs font-semibold text-[#475569] dark:text-[#CBD5E1] uppercase tracking-wider flex items-center gap-2">
-                    <i className="fa-regular fa-clock text-[#005A36] dark:text-[#6EE7B7]" /> Historial Académico ({historialSemestres.length})
-                </h3>
-                <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                        size="sm" variant="flat"
-                        onPress={() => setOpenedAccordions(new Set(historialSemestres.map((_, i) => String(i))))}
-                        className="font-medium text-xs flex-1 sm:flex-none bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
-                    >
-                        Mostrar todos
-                    </Button>
-                    <Button
-                        size="sm" variant="light"
-                        onPress={() => setOpenedAccordions(new Set())}
-                        className="font-medium text-xs flex-1 sm:flex-none text-[#64748B] dark:text-[#94A3B8]"
-                    >
-                        Ocultar todos
-                    </Button>
+            {/* Barra de Resumen y Control */}
+            <div className="flex flex-wrap items-center justify-between gap-2" data-html2canvas-ignore>
+                <div className="flex flex-wrap items-center gap-2">
+                    {!embedded && (
+                        <h3 className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] mr-1">
+                            Historial Académico
+                        </h3>
+                    )}
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-xs font-medium text-[#334155] dark:text-[#E2E8F0] tabular-nums">
+                        <CalendarRange size={13} className="text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
+                        {historialSemestres.length}{' '}
+                        {historialSemestres.length === 1 ? 'cuatrimestre' : 'cuatrimestres'}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold text-[#005A36] dark:text-[#86EFAC] tabular-nums">
+                        <CheckCircle2 size={13} aria-hidden="true" />
+                        {materiasCursadasTotal} {materiasCursadasTotal === 1 ? 'materia simulada' : 'materias simuladas'}
+                    </span>
                 </div>
+
+                <Button
+                    size="sm"
+                    variant="flat"
+                    onPress={handleToggleAll}
+                    startContent={<ChevronsUpDown size={14} />}
+                    className="font-medium text-xs h-8 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
+                >
+                    {allOpened ? 'Contraer todos' : 'Expandir todos'}
+                </Button>
             </div>
 
-            {/* Lista de semestres */}
-            <div className="flex flex-col gap-4 pl-5">
+            {/* Lista Moderna de Cuatrimestres */}
+            <Accordion
+                variant="splitted"
+                selectionMode="multiple"
+                selectedKeys={openedAccordions}
+                onSelectionChange={(keys) => {
+                    if (keys === 'all') {
+                        setOpenedAccordions(new Set(historialSemestres.map((_, i) => String(i))));
+                    } else {
+                        setOpenedAccordions(new Set(Array.from(keys).map(String)));
+                    }
+                }}
+                className="px-0 gap-2.5"
+                itemClasses={{
+                    base: 'bg-[#F8FAFC] dark:bg-[#0F1419] border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl px-3.5 sm:px-4',
+                    trigger: 'py-3 cursor-pointer',
+                    title: 'w-full',
+                    indicator: 'text-[#64748B] dark:text-[#94A3B8]',
+                    content: 'pb-3.5 pt-2.5 border-t border-[#E2E8F0]/70 dark:border-[#24303C]',
+                }}
+            >
                 {historialSemestres.map((item, idx) => {
+                    const cursadas = item.materiasDelSemestre.filter(
+                        (m) => item.progresoSnapshot[m.codigo] === 'Cursado',
+                    );
+                    const noCursadas = item.materiasDelSemestre.filter(
+                        (m) => item.progresoSnapshot[m.codigo] !== 'Cursado',
+                    );
                     const materiasCursadasReales = item.materiasDelSemestre.filter(
-                        m => item.progresoSnapshot[m.codigo] === 'Cursado' && item.progresoBaseSnapshot[m.codigo] !== 'Cursado'
-                    )
-                    const totalSemestre = item.materiasDelSemestre.length
-                    let horasTotales = 0, horasSemanales = 0
-                    materiasCursadasReales.forEach(m => {
-                        horasTotales += Number(m.horas_totales) || 0
-                        horasSemanales += Number(m.horas_semanales) || 0
-                    })
+                        (m) =>
+                            item.progresoSnapshot[m.codigo] === 'Cursado' &&
+                            item.progresoBaseSnapshot[m.codigo] !== 'Cursado',
+                    );
+
+                    let horasTotales = 0;
+                    let horasSemanales = 0;
+                    materiasCursadasReales.forEach((m) => {
+                        horasTotales += Number(m.horas_totales) || 0;
+                        horasSemanales += Number(m.horas_semanales) || 0;
+                    });
+
+                    const isMilestone = idx === indiceIntermedio;
 
                     return (
-                        <div key={`${item.anioActual}-${item.cuatri}-${idx}`} className="relative">
-                            {/* Nodo de la timeline */}
-                            <div
-                                className={`absolute -left-[31px] top-4 ${idx === indiceIntermedio ? 'bg-[#005A36]' : 'bg-[#478559]'} text-white w-6 h-6 rounded-full flex items-center justify-center text-[10px] ring-4 ring-white dark:ring-[#161D24] z-10`}
-                                data-html2canvas-ignore
-                            >
-                                <i className={`fa-solid ${idx === indiceIntermedio ? 'fa-graduation-cap' : 'fa-check'}`} />
-                            </div>
-
-                            {/* Aviso de Título Intermedio */}
-                            {idx === indiceIntermedio && (
-                                <div className="mb-2 inline-flex items-center gap-1.5 bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold px-3 py-1 rounded-lg">
-                                    <i className="fa-solid fa-graduation-cap" />
-                                    <span>Alcanzás el {tituloIntermedioNombre}</span>
-                                </div>
-                            )}
-
-                            <Accordion
-                                selectionMode="multiple"
-                                selectedKeys={openedAccordions.has(String(idx)) ? [String(idx)] : []}
-                                onSelectionChange={(keys) => {
-                                    setOpenedAccordions(prev => {
-                                        const next = new Set(prev)
-                                        if (keys.has(String(idx))) next.add(String(idx))
-                                        else next.delete(String(idx))
-                                        return next
-                                    })
-                                }}
-                                className="bg-[#F8FAFC] dark:bg-[#1E2730] rounded-xl border border-[#E2E8F0] dark:border-[#2A3540] shadow-none w-full"
-                            >
-                                <AccordionItem
-                                    key={String(idx)}
-                                    aria-label={`Completado ${item.cuatri}º Cuatrimestre`}
-                                    title={
-                                        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 mr-2 py-0.5 w-full">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-[#1E293B] dark:text-[#F1F5F9] text-sm sm:text-base tracking-tight">
-                                                    {item.cuatri}º Cuatrimestre <span className="text-[#94A3B8] mx-1">·</span> {item.anioActual}
-                                                </span>
-                                                {item.esImportado && (
-                                                    <Chip 
-                                                        size="sm" 
-                                                        variant="flat" 
-                                                        color="primary" 
-                                                        className="h-5 text-[10px] font-medium"
-                                                        startContent={<i className="fa-solid fa-cloud-arrow-down mr-1" />}
-                                                    >
-                                                        Importado
-                                                    </Chip>
-                                                )}
-                                            </div>
-                                            <span className="text-xs text-[#475569] dark:text-[#CBD5E1] font-medium bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] px-2.5 py-0.5 rounded-lg whitespace-nowrap tabular-nums">
-                                                {materiasCursadasReales.length} de {totalSemestre}
+                        <AccordionItem
+                            key={String(idx)}
+                            aria-label={`Completado ${item.cuatri}° Cuatrimestre ${item.anioActual}`}
+                            title={
+                                <div className="flex flex-wrap items-center justify-between gap-2 pr-1">
+                                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                                        {isMilestone ? (
+                                            <span
+                                                className="w-6 h-6 rounded-lg bg-[#005A36] dark:bg-[#2E8B63] text-white flex items-center justify-center shrink-0"
+                                                data-html2canvas-ignore
+                                            >
+                                                <GraduationCap size={14} aria-hidden="true" />
                                             </span>
-                                            {(horasTotales > 0 || horasSemanales > 0) && (
-                                                <div className="w-full flex gap-3 text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] mt-0.5">
-                                                    {horasTotales > 0 && (
-                                                        <span className="flex items-center gap-1 whitespace-nowrap">
-                                                            <i data-html2canvas-ignore className="fa-regular fa-clock" /> {horasTotales}h totales
-                                                        </span>
-                                                    )}
-                                                    {horasSemanales > 0 && (
-                                                        <span className="flex items-center gap-1 whitespace-nowrap">
-                                                            <i data-html2canvas-ignore className="fa-solid fa-calendar-week" /> {horasSemanales}h/sem
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    }
-                                >
-                                    <div className={`grid ${descargandoPDF ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'} gap-2.5 px-1 pb-4`}>
-                                        {item.materiasDelSemestre.map(materia => {
-                                            const isCursado = item.progresoSnapshot[materia.codigo] === 'Cursado';
-                                            return (
-                                                <Card
-                                                    key={materia.codigo}
-                                                    shadow="none"
-                                                    className={`relative overflow-hidden border transition-colors ${isCursado ? 'bg-[#ECFDF5] dark:bg-[#102A20] border-[#A7F3D0] dark:border-[#1E4D38]' : 'bg-[#FFFBEB] dark:bg-[#2D2210] border-[#FDE68A] dark:border-[#5C4318]'}`}
-                                                >
-                                                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${isCursado ? 'bg-[#478559]' : 'bg-[#D97706]'}`} />
+                                        ) : (
+                                            <span className="w-6 h-6 rounded-lg bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] text-[11px] font-bold flex items-center justify-center tabular-nums shrink-0">
+                                                #{idx + 1}
+                                            </span>
+                                        )}
 
-                                                    <CardBody className="p-2.5 pl-4 flex flex-row items-center gap-3 overflow-hidden">
-                                                        <div className={`hidden sm:flex w-8 h-8 rounded-lg items-center justify-center shrink-0 ${isCursado ? 'bg-[#D1FAE5] dark:bg-[#173A24] text-[#166534] dark:text-[#86EFAC]' : 'bg-[#FEF3C7] dark:bg-[#423115] text-[#92400E] dark:text-[#FCD34D]'}`} data-html2canvas-ignore>
-                                                            <i className={`fa-regular ${isCursado ? 'fa-circle-check' : 'fa-clock'} text-sm`} />
-                                                        </div>
+                                        <span className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums">
+                                            {item.cuatri}° Cuatrimestre · {item.anioActual}
+                                        </span>
 
-                                                        <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                                            <div className="flex justify-between items-center w-full">
-                                                                <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-foreground/40 leading-none whitespace-nowrap">
-                                                                    {materia.mostrarCodigo === false ? '---' : materia.codigo}
-                                                                </span>
-                                                                <div className='sm:hidden' data-html2canvas-ignore>
-                                                                    <i className={`fa-regular ${isCursado ? 'fa-circle-check text-success' : 'fa-clock text-warning'} text-[10px]`} />
-                                                                </div>
-                                                            </div>
-                                                            <h4 className="text-xs sm:text-sm font-bold text-foreground/80 leading-tight">
-                                                                {materia.nombre}
-                                                            </h4>
-                                                            <div className="flex gap-3 mt-0.5 text-[9px] sm:text-[10px] font-medium text-foreground/50">
-                                                                {materia.horas_totales > 0 && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <i data-html2canvas-ignore className="fa-regular fa-clock" /> {materia.horas_totales}h tot.
-                                                                    </span>
-                                                                )}
-                                                                {materia.horas_semanales > 0 && (
-                                                                    <span className="flex items-center gap-1">
-                                                                        <i data-html2canvas-ignore className="fa-solid fa-calendar-week" /> {materia.horas_semanales}h/sem
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </CardBody>
-                                                </Card>
-                                            );
-                                        })}
-                                        {item.materiasDelSemestre.length === 0 && (
-                                            <div className="col-span-full text-sm text-foreground/60 p-2">No hubo materias disponibles.</div>
+                                        {item.esImportado && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E0F2FE] dark:bg-[#16384F] text-[#075985] dark:text-[#7DD3FC] text-[10px] font-semibold">
+                                                <CloudDownload size={11} aria-hidden="true" />
+                                                Importado
+                                            </span>
+                                        )}
+
+                                        {isMilestone && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-[#005A36] dark:text-[#86EFAC] text-[10px] font-semibold">
+                                                <GraduationCap size={11} aria-hidden="true" />
+                                                Alcanzás {tituloIntermedioNombre}
+                                            </span>
                                         )}
                                     </div>
-                                </AccordionItem>
-                            </Accordion>
-                        </div>
-                    )
+
+                                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] tabular-nums shrink-0">
+                                        <span
+                                            className={`px-2 py-0.5 rounded-md font-semibold ${
+                                                materiasCursadasReales.length > 0
+                                                    ? 'bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]'
+                                                    : 'bg-white dark:bg-[#161D24] text-[#64748B] dark:text-[#94A3B8] border border-[#E2E8F0] dark:border-[#2A3540]'
+                                            }`}
+                                        >
+                                            {materiasCursadasReales.length} cursadas
+                                        </span>
+
+                                        {horasSemanales > 0 && (
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#475569] dark:text-[#CBD5E1] font-medium">
+                                                <Clock size={11} className="text-[#64748B] dark:text-[#94A3B8]" aria-hidden="true" />
+                                                {horasSemanales}h/sem
+                                            </span>
+                                        )}
+
+                                        {horasTotales > 0 && (
+                                            <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#64748B] dark:text-[#94A3B8] font-medium">
+                                                {horasTotales}h tot.
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            }
+                        >
+                            {item.materiasDelSemestre.length === 0 ? (
+                                <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                                    No hubo materias disponibles en este cuatrimestre.
+                                </p>
+                            ) : (
+                                <>
+                                    {cursadas.length > 0 ? (
+                                        <div className={`grid ${descargandoPDF ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'} gap-2`}>
+                                            {cursadas.map((materia) => (
+                                                <div
+                                                    key={materia.codigo}
+                                                    className="flex items-start gap-2.5 p-2.5 rounded-xl bg-white dark:bg-[#161D24] border border-[#A7F3D0] dark:border-[#1E4D38]"
+                                                >
+                                                    <CheckCircle2
+                                                        size={15}
+                                                        className="text-[#005A36] dark:text-[#6EE7B7] mt-0.5 shrink-0"
+                                                        data-html2canvas-ignore
+                                                        aria-hidden="true"
+                                                    />
+                                                    <div className="min-w-0 flex-1 space-y-1">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <h4 className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-snug">
+                                                                {materia.nombre}
+                                                            </h4>
+                                                            <span className="font-mono text-[10px] text-[#64748B] dark:text-[#94A3B8] shrink-0">
+                                                                {materia.mostrarCodigo === false ? '---' : materia.codigo}
+                                                            </span>
+                                                        </div>
+                                                        {(materia.horas_semanales > 0 || materia.horas_totales > 0) && (
+                                                            <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] tabular-nums">
+                                                                {[
+                                                                    materia.horas_semanales > 0 && `${materia.horas_semanales}h/sem`,
+                                                                    materia.horas_totales > 0 && `${materia.horas_totales}h tot.`,
+                                                                ]
+                                                                    .filter(Boolean)
+                                                                    .join(' · ')}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
+                                            No marcaste materias para cursar en este cuatrimestre.
+                                        </p>
+                                    )}
+
+                                    {noCursadas.length > 0 && (
+                                        <div className="mt-3 pt-2.5 border-t border-dashed border-[#E2E8F0] dark:border-[#24303C]">
+                                            <p className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] mb-1.5">
+                                                Disponibles sin cursar ({noCursadas.length})
+                                            </p>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {noCursadas.map((materia) => (
+                                                    <span
+                                                        key={materia.codigo}
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/70 dark:bg-[#161D24]/70 border border-[#E2E8F0] dark:border-[#2A3540] text-[11px] text-[#64748B] dark:text-[#94A3B8]"
+                                                    >
+                                                        <span>{materia.nombre}</span>
+                                                        <span className="font-mono text-[10px] opacity-75">
+                                                            {materia.mostrarCodigo === false ? '---' : materia.codigo}
+                                                        </span>
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </AccordionItem>
+                    );
                 })}
-            </div>
+            </Accordion>
         </div>
-    )
+    );
 }
 
-export default HistorialAcademico
+export default HistorialAcademico;
