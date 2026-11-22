@@ -36,11 +36,63 @@ const DATA_INVENTORY = [
 ];
 
 const NORMATIVE_SOURCES = [
-    'Res. HCS 260/24 — Aprobación del Plan 17.14, cargas horarias (3374 / 1888 hs) y Anexo VI de equivalencias',
-    'Res. HCS 836/24 — Rectificatoria del Anexo VI de equivalencias (código 14031)',
-    'Disp. SA 395/24 — Régimen de correlatividades del Plan 17.14',
-    'Plan de Transición 2025–2029 (Res. HCS 89/2025) — Cronograma progresivo de dictado 17.13 → 17.14',
-    'Régimen General de Estudios (RGE) UNLu — Vigencia de regularidad (5 cuatrimestres) e intentos de final',
+    {
+        code: 'Res. HCS 260/24',
+        title: 'Res. HCS 260/24',
+        description: 'Aprobación del Plan 17.14, cargas horarias (3374 / 1888 hs) y Anexo VI de equivalencias',
+        url: 'https://www.planesdeestudio.unlu.edu.ar/sites/www.planesdeestudio.unlu.edu.ar/files/site/3141a825-2bd3-4770-b55a-f7ee9b66b8c8_0.pdf',
+        linkLabel: 'Ver PDF oficial',
+    },
+    {
+        code: 'Res. HCS 836/24',
+        title: 'Res. HCS 836/24',
+        description: 'Rectificatoria del Anexo VI de equivalencias (código 14031)',
+        url: 'https://www.planesdeestudio.unlu.edu.ar/sites/www.planesdeestudio.unlu.edu.ar/files/site/17-SCAN/RES%20HCS%20836-24.pdf',
+        linkLabel: 'Ver PDF oficial',
+    },
+    {
+        code: 'Disp. SA 395/24',
+        title: 'Disp. SA 395/24',
+        description: 'Régimen de correlatividades del Plan 17.14',
+        url: 'https://www.planesdeestudio.unlu.edu.ar/sites/www.planesdeestudio.unlu.edu.ar/files/site/adbe75eb-5477-4537-924b-02fad84ebe7e.pdf',
+        linkLabel: 'Ver PDF oficial',
+    },
+    {
+        code: 'Res. HCS 726/24',
+        title: 'Res. HCS 726/24',
+        description: 'Diplomaturas Intracurriculares del Plan 17.14',
+        url: 'https://www.planesdeestudio.unlu.edu.ar/sites/www.planesdeestudio.unlu.edu.ar/files/site/17-SCAN/RES%20HCS%20726-24.pdf',
+        linkLabel: 'Ver PDF oficial',
+    },
+    {
+        code: 'Res. HCS 89/2025',
+        title: 'Plan de Transición 2025–2029 (Res. HCS 89/2025)',
+        description: 'Cronograma progresivo de dictado 17.13 → 17.14',
+        url: 'https://www.planesdeestudio.unlu.edu.ar/?q=node/32',
+        linkLabel: 'Índice Planes de Estudio',
+    },
+    {
+        code: 'RGE UNLu',
+        title: 'Régimen General de Estudios (RGE) UNLu',
+        description: 'Vigencia de regularidad (5 cuatrimestres) e intentos de final',
+        url: 'https://www.unlu.edu.ar/regimen.html',
+        linkLabel: 'Ver página oficial',
+    },
+];
+
+const OFFICIAL_PORTAL_LINKS = [
+    {
+        label: 'División Planes de Estudio (LSI)',
+        url: 'https://www.planesdeestudio.unlu.edu.ar/?q=node/32',
+    },
+    {
+        label: 'Ficha oficial Plan 17.14',
+        url: 'https://www.unlu.edu.ar/carg-sistemas.html',
+    },
+    {
+        label: 'Ficha oficial Plan 17.13',
+        url: 'https://www.unlu.edu.ar/carg-sistemas-1713.html',
+    },
 ];
 
 const LEGAL_ANCHORS = [
@@ -245,17 +297,57 @@ export default function Legal() {
 
                     <section
                         id="fuentes-contacto"
-                        className="scroll-mt-20 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-5 sm:p-6 lg:p-7 space-y-3"
+                        className="scroll-mt-20 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-5 sm:p-6 lg:p-7 space-y-4"
                     >
                         <h2 className="text-lg font-bold text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2">
                             <i className="fa-solid fa-book-open text-[#005A36] dark:text-[#86EFAC]" aria-hidden="true" />
                             5. Fuentes normativas consultadas y canales oficiales
                         </h2>
-                        <ul className="list-disc pl-5 space-y-1.5 text-sm text-[#475569] dark:text-[#CBD5E1]">
+                        <ul className="divide-y divide-[#E2E8F0] dark:divide-[#2A3540] rounded-xl border border-[#E2E8F0] dark:border-[#2A3540] bg-[#F8FAFC]/60 dark:bg-[#1E2730]/40">
                             {NORMATIVE_SOURCES.map((item) => (
-                                <li key={item}>{item}</li>
+                                <li
+                                    key={item.code}
+                                    className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-[#475569] dark:text-[#CBD5E1]"
+                                >
+                                    <div className="min-w-0">
+                                        <span className="font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                                            {item.title}
+                                        </span>
+                                        <span className="text-[#64748B] dark:text-[#94A3B8]">
+                                            {' '}— {item.description}
+                                        </span>
+                                    </div>
+                                    <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline shrink-0"
+                                    >
+                                        <span>{item.linkLabel}</span>
+                                        <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true" />
+                                    </a>
+                                </li>
                             ))}
                         </ul>
+
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                            <span className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
+                                Portales oficiales de la carrera:
+                            </span>
+                            {OFFICIAL_PORTAL_LINKS.map((portal) => (
+                                <a
+                                    key={portal.url}
+                                    href={portal.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38] hover:underline"
+                                >
+                                    <span>{portal.label}</span>
+                                    <i className="fa-solid fa-arrow-up-right-from-square text-[10px]" aria-hidden="true" />
+                                </a>
+                            ))}
+                        </div>
+
                         <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] pt-1">
                             Para trámites académicos oficiales, certificados o consultas administrativas de validez, dirigite siempre al portal institucional{' '}
                             <a
