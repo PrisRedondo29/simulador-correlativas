@@ -23,13 +23,17 @@ function Footer() {
             <footer className="w-full border-t border-[#E2E8F0] dark:border-[#2A3540] py-4 pb-16 sm:pb-4 px-4 sm:px-8 sm:pr-20 mt-8">
                 <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#64748B] dark:text-[#94A3B8]">
                     <span>
-                        Simulador de Correlativas · {policy.carrera} ({tenant?.shortName || 'UNLu'})
+                        Simulador de Correlativas (Proyecto estudiantil no oficial) · {policy.carrera} ({tenant?.shortName || 'UNLu'})
                     </span>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center justify-center gap-3">
                         <span>Desarrollado por Priscila Redondo</span>
                         <span aria-hidden="true">·</span>
                         <Link to="/contacto" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
                             Contacto
+                        </Link>
+                        <span aria-hidden="true">·</span>
+                        <Link to="/legal" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
+                            Aviso legal y privacidad
                         </Link>
                     </div>
                 </div>
@@ -103,6 +107,13 @@ function Footer() {
                                 Email
                             </Button>
                         </div>
+
+                        <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] pt-2">
+                            Proyecto independiente no oficial ·{' '}
+                            <Link to="/legal" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
+                                Aviso legal y privacidad
+                            </Link>
+                        </p>
                     </div>
                 </div>
             </div>

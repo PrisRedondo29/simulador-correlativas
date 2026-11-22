@@ -37,5 +37,9 @@ describe('routeSeo - metadatos dinámicos y URL canónica por ruta', () => {
             `${CANONICAL_ORIGIN}/cambio-plan`,
         );
         expect(document.querySelectorAll('link[rel="canonical"]')).toHaveLength(1);
+
+        const legalSeo = getRouteSeo('/legal');
+        expect(legalSeo.title).toBe('Aviso Legal y Privacidad');
+        expect(legalSeo.canonicalUrl).toBe(`${CANONICAL_ORIGIN}/legal`);
     });
 });

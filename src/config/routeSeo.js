@@ -88,6 +88,13 @@ export const ROUTE_SEO = {
             'Comunicate con el equipo desarrollador para reportar errores, sugerir mejoras o consultar sobre planes de estudio.',
         canonicalPath: '/contacto',
     },
+    '/legal': {
+        title: 'Aviso Legal y Privacidad',
+        documentTitle: 'Aviso Legal y Privacidad | Simulador de Correlativas UNLu',
+        description:
+            'Política de privacidad (Ley 25.326), descargo de proyecto estudiantil no oficial UNLu, detalle de datos tratados y derechos del titular.',
+        canonicalPath: '/legal',
+    },
 };
 
 /**

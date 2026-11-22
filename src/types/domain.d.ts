@@ -557,6 +557,7 @@ export interface TenantConfig {
     name: string;
     shortName: string;
     portalTitle: string;
+    unofficialNotice?: string;
     themeColor: string;
     academicRules: AcademicRulesConfig;
     communityLink?: TenantCommunityLink | null;

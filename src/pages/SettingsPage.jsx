@@ -644,6 +644,36 @@ export default function SettingsPage({ plan, setPlan }) {
                         </div>
                     </CardBody>
                 </Card>
+
+                {/* Privacidad y marco legal */}
+                <Card shadow="none" className="md:col-span-2 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
+                    <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
+                        <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] flex items-center justify-center text-[#005A36] dark:text-[#6EE7B7]">
+                            <i className="fa-solid fa-scale-balanced text-xs" aria-hidden="true" />
+                        </div>
+                        <div className="flex flex-col">
+                            <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">
+                                Privacidad y marco legal
+                            </p>
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
+                                Transparencia sobre el tratamiento de datos (Ley N° 25.326) y alcance no oficial
+                            </p>
+                        </div>
+                    </CardHeader>
+                    <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
+                    <CardBody className="px-5 pb-5 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed max-w-2xl">
+                            Tu avance se guarda por defecto en el dispositivo y el Analítico SAWeb se procesa localmente sin subir archivos ni conservar DNI o legajo.
+                        </p>
+                        <Link
+                            to="/legal"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#6EE7B7] border border-[#E2E8F0] dark:border-[#2A3540] hover:underline shrink-0"
+                        >
+                            <i className="fa-solid fa-file-shield text-[11px]" aria-hidden="true" />
+                            Aviso legal y privacidad
+                        </Link>
+                    </CardBody>
+                </Card>
             </div>
         </div>
     );

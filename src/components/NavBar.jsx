@@ -34,6 +34,8 @@ const ROUTE_TITLES = {
     '/configuracion': 'Configuración',
     '/config': 'Configuración',
     '/contacto': 'Contacto',
+    '/legal': 'Aviso legal y privacidad',
+    '/privacidad': 'Aviso legal y privacidad',
 };
 
 // ─── Panel de usuario (sección inferior del sidebar) ──────────────────────────
@@ -363,7 +365,7 @@ export function TopUtilityBar({ plan }) {
     const location = useLocation();
     const navigate = useNavigate();
     const { policy, tenant } = usePlanCapabilities();
-    const pageTitle = ROUTE_TITLES[location.pathname] || tenant?.portalTitle || 'Portal Estudiantil';
+    const pageTitle = ROUTE_TITLES[location.pathname] || tenant?.portalTitle || 'Simulador Estudiantil';
     const activePlan = plan || DEFAULT_PLAN;
 
     return (
@@ -407,7 +409,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
     const { policy, tenant } = usePlanCapabilities();
     const navigate = useNavigate();
     const location = useLocation();
-    const pageTitle = ROUTE_TITLES[location.pathname] || 'Portal Estudiantil';
+    const pageTitle = ROUTE_TITLES[location.pathname] || tenant?.portalTitle || 'Simulador Estudiantil';
     const activePlan = plan || DEFAULT_PLAN;
 
     const handleSignIn = async (rememberMe) => {
@@ -460,7 +462,7 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                                 {pageTitle}
                             </span>
                             <span className="text-[10px] text-white/75 truncate leading-tight">
-                                {tenant?.shortName || 'UNLu'} · {policy.careerShortName}
+                                No oficial · {tenant?.shortName || 'UNLu'} · {policy.careerShortName}
                             </span>
                         </div>
                     </button>
@@ -508,8 +510,8 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
 
                     {!isCollapsed && (
                         <div className="flex flex-col min-w-0">
-                            <span className="font-bold text-white text-base tracking-tight leading-none">{tenant?.shortName || 'UNLu'}</span>
-                            <span className="text-white/75 font-medium text-[11px] tracking-wider uppercase mt-0.5">{tenant?.portalTitle || 'Portal Estudiantil'}</span>
+                            <span className="font-bold text-white text-sm tracking-tight leading-tight truncate">{tenant?.portalTitle || 'Simulador Estudiantil'}</span>
+                            <span className="text-white/75 font-medium text-[11px] tracking-wide mt-0.5 truncate">No oficial · {tenant?.shortName || 'UNLu'}</span>
                         </div>
                     )}
                 </div>
@@ -552,9 +554,9 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
                                     >
                                         <i className="fa-solid fa-graduation-cap text-white" />
                                     </button>
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-white text-base leading-none">{tenant?.shortName || 'UNLu'}</span>
-                                        <span className="text-white/75 text-[11px] font-medium uppercase tracking-wider mt-0.5">{tenant?.portalTitle || 'Portal Estudiantil'}</span>
+                                    <div className="flex flex-col min-w-0">
+                                        <span className="font-bold text-white text-sm leading-tight truncate">{tenant?.portalTitle || 'Simulador Estudiantil'}</span>
+                                        <span className="text-white/75 text-[11px] font-medium tracking-wide mt-0.5 truncate">No oficial · {tenant?.shortName || 'UNLu'}</span>
                                     </div>
                                 </div>
                             </DrawerHeader>

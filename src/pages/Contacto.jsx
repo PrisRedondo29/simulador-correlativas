@@ -31,13 +31,13 @@ const Contacto = () => {
             <header className="space-y-1.5">
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#005A36] dark:text-[#86EFAC]">
                     <i className="fa-solid fa-building-columns text-[11px]" aria-hidden="true" />
-                    {institucion} · {carreraLabel}
+                    Proyecto estudiantil no oficial · {institucion} · {carreraLabel}
                 </span>
                 <h1 className="text-2xl sm:text-3xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tracking-tight">
                     Contacto y Reportes
                 </h1>
                 <p className="text-[#64748B] dark:text-[#94A3B8] text-xs sm:text-sm max-w-2xl leading-relaxed">
-                    Consultas sobre correlatividades, reporte de errores en el plan de estudios o sugerencias de mejora para el simulador.
+                    Canal de soporte técnico del simulador para reportar errores o sugerir mejoras (no gestiona trámites académicos oficiales de la {institucion}).
                 </p>
             </header>
 
@@ -73,7 +73,7 @@ const Contacto = () => {
                                 <i className={`${community.icon || 'fa-solid fa-users'} text-sm`} aria-hidden="true" />
                             </div>
                             <div className="min-w-0">
-                                <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] block">Comunidad estudiantil</span>
+                                <span className="text-[11px] font-medium text-[#64748B] dark:text-[#94A3B8] block">Comunidad estudiantil no oficial</span>
                                 <span className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] truncate block">
                                     {community.name}
                                 </span>

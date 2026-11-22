@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 let mockAuthError = null;
 const mockClearAuthError = vi.fn();
@@ -49,7 +50,14 @@ describe('LoginModal - Flujo de inicio de sesión y manejo de errores', () => {
         const onClose = vi.fn();
         const onConfirm = vi.fn().mockResolvedValue({ uid: 'u1' });
 
-        render(<LoginModal isOpen={true} onClose={onClose} onConfirm={onConfirm} />);
+        render(
+            <MemoryRouter>
+                <LoginModal isOpen={true} onClose={onClose} onConfirm={onConfirm} />
+            </MemoryRouter>,
+        );
+
+        const legalLink = screen.getByRole('link', { name: 'Aviso legal y privacidad' });
+        expect(legalLink.getAttribute('href')).toBe('/legal');
 
         fireEvent.click(screen.getByRole('checkbox', { name: /Recordarme/i }));
         fireEvent.click(screen.getByRole('button', { name: /Continuar con Google/i }));
@@ -67,7 +75,11 @@ describe('LoginModal - Flujo de inicio de sesión y manejo de errores', () => {
         const onConfirm = vi.fn().mockRejectedValue(new Error('auth/popup-closed-by-user'));
         mockAuthError = 'Se cerró la ventana antes de completar el inicio de sesión.';
 
-        render(<LoginModal isOpen={true} onClose={onClose} onConfirm={onConfirm} />);
+        render(
+            <MemoryRouter>
+                <LoginModal isOpen={true} onClose={onClose} onConfirm={onConfirm} />
+            </MemoryRouter>,
+        );
 
         expect(screen.getByText(mockAuthError)).toBeTruthy();
 

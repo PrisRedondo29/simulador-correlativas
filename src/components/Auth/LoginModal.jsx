@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Button, Switch } from '@heroui/react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../context/AuthContext';
@@ -71,6 +72,18 @@ const LoginModal = ({ isOpen, onClose, onConfirm }) => {
                             color="primary"
                         />
                     </div>
+
+                    <p className="text-[11px] text-foreground/65 leading-relaxed px-1 pt-2 border-t border-default-200">
+                        Iniciar sesión es opcional y almacena tu UID, correo y progreso académico en Firebase únicamente para sincronizar entre dispositivos.{' '}
+                        <Link
+                            to="/legal"
+                            onClick={onClose}
+                            className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline"
+                        >
+                            Aviso legal y privacidad
+                        </Link>
+                        .
+                    </p>
                 </ModalBody>
 
                 <ModalFooter>

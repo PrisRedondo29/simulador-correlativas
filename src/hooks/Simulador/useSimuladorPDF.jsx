@@ -87,6 +87,8 @@ function drawTableHeader(pdf, y) {
     return y + headerH;
 }
 
+export const PDF_UNOFFICIAL_FOOTER_DISCLAIMER = 'Documento orientativo no oficial UNLu';
+
 function stampPageFooters(pdf, labelText) {
     const totalPages = pdf.getNumberOfPages();
     for (let page = 1; page <= totalPages; page++) {
@@ -96,7 +98,7 @@ function stampPageFooters(pdf, labelText) {
         pdf.line(MARGIN_X, 284, PAGE_WIDTH - MARGIN_X, 284);
 
         pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7.5);
+        pdf.setFontSize(7.2);
         pdf.setTextColor(...INK_LIGHT);
         pdf.text(labelText, MARGIN_X, 288.5);
         pdf.text(`Página ${page} de ${totalPages}`, PAGE_WIDTH - MARGIN_X, 288.5, {
@@ -664,7 +666,10 @@ export function buildSimuladorPDFDocument({
         y += 4.5;
     });
 
-    stampPageFooters(pdf, `Simulador de Correlativas UNLu · Plan ${plan || '-'}`);
+    stampPageFooters(
+        pdf,
+        `${PDF_UNOFFICIAL_FOOTER_DISCLAIMER} · Plan ${plan || '-'} · Simulador de Correlativas`,
+    );
     return pdf;
 }
 
@@ -970,7 +975,10 @@ export function buildPlanillaPlanPDFDocument({
         y += 4.2;
     });
 
-    stampPageFooters(pdf, `Simulador de Correlativas UNLu · Plan ${plan || '-'}`);
+    stampPageFooters(
+        pdf,
+        `${PDF_UNOFFICIAL_FOOTER_DISCLAIMER} · Plan ${plan || '-'} · Simulador de Correlativas`,
+    );
     return pdf;
 }
 

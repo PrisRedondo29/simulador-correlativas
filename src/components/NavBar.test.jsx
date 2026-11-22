@@ -30,8 +30,13 @@ vi.mock('../context/PlanContext', () => ({
         },
         tenant: {
             shortName: 'UNLu',
-            portalTitle: 'Portal Estudiantil',
-            communityLink: null,
+            portalTitle: 'Simulador Estudiantil',
+            unofficialNotice: 'Proyecto estudiantil no oficial',
+            communityLink: {
+                name: 'CODES++ (Comunidad estudiantil)',
+                icon: 'fa-solid fa-users',
+                url: 'https://www.codesunlu.tech/',
+            },
         },
         careersRegistry: undefined,
     }),
@@ -114,5 +119,10 @@ describe('NavBar - Jerarquía z-index del botón colapsador sobre el encabezado 
         expect(collapseBtn.className).toContain('-right-3.5');
         expect(collapseBtn.className).toContain('z-10');
         expect(collapseBtn.className).not.toContain('z-[60]');
+
+        expect(sidebar.textContent).toContain('Simulador Estudiantil');
+        expect(sidebar.textContent).toContain('No oficial · UNLu');
+        expect(screen.queryByText('Portal Estudiantil')).toBeNull();
+        expect(screen.getByRole('link', { name: /CODES\+\+ \(Comunidad estudiantil\)/i })).toBeTruthy();
     });
 });

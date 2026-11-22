@@ -17,6 +17,10 @@ describe('tenantConfig - Configuraci√≥n institucional declarativa y reglas acad√
         expect(tenant).toBe(UNLU_TENANT_CONFIG);
         expect(tenant.id).toBe('unlu');
         expect(tenant.shortName).toBe('UNLu');
+        expect(tenant.portalTitle).toBe('Simulador Estudiantil');
+        expect(tenant.unofficialNotice).toMatch(/no oficial/i);
+        expect(tenant.communityLink?.name).toContain('CODES++');
+        expect(tenant.communityLink?.description).toMatch(/no oficial/i);
         expect(tenant.academicRules).toEqual(DEFAULT_UNLU_ACADEMIC_RULES);
         expect(tenant.academicRules.cuatrimestresRegularidad).toBe(5);
         expect(tenant.academicRules.intentosFinal).toBe(4);

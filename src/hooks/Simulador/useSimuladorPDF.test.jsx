@@ -5,6 +5,7 @@ import { render, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { jsPDF } from 'jspdf';
 import sistemasPlanes from '../../data/sistemas.json';
 import useSimuladorPDF, {
+    PDF_UNOFFICIAL_FOOTER_DISCLAIMER,
     buildCompleteSimulationSemesters,
     buildPlanillaPlanPDFDocument,
     buildSimuladorPDFDocument,
@@ -501,5 +502,39 @@ describe('useSimuladorPDF - Planilla vectorial imprimible con jsPDF', () => {
         // promoMat (Promoc = 1) + aprobRegMat (Regular + Aprobada = 2) + optMat (Promoc = 1) = 4 marcadas; futMat = 0 marcadas
         expect(boxes).toHaveLength(15);
         expect(filled).toHaveLength(4);
+    });
+
+    it('incluye el pie "Documento orientativo no oficial UNLu" en simulación y en planillas del plan (blanco y progreso)', () => {
+        const spySim = createSpyJsPDFClass();
+        buildSimuladorPDFDocument({
+            jsPDF: /** @type {any} */ (spySim.MockJsPDF),
+            historialSemestres: [
+                {
+                    cuatri: 1,
+                    anioActual: 2026,
+                    materiasDelSemestre: [MOCK_MATERIAS[0]],
+                    progresoSnapshot: { 11071: 'Cursado' },
+                    progresoBaseSnapshot: {},
+                },
+            ],
+            plan: '17.14',
+            materias: MOCK_MATERIAS,
+        });
+        expect(
+            spySim.textCalls.some((t) => t.includes(PDF_UNOFFICIAL_FOOTER_DISCLAIMER)),
+        ).toBe(true);
+
+        for (const includeProgress of [false, true]) {
+            const spyPlanilla = createSpyJsPDFClass();
+            buildPlanillaPlanPDFDocument({
+                jsPDF: /** @type {any} */ (spyPlanilla.MockJsPDF),
+                materias: [MOCK_MATERIAS[0]],
+                plan: '17.14',
+                includeProgress,
+            });
+            expect(
+                spyPlanilla.textCalls.some((t) => t.includes(PDF_UNOFFICIAL_FOOTER_DISCLAIMER)),
+            ).toBe(true);
+        }
     });
 });

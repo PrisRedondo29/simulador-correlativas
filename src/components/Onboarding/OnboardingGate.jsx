@@ -29,7 +29,7 @@ import OnboardingSubjectsStep from './OnboardingSubjectsStep';
 import { DEV_SIMULATE_NEWCOMER_EVENT } from './onboardingEvents';
 import { mergeSawebImportWithExisting } from '../../utils/sawebParser';
 
-const FREE_ROUTES = ['/como-usar', '/contacto'];
+const FREE_ROUTES = ['/como-usar', '/contacto', '/legal', '/privacidad'];
 const ONBOARDING_DRAFT_KEY = 'onboarding_draft_state';
 
 function readOnboardingDraft() {
