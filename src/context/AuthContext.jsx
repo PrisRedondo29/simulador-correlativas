@@ -2,11 +2,16 @@ import { useContext, useEffect, useState, useCallback, useRef, useReducer } from
 import PropTypes from 'prop-types';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
-import { loginConGoogle, logout } from '../services/authService';
+import {
+    loginConGoogle,
+    logout,
+    reauthenticateWithGoogle,
+    deleteCurrentAuthUser,
+} from '../services/authService';
 import { isIntentionalAuthCancel } from '../utils/errorCodes';
 import { logError } from '../services/logService';
 import { trackLogin, trackLogout } from '../services/analyticsService';
-import { getUserData, getUserRole } from '../services/dbService';
+import { deleteUserCloudData, getUserData, getUserRole } from '../services/dbService';
 import {
     fetchCloudBundle,
     uploadAcademicSnapshot,
@@ -95,6 +100,9 @@ export function AuthProvider({ children }) {
     const [isCriticalError, setIsCriticalError] = useState(false);
     const [recoveryBackup, setRecoveryBackup] = useState(() =>
         storageRepository.getRecoveryBackup(),
+    );
+    const [pendingAccountDeletion, setPendingAccountDeletion] = useState(() =>
+        storageRepository.getPendingAccountDeletion(),
     );
 
     const [syncState, dispatchSync] = useReducer(
@@ -804,6 +812,210 @@ export function AuthProvider({ children }) {
         setLoading(false);
     }, []);
 
+    const deleteAccount = useCallback(
+        async ({ clearLocalData = false } = {}) => {
+            const activeUser = userRef.current;
+            if (!activeUser) {
+                return {
+                    ok: false,
+                    status: 'unauthenticated',
+                    firestoreDeleted: false,
+                    authDeleted: false,
+                    message: 'No hay una sesión activa para eliminar.',
+                };
+            }
+
+            if (!syncStateRef.current.isOnline) {
+                return {
+                    ok: false,
+                    status: 'offline',
+                    firestoreDeleted: false,
+                    authDeleted: false,
+                    message:
+                        'Sin conexión a internet. Necesitás conexión para eliminar tu cuenta en la nube.',
+                };
+            }
+
+            const existingPending = storageRepository.getPendingAccountDeletion();
+            const firestoreAlreadyDeleted = Boolean(
+                existingPending &&
+                    existingPending.uid === activeUser.uid &&
+                    existingPending.stage === 'firestore_deleted_auth_pending',
+            );
+            const effectiveClearLocal = firestoreAlreadyDeleted
+                ? Boolean(clearLocalData || existingPending?.clearLocalData)
+                : Boolean(clearLocalData);
+
+            /** @param {unknown} err */
+            const extractErrInfo = (err, fallbackMessage) => ({
+                code:
+                    err && typeof err === 'object' && 'code' in err && typeof err.code === 'string'
+                        ? err.code
+                        : null,
+                message:
+                    err &&
+                    typeof err === 'object' &&
+                    'message' in err &&
+                    typeof err.message === 'string' &&
+                    err.message
+                        ? err.message
+                        : fallbackMessage,
+            });
+
+            // Etapa 1: Reautenticar con Google antes de tocar Firestore o reintentar Auth
+            try {
+                await reauthenticateWithGoogle(activeUser);
+            } catch (err) {
+                if (isIntentionalAuthCancel(err)) {
+                    return {
+                        ok: false,
+                        status: 'cancelled',
+                        firestoreDeleted: firestoreAlreadyDeleted,
+                        authDeleted: false,
+                        message: null,
+                    };
+                }
+                const { code, message } = extractErrInfo(
+                    err,
+                    'No se pudo verificar tu identidad con Google.',
+                );
+                if (firestoreAlreadyDeleted && existingPending) {
+                    const updatedPending = {
+                        ...existingPending,
+                        clearLocalData: effectiveClearLocal,
+                        lastErrorCode: code,
+                        lastErrorMessage: message,
+                    };
+                    storageRepository.setPendingAccountDeletion(updatedPending);
+                    setPendingAccountDeletion(updatedPending);
+                    return {
+                        ok: false,
+                        status: 'partial_auth_pending',
+                        firestoreDeleted: true,
+                        authDeleted: false,
+                        recoverable: true,
+                        code,
+                        message,
+                    };
+                }
+                return {
+                    ok: false,
+                    status: 'failed_reauth',
+                    firestoreDeleted: false,
+                    authDeleted: false,
+                    code,
+                    message,
+                };
+            }
+
+            // Etapa 2: Eliminar documento en Cloud Firestore (`/users/{uid}`) si aún no fue eliminado
+            if (!firestoreAlreadyDeleted) {
+                try {
+                    await deleteUserCloudData(activeUser.uid);
+                } catch (err) {
+                    logError(err, {
+                        route: '/configuracion',
+                        errorCode: 'account/delete-firestore-failed',
+                    });
+                    const { code, message } = extractErrInfo(
+                        err,
+                        'No se pudieron eliminar tus datos de Cloud Firestore. Tu cuenta sigue intacta.',
+                    );
+                    return {
+                        ok: false,
+                        status: 'failed_firestore',
+                        firestoreDeleted: false,
+                        authDeleted: false,
+                        code,
+                        message,
+                    };
+                }
+
+                const pendingState = {
+                    uid: activeUser.uid,
+                    email: activeUser.email ?? null,
+                    stage: /** @type {const} */ ('firestore_deleted_auth_pending'),
+                    clearLocalData: effectiveClearLocal,
+                    firestoreDeletedAt: new Date().toISOString(),
+                    lastErrorCode: null,
+                    lastErrorMessage: null,
+                };
+                storageRepository.setPendingAccountDeletion(pendingState);
+                setPendingAccountDeletion(pendingState);
+                storageRepository.clearCloudSyncMetadata();
+                setUserData(null);
+            }
+
+            // Etapa 3: Eliminar usuario en Firebase Authentication
+            try {
+                await deleteCurrentAuthUser(activeUser);
+            } catch (err) {
+                const { code, message } = extractErrInfo(
+                    err,
+                    'Tus datos en Firestore se eliminaron, pero falló la baja en Firebase Authentication.',
+                );
+                if (code !== 'auth/user-not-found') {
+                    logError(err, {
+                        route: '/configuracion',
+                        errorCode: 'account/delete-auth-failed',
+                    });
+                    const currentStored = storageRepository.getPendingAccountDeletion();
+                    const updatedPending = {
+                        uid: activeUser.uid,
+                        email: activeUser.email ?? null,
+                        stage: /** @type {const} */ ('firestore_deleted_auth_pending'),
+                        clearLocalData: effectiveClearLocal,
+                        firestoreDeletedAt:
+                            currentStored?.firestoreDeletedAt ?? new Date().toISOString(),
+                        lastErrorCode: code,
+                        lastErrorMessage: message,
+                    };
+                    storageRepository.setPendingAccountDeletion(updatedPending);
+                    setPendingAccountDeletion(updatedPending);
+                    return {
+                        ok: false,
+                        status: 'partial_auth_pending',
+                        firestoreDeleted: true,
+                        authDeleted: false,
+                        recoverable: true,
+                        code,
+                        message,
+                    };
+                }
+            }
+
+            // Etapa 4: Completado integral -> limpiar estado pendiente, sesión y (opcional) datos locales
+            storageRepository.clearPendingAccountDeletion();
+            setPendingAccountDeletion(null);
+            clearSession();
+            clearAuthError();
+            clearFirestoreWarning();
+
+            if (effectiveClearLocal) {
+                storageRepository.clearLocalUserData();
+                refreshRecoveryBackup();
+            } else {
+                storageRepository.clearCloudSyncMetadata();
+            }
+
+            trackLogout();
+            setUser(null);
+            userRef.current = null;
+            setUserData(null);
+            setUserRole('user');
+            dispatchSync({ type: 'SIGNED_OUT' });
+
+            return {
+                ok: true,
+                status: 'completed',
+                firestoreDeleted: true,
+                authDeleted: true,
+                localCleared: effectiveClearLocal,
+            };
+        },
+        [clearAuthError, clearFirestoreWarning, refreshRecoveryBackup],
+    );
+
     // --- Helpers de lectura local vía storageRepository ---
     const getProgresoLocal = useCallback((plan) => storageRepository.getProgreso(plan, null), []);
     const getProgresoDetallesLocal = useCallback(
@@ -816,6 +1028,8 @@ export function AuthProvider({ children }) {
     );
 
     const isAuthenticated = Boolean(user);
+    const activePendingAccountDeletion =
+        user && pendingAccountDeletion?.uid === user.uid ? pendingAccountDeletion : null;
     const showSyncModal =
         isAuthenticated &&
         (syncState.status === SYNC_STATUS.CONFLICT ||
@@ -847,6 +1061,8 @@ export function AuthProvider({ children }) {
         // Acciones de cuenta y perfil
         signIn,
         signOut,
+        deleteAccount,
+        pendingAccountDeletion: activePendingAccountDeletion,
         updateAuthProgreso,
         refetchUserData,
         enterOfflineMode,

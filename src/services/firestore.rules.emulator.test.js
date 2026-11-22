@@ -104,11 +104,20 @@ describe('users: propietario y contrato de sincronización', () => {
     await assertFails(setDoc(doc(student, 'users', studentId), { ...baseProfile(), isAdmin: true }));
   });
 
-  it('rechaza modificar uid, createdAt y eliminar el documento', async () => {
+  it('rechaza modificar uid y createdAt, permite al propietario eliminar su documento y bloquea el borrado por terceros o anónimos', async () => {
     await assertSucceeds(setDoc(doc(student, 'users', studentId), baseProfile()));
     await assertFails(updateDoc(doc(student, 'users', studentId), { uid: 'student-b' }));
     await assertFails(updateDoc(doc(student, 'users', studentId), { createdAt: serverTimestamp() }));
-    await assertFails(deleteDoc(doc(student, 'users', studentId)));
+
+    // Terceros, admin y anónimos NO pueden eliminar la cuenta/datos de studentId
+    await assertFails(deleteDoc(doc(anotherStudent, 'users', studentId)));
+    await assertFails(deleteDoc(doc(admin, 'users', studentId)));
+    await assertFails(deleteDoc(doc(anonymous, 'users', studentId)));
+
+    // El propietario SÍ puede eliminar su propio documento en `/users/{uid}` (Ley 25.326)
+    await assertSucceeds(deleteDoc(doc(student, 'users', studentId)));
+    const afterDeleteSnap = await assertSucceeds(getDoc(doc(student, 'users', studentId)));
+    expect(afterDeleteSnap.exists()).toBe(false);
   });
 
   it('permite editar configuración con su timestamp actualizado', async () => {

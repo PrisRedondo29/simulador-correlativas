@@ -16,7 +16,10 @@ const mockFetchCloudBundle = vi.fn();
 const mockUploadAcademicSnapshot = vi.fn();
 const mockGetUserData = vi.fn();
 const mockGetUserRole = vi.fn();
+const mockDeleteUserCloudData = vi.fn();
 const mockLogout = vi.fn();
+const mockReauthenticateWithGoogle = vi.fn();
+const mockDeleteCurrentAuthUser = vi.fn();
 const mockAddToast = vi.fn();
 
 vi.mock('firebase/auth', () => ({
@@ -36,6 +39,8 @@ vi.mock('../services/firebase', () => ({
 vi.mock('../services/authService', () => ({
     loginConGoogle: vi.fn(),
     logout: (...args) => mockLogout(...args),
+    reauthenticateWithGoogle: (...args) => mockReauthenticateWithGoogle(...args),
+    deleteCurrentAuthUser: (...args) => mockDeleteCurrentAuthUser(...args),
 }));
 
 vi.mock('../services/logService', () => ({
@@ -50,6 +55,7 @@ vi.mock('../services/analyticsService', () => ({
 vi.mock('../services/dbService', () => ({
     getUserData: (...args) => mockGetUserData(...args),
     getUserRole: (...args) => mockGetUserRole(...args),
+    deleteUserCloudData: (...args) => mockDeleteUserCloudData(...args),
 }));
 
 // Mantenemos adoptRemoteSnapshot y claimLocalSnapshotForAccount REALES de syncService
@@ -536,5 +542,187 @@ describe('AuthContext + SyncModal - Integración React completa (Etapa 6A.2)', (
             fireEvent.click(screen.getByRole('button', { name: /Restaurar copia anterior/i }));
         });
         expect(storageRepository.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
+    });
+
+    it('deleteAccount (flujo feliz): reautentica, borra Firestore y Auth conservando o limpiando localStorage según opción', async () => {
+        createActiveSession();
+        storageRepository.setProgreso('17.14', { '11071': 'Aprobado' }, { silent: true });
+        mockFetchCloudBundle.mockResolvedValue(
+            makeCloudResponse(
+                {
+                    progreso: { '17.14': { '11071': 'Aprobado' } },
+                    progresoDetalles: {},
+                    cursada: {},
+                    simulaciones: {},
+                },
+                2,
+            ),
+        );
+        mockReauthenticateWithGoogle.mockResolvedValue({ user: { uid: 'uid-1' } });
+        mockDeleteUserCloudData.mockResolvedValue(undefined);
+        mockDeleteCurrentAuthUser.mockResolvedValue(undefined);
+
+        const authBox = renderWithAuth();
+        await act(async () => {
+            await authObserverCallback({ uid: 'uid-1', email: 'estudiante@unlu.edu.ar' });
+        });
+
+        let resKeepLocal;
+        await act(async () => {
+            resKeepLocal = await authBox.current.deleteAccount({ clearLocalData: false });
+        });
+
+        expect(resKeepLocal).toEqual({
+            ok: true,
+            status: 'completed',
+            firestoreDeleted: true,
+            authDeleted: true,
+            localCleared: false,
+        });
+        expect(mockReauthenticateWithGoogle).toHaveBeenCalledTimes(1);
+        expect(mockDeleteUserCloudData).toHaveBeenCalledWith('uid-1');
+        expect(mockDeleteCurrentAuthUser).toHaveBeenCalledTimes(1);
+        expect(storageRepository.getPendingAccountDeletion()).toBeNull();
+        expect(storageRepository.getSyncMeta()).toBeNull();
+        expect(storageRepository.getProgreso('17.14')).toEqual({ '11071': 'Aprobado' });
+        expect(authBox.current.isAuthenticated).toBe(false);
+
+        // Segunda sesión eligiendo clearLocalData: true -> también limpia progreso local y backup
+        createActiveSession();
+        mockFetchCloudBundle.mockResolvedValue(
+            makeCloudResponse(
+                {
+                    progreso: { '17.14': { '11071': 'Aprobado' } },
+                    progresoDetalles: {},
+                    cursada: {},
+                    simulaciones: {},
+                },
+                3,
+            ),
+        );
+        await act(async () => {
+            await authObserverCallback({ uid: 'uid-2', email: 'dos@unlu.edu.ar' });
+        });
+
+        let resClearAll;
+        await act(async () => {
+            resClearAll = await authBox.current.deleteAccount({ clearLocalData: true });
+        });
+
+        expect(resClearAll?.localCleared).toBe(true);
+        expect(storageRepository.getProgreso('17.14')).toBeNull();
+        expect(storageRepository.getRecoveryBackup()).toBeNull();
+    });
+
+    it('deleteAccount cancelado en reautenticación o ante error de Firestore aborta sin tocar Auth', async () => {
+        createActiveSession();
+        storageRepository.setProgreso('17.14', { '11071': 'Aprobado' }, { silent: true });
+        mockFetchCloudBundle.mockResolvedValue(
+            makeCloudResponse(
+                {
+                    progreso: { '17.14': { '11071': 'Aprobado' } },
+                    progresoDetalles: {},
+                    cursada: {},
+                    simulaciones: {},
+                },
+                1,
+            ),
+        );
+
+        const authBox = renderWithAuth();
+        await act(async () => {
+            await authObserverCallback({ uid: 'uid-1', email: 'estudiante@unlu.edu.ar' });
+        });
+
+        mockReauthenticateWithGoogle.mockRejectedValueOnce({
+            code: 'auth/popup-closed-by-user',
+            message: null,
+        });
+        let cancelRes;
+        await act(async () => {
+            cancelRes = await authBox.current.deleteAccount({ clearLocalData: true });
+        });
+        expect(cancelRes.status).toBe('cancelled');
+        expect(mockDeleteUserCloudData).not.toHaveBeenCalled();
+        expect(mockDeleteCurrentAuthUser).not.toHaveBeenCalled();
+
+        mockReauthenticateWithGoogle.mockResolvedValueOnce({ user: { uid: 'uid-1' } });
+        mockDeleteUserCloudData.mockRejectedValueOnce(new Error('permission-denied'));
+        let fsFailRes;
+        await act(async () => {
+            fsFailRes = await authBox.current.deleteAccount({ clearLocalData: true });
+        });
+        expect(fsFailRes.status).toBe('failed_firestore');
+        expect(fsFailRes.firestoreDeleted).toBe(false);
+        expect(mockDeleteCurrentAuthUser).not.toHaveBeenCalled();
+        expect(storageRepository.getPendingAccountDeletion()).toBeNull();
+        expect(authBox.current.isAuthenticated).toBe(true);
+    });
+
+    it('deleteAccount ante fallo parcial (Firestore OK pero falla Auth) persiste estado recuperable y completa en reintento sin re-borrar Firestore', async () => {
+        createActiveSession();
+        storageRepository.setProgreso('17.14', { '11071': 'Aprobado' }, { silent: true });
+        mockFetchCloudBundle.mockResolvedValue(
+            makeCloudResponse(
+                {
+                    progreso: { '17.14': { '11071': 'Aprobado' } },
+                    progresoDetalles: {},
+                    cursada: {},
+                    simulaciones: {},
+                },
+                4,
+            ),
+        );
+
+        const authBox = renderWithAuth();
+        await act(async () => {
+            await authObserverCallback({ uid: 'uid-partial', email: 'parcial@unlu.edu.ar' });
+        });
+
+        // Primer intento: Firestore OK, Auth deleteUser falla -> partial_auth_pending
+        mockReauthenticateWithGoogle.mockResolvedValueOnce({ user: { uid: 'uid-partial' } });
+        mockDeleteUserCloudData.mockResolvedValueOnce(undefined);
+        mockDeleteCurrentAuthUser.mockRejectedValueOnce({
+            code: 'auth/requires-recent-login',
+            message: 'Necesitás volver a confirmar tu identidad con Google.',
+        });
+
+        let partialRes;
+        await act(async () => {
+            partialRes = await authBox.current.deleteAccount({ clearLocalData: false });
+        });
+
+        expect(partialRes).toMatchObject({
+            ok: false,
+            status: 'partial_auth_pending',
+            firestoreDeleted: true,
+            authDeleted: false,
+            recoverable: true,
+        });
+        expect(authBox.current.pendingAccountDeletion?.stage).toBe('firestore_deleted_auth_pending');
+        expect(storageRepository.getPendingAccountDeletion()?.uid).toBe('uid-partial');
+        expect(mockDeleteUserCloudData).toHaveBeenCalledTimes(1);
+
+        // Segundo intento (reintento): reautentica, NO vuelve a llamar a deleteUserCloudData y completa deleteUser
+        mockReauthenticateWithGoogle.mockResolvedValueOnce({ user: { uid: 'uid-partial' } });
+        mockDeleteCurrentAuthUser.mockResolvedValueOnce(undefined);
+
+        let retryRes;
+        await act(async () => {
+            retryRes = await authBox.current.deleteAccount({ clearLocalData: false });
+        });
+
+        expect(retryRes).toEqual({
+            ok: true,
+            status: 'completed',
+            firestoreDeleted: true,
+            authDeleted: true,
+            localCleared: false,
+        });
+        expect(mockDeleteUserCloudData).toHaveBeenCalledTimes(1);
+        expect(mockDeleteCurrentAuthUser).toHaveBeenCalledTimes(2);
+        expect(storageRepository.getPendingAccountDeletion()).toBeNull();
+        expect(authBox.current.pendingAccountDeletion).toBeNull();
+        expect(authBox.current.isAuthenticated).toBe(false);
     });
 });

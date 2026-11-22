@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockSignInWithPopup = vi.fn();
 const mockSignOut = vi.fn();
+const mockReauthenticateWithPopup = vi.fn();
+const mockDeleteUser = vi.fn();
 const mockGetDoc = vi.fn();
 const mockSetDoc = vi.fn();
 const mockDoc = vi.fn((_db, col, id) => ({ path: `${col}/${id}`, id }));
@@ -11,6 +13,8 @@ vi.mock('firebase/auth', () => ({
     GoogleAuthProvider: vi.fn(),
     signInWithPopup: (...args) => mockSignInWithPopup(...args),
     signOut: (...args) => mockSignOut(...args),
+    reauthenticateWithPopup: (...args) => mockReauthenticateWithPopup(...args),
+    deleteUser: (...args) => mockDeleteUser(...args),
 }));
 
 vi.mock('firebase/firestore', () => ({
@@ -25,7 +29,12 @@ vi.mock('./firebase', () => ({
     db: {},
 }));
 
-import { loginConGoogle, logout } from './authService';
+import {
+    loginConGoogle,
+    logout,
+    reauthenticateWithGoogle,
+    deleteCurrentAuthUser,
+} from './authService';
 
 describe('authService - Registro seguro sin fugas de localStorage entre cuentas', () => {
     beforeEach(() => {
@@ -118,5 +127,43 @@ describe('authService - Registro seguro sin fugas de localStorage entre cuentas'
         mockSignOut.mockResolvedValue(undefined);
         await logout();
         expect(mockSignOut).toHaveBeenCalledTimes(1);
+    });
+
+    it('reauthenticateWithGoogle reautentica al usuario, propaga cancelación silenciosa y mapea cuenta distinta', async () => {
+        const fakeUser = { uid: 'uid-1', email: 'est@unlu.edu.ar' };
+        mockReauthenticateWithPopup.mockResolvedValueOnce({ user: fakeUser });
+        await reauthenticateWithGoogle(/** @type {any} */ (fakeUser));
+        expect(mockReauthenticateWithPopup).toHaveBeenCalledTimes(1);
+
+        mockReauthenticateWithPopup.mockRejectedValueOnce({ code: 'auth/popup-closed-by-user' });
+        await expect(
+            reauthenticateWithGoogle(/** @type {any} */ (fakeUser)),
+        ).rejects.toMatchObject({
+            code: 'auth/popup-closed-by-user',
+            message: null,
+        });
+
+        mockReauthenticateWithPopup.mockRejectedValueOnce({ code: 'auth/user-mismatch' });
+        await expect(
+            reauthenticateWithGoogle(/** @type {any} */ (fakeUser)),
+        ).rejects.toMatchObject({
+            code: 'auth/user-mismatch',
+            message: expect.stringMatching(/no coincide con la sesión actual/i),
+        });
+    });
+
+    it('deleteCurrentAuthUser invoca deleteUser y traduce auth/requires-recent-login', async () => {
+        const fakeUser = { uid: 'uid-1' };
+        mockDeleteUser.mockResolvedValueOnce(undefined);
+        await deleteCurrentAuthUser(/** @type {any} */ (fakeUser));
+        expect(mockDeleteUser).toHaveBeenCalledWith(fakeUser);
+
+        mockDeleteUser.mockRejectedValueOnce({ code: 'auth/requires-recent-login' });
+        await expect(
+            deleteCurrentAuthUser(/** @type {any} */ (fakeUser)),
+        ).rejects.toMatchObject({
+            code: 'auth/requires-recent-login',
+            message: expect.stringMatching(/confirmar tu identidad con Google/i),
+        });
     });
 });

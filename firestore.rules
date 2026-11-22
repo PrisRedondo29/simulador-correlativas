@@ -267,7 +267,7 @@ service cloud.firestore {
       allow create: if isOwner(userId) && validUserCreate(request.resource.data, userId);
       allow update: if isOwner(userId) &&
         validUserUpdate(request.resource.data, resource.data, userId);
-      allow delete: if false;
+      allow delete: if isOwner(userId);
     }
 
     match /roles/{userId} {

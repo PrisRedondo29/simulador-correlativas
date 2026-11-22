@@ -1,5 +1,11 @@
 import { auth, db } from './firebase';
-import { GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import {
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    reauthenticateWithPopup,
+    deleteUser,
+} from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { mapFirebaseError } from '../utils/errorCodes';
 
@@ -92,5 +98,57 @@ export const logout = async () => {
         await signOut(auth);
     } catch (err) {
         throw mapFirebaseError(err) ?? err;
+    }
+};
+
+/**
+ * Reautentica al usuario actual con Google OAuth antes de acciones críticas (como eliminar cuenta).
+ * Respeta cancelaciones silenciosas del popup igual que `loginConGoogle`.
+ *
+ * @param {import('firebase/auth').User | null} [currentUser]
+ * @returns {Promise<import('firebase/auth').UserCredential>}
+ * @throws {import('../utils/errorCodes').AppError | { code?: string, message: null, originalError: unknown }}
+ */
+export const reauthenticateWithGoogle = async (currentUser = auth.currentUser) => {
+    if (!currentUser) {
+        throw {
+            code: 'auth/unauthenticated',
+            message: 'No hay una sesión activa para confirmar tu identidad.',
+        };
+    }
+
+    try {
+        return await reauthenticateWithPopup(currentUser, provider);
+    } catch (authError) {
+        const appError = mapFirebaseError(authError);
+        throw (
+            appError ?? {
+                code: extractErrorCode(authError),
+                message: null,
+                originalError: authError,
+            }
+        );
+    }
+};
+
+/**
+ * Elimina definitivamente el usuario autenticado en Firebase Authentication.
+ *
+ * @param {import('firebase/auth').User | null} [currentUser]
+ * @returns {Promise<void>}
+ * @throws {import('../utils/errorCodes').AppError | unknown}
+ */
+export const deleteCurrentAuthUser = async (currentUser = auth.currentUser) => {
+    if (!currentUser) {
+        throw {
+            code: 'auth/unauthenticated',
+            message: 'No hay una sesión activa para eliminar.',
+        };
+    }
+
+    try {
+        await deleteUser(currentUser);
+    } catch (authError) {
+        throw mapFirebaseError(authError) ?? authError;
     }
 };

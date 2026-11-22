@@ -564,6 +564,36 @@ export interface TenantConfig {
     operationModes: TenantOperationModes;
 }
 
+export interface PendingAccountDeletionState {
+    uid: string;
+    email: string | null;
+    stage: 'firestore_deleted_auth_pending';
+    clearLocalData: boolean;
+    firestoreDeletedAt: string;
+    lastErrorCode: string | null;
+    lastErrorMessage: string | null;
+}
+
+export type DeleteAccountStatus =
+    | 'completed'
+    | 'cancelled'
+    | 'offline'
+    | 'unauthenticated'
+    | 'failed_reauth'
+    | 'failed_firestore'
+    | 'partial_auth_pending';
+
+export interface DeleteAccountResult {
+    ok: boolean;
+    status: DeleteAccountStatus;
+    firestoreDeleted: boolean;
+    authDeleted: boolean;
+    localCleared?: boolean;
+    recoverable?: boolean;
+    code?: string | null;
+    message?: string | null;
+}
+
 export interface UniversidadConfig {
     id: string;
     name: string;

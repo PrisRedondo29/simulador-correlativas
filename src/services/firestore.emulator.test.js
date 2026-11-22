@@ -20,7 +20,7 @@ import {
     updateDoc,
     addDoc,
 } from 'firebase/firestore';
-import { commitAcademicBundleTransaction } from './dbService';
+import { commitAcademicBundleTransaction, deleteUserCloudData } from './dbService';
 import { fetchCloudBundle } from './syncService';
 import { computeBundleHash } from '../utils/Sync/syncStateMachine';
 
@@ -94,10 +94,22 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
         );
         await assertFails(getDoc(doc(dbB, 'roles', 'uid-A')));
 
-        // Listado de colecciones y borrado bloqueados incluso autenticado
+        // Listado de colecciones sigue bloqueado; borrado queda estrictamente restringido al propietario
         await assertFails(getDocs(collection(dbA, 'users')));
         await assertFails(getDocs(collection(dbA, 'roles')));
-        await assertFails(deleteDoc(doc(dbA, 'users', 'uid-A')));
+        await assertFails(deleteDoc(doc(unauthDb, 'users', 'uid-A')));
+        await assertFails(deleteDoc(doc(dbB, 'users', 'uid-A')));
+
+        // El propio dueño SÍ puede eliminar su documento en /users/{uid} mediante deleteUserCloudData (Ley 25.326)
+        await assertSucceeds(
+            deleteUserCloudData('uid-A', {
+                deleteDocFn: deleteDoc,
+                docFn: doc,
+                firestoreDb: dbA,
+            }),
+        );
+        const deletedSnap = await assertSucceeds(getDoc(doc(dbA, 'users', 'uid-A')));
+        expect(deletedSnap.exists()).toBe(false);
 
         // roles/{uid}: lectura propia permitida, escritura prohibida (anti escalación de privilegios)
         await assertSucceeds(getDoc(doc(dbA, 'roles', 'uid-A')));

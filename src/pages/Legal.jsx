@@ -19,7 +19,7 @@ const DATA_INVENTORY = [
         channel: 'Sincronización opcional en la nube (Firebase Auth + Cloud Firestore)',
         data: 'UID, correo electrónico, nombre y foto de perfil de Google, alias opcional y copia sincronizada de tu progreso académico bajo /users/{uid}.',
         purpose: 'Respaldar y sincronizar tu progreso entre dispositivos cuando elegís iniciar sesión.',
-        retention: 'Mientras mantengas tu cuenta; podés solicitar la eliminación y exportar respaldo JSON desde Configuración.',
+        retention: 'Mientras mantengas tu cuenta; podés exportarla en JSON o eliminar tu cuenta y datos en la nube directamente desde Configuración.',
     },
     {
         channel: 'Métricas de uso y errores técnicos (Firebase Analytics / GA4)',
@@ -195,11 +195,11 @@ export default function Legal() {
                     4. Derechos del titular de los datos (Ley N° 25.326)
                 </h2>
                 <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed">
-                    Como titular de tus datos personales, tenés derecho de <strong>acceso, rectificación, actualización y supresión</strong> (arts. 14 a 16 de la Ley N° 25.326). Podés exportar tu información en JSON desde{' '}
+                    Como titular de tus datos personales, tenés derecho de <strong>acceso, rectificación, actualización y supresión</strong> (arts. 14 a 16 de la Ley N° 25.326). Desde{' '}
                     <Link to="/configuracion" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
                         Configuración
-                    </Link>
-                    , borrar tus datos locales en el navegador o escribirnos a través de{' '}
+                    </Link>{' '}
+                    podés exportar tu respaldo en JSON o eliminar definitivamente tu cuenta de Google y tus datos sincronizados en Cloud Firestore (previa reautenticación), además de borrar tus datos locales en el navegador o escribirnos a través de{' '}
                     <Link to="/contacto" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
                         Contacto
                     </Link>{' '}

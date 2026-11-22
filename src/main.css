@@ -83,3 +83,14 @@ html, body {
         scroll-behavior: auto !important;
     }
 }
+
+/* Contención de scroll en modales nativos <dialog> */
+dialog:modal {
+    overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+    background: rgb(15 23 42 / 0.55);
+    overflow: hidden;
+    overscroll-behavior: contain;
+}

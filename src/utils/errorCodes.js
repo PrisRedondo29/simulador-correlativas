@@ -22,6 +22,11 @@ const AUTH_ERROR_MESSAGES = {
     'auth/user-disabled': 'Esta cuenta fue deshabilitada. Contacta al soporte si creés que es un error.',
     'auth/account-exists-with-different-credential':
         'Ya existe una cuenta con ese email usando otro método de inicio de sesión.',
+    'auth/requires-recent-login':
+        'Por seguridad, necesitás volver a confirmar tu identidad con Google antes de eliminar tu cuenta.',
+    'auth/user-mismatch':
+        'La cuenta de Google seleccionada no coincide con la sesión actual. Elegí la misma cuenta para confirmar.',
+    'auth/user-not-found': 'La cuenta ya no existe o fue eliminada previamente.',
 
     // Firestore / permisos
     'permission-denied': 'No tenés permisos para realizar esta acción.',

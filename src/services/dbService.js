@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from './firebase';
 import { mapFirebaseError } from '../utils/errorCodes';
 import {
@@ -298,4 +298,25 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
             originalError: error,
         };
     }
+};
+
+/**
+ * Elimina el documento del usuario en `/users/{uid}` (única colección con datos académicos del usuario).
+ *
+ * @param {string} uid
+ * @param {{
+ *   deleteDocFn?: typeof deleteDoc,
+ *   docFn?: typeof doc,
+ *   firestoreDb?: typeof db,
+ * }} [deps]
+ * @returns {Promise<void>}
+ */
+export const deleteUserCloudData = async (uid, deps = {}) => {
+    if (!uid) {
+        throw new Error('Se requiere un UID válido para eliminar los datos en la nube.');
+    }
+    const deleteDocFn = deps.deleteDocFn ?? deleteDoc;
+    const docFn = deps.docFn ?? doc;
+    const firestoreDb = deps.firestoreDb ?? db;
+    await deleteDocFn(docFn(firestoreDb, 'users', uid));
 };

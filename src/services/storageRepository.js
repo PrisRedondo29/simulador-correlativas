@@ -28,6 +28,7 @@ import {
 /** @typedef {import('../types/domain').CatalogMetaCache} CatalogMetaCache */
 /** @typedef {import('../types/domain').PublishedPlanSnapshot} PublishedPlanSnapshot */
 /** @typedef {import('../types/domain').PlanUpdateNotice} PlanUpdateNotice */
+/** @typedef {import('../types/domain').PendingAccountDeletionState} PendingAccountDeletionState */
 
 export const STORAGE_SCHEMA_VERSION = 3;
 export const CURRENT_ONBOARDING_VERSION = 1;
@@ -51,6 +52,7 @@ export const STORAGE_KEYS = {
     SIMULADOR_DESKTOP_LAYOUT: 'unlu_simulador_desktop_layout:v1',
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
+    PENDING_ACCOUNT_DELETION: 'unlu_pending_account_deletion:v1',
     CATALOG_META_CACHE: 'unlu_catalog_meta:v1',
     /** @param {string} plan */
     catalogPlanCache: (plan) => `unlu_catalog_plan+${plan}`,
@@ -872,6 +874,52 @@ export function createStorageRepository(storage = getBrowserStorage()) {
          */
         setSimuladorDesktopLayout: (layout) =>
             setRaw(STORAGE_KEYS.SIMULADOR_DESKTOP_LAYOUT, layout),
+
+        /**
+         * Recupera un estado persistido de eliminación parcial (`Firestore` borrado, `Auth` pendiente).
+         * @returns {PendingAccountDeletionState | null}
+         */
+        getPendingAccountDeletion: () => {
+            /** @type {PendingAccountDeletionState | null} */
+            const parsed = getJSON(
+                STORAGE_KEYS.PENDING_ACCOUNT_DELETION,
+                /** @type {any} */ (null),
+            );
+            if (
+                !parsed ||
+                typeof parsed !== 'object' ||
+                typeof parsed.uid !== 'string' ||
+                !parsed.uid ||
+                parsed.stage !== 'firestore_deleted_auth_pending'
+            ) {
+                return null;
+            }
+            return parsed;
+        },
+
+        /**
+         * @param {PendingAccountDeletionState | null} state
+         * @param {StorageWriteOptions} [options]
+         */
+        setPendingAccountDeletion: (state, options = { silent: true }) => {
+            if (!state) {
+                return remove(STORAGE_KEYS.PENDING_ACCOUNT_DELETION, options);
+            }
+            return setJSON(STORAGE_KEYS.PENDING_ACCOUNT_DELETION, state, options);
+        },
+
+        clearPendingAccountDeletion: () =>
+            remove(STORAGE_KEYS.PENDING_ACCOUNT_DELETION, { silent: true }),
+
+        clearCloudSyncMetadata: () => remove(STORAGE_KEYS.SYNC_META, { silent: true }),
+
+        clearLocalUserData: () => {
+            clearAcademicCache();
+            remove(STORAGE_KEYS.SYNC_META, { silent: true });
+            remove(STORAGE_KEYS.SYNC_RECOVERY_BACKUP, { silent: true });
+            remove(STORAGE_KEYS.NOTIFICACIONES_LEIDAS, { silent: true });
+            emitHydrationEvents();
+        },
     };
 }
 

@@ -24,6 +24,7 @@ import { trackSeleccionCarrera } from '../services/analyticsService';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { getAvailableTours } from '../config/tutorialTours';
 import usePwaInstall from '../hooks/usePwaInstall';
+import DeleteAccountDialog from '../components/Settings/DeleteAccountDialog';
 
 export default function SettingsPage({ plan, setPlan }) {
     const navigate = useNavigate();
@@ -37,6 +38,8 @@ export default function SettingsPage({ plan, setPlan }) {
         restorePreviousBackup,
         exportBackupJson,
         importBackupJson,
+        deleteAccount,
+        pendingAccountDeletion,
     } = useAuth();
     const {
         tenant,
@@ -59,6 +62,9 @@ export default function SettingsPage({ plan, setPlan }) {
 
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+    const [deleteDialogError, setDeleteDialogError] = useState(null);
     const [tutorialPrefs, setTutorialPrefs] = useState(() => storageRepository.getTutorialPrefs());
     const importInputRef = useRef(null);
     const { canInstall, isInstalling, triggerInstall } = usePwaInstall();
@@ -164,6 +170,40 @@ export default function SettingsPage({ plan, setPlan }) {
                 description: res.message || 'No hay una copia previa disponible.',
                 color: 'warning',
             });
+        }
+    };
+
+    const handleConfirmDeleteAccount = async ({ clearLocalData }) => {
+        if (!deleteAccount) return;
+        setDeleteDialogError(null);
+        setIsDeletingAccount(true);
+        try {
+            const res = await deleteAccount({ clearLocalData });
+            if (res.ok) {
+                setIsDeleteDialogOpen(false);
+                addToast({
+                    title: 'Cuenta eliminada',
+                    description: res.localCleared
+                        ? 'Se eliminaron tu cuenta en la nube y tus datos locales de este dispositivo.'
+                        : 'Se eliminaron tu cuenta y tus datos de la nube. Tu copia local permanece en este navegador.',
+                    color: 'success',
+                });
+                return;
+            }
+            if (res.status === 'cancelled') {
+                addToast({
+                    title: 'Eliminación cancelada',
+                    description: 'Cerraste la confirmación de Google. No se eliminó ningún dato.',
+                    color: 'default',
+                });
+                return;
+            }
+            const errMsg =
+                res.message ||
+                'No se pudo completar la eliminación de la cuenta. Revisá tu conexión e intentá nuevamente.';
+            setDeleteDialogError(errMsg);
+        } finally {
+            setIsDeletingAccount(false);
         }
     };
 
@@ -645,7 +685,7 @@ export default function SettingsPage({ plan, setPlan }) {
                     </CardBody>
                 </Card>
 
-                {/* Privacidad y marco legal */}
+                {/* Privacidad, marco legal y eliminación de cuenta */}
                 <Card shadow="none" className="md:col-span-2 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">
                     <CardHeader className="flex gap-3 px-5 pt-5 pb-2">
                         <div className="w-8 h-8 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] flex items-center justify-center text-[#005A36] dark:text-[#6EE7B7]">
@@ -653,28 +693,101 @@ export default function SettingsPage({ plan, setPlan }) {
                         </div>
                         <div className="flex flex-col">
                             <p className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-none">
-                                Privacidad y marco legal
+                                Privacidad, marco legal y eliminación de cuenta
                             </p>
                             <p className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
-                                Transparencia sobre el tratamiento de datos (Ley N° 25.326) y alcance no oficial
+                                Transparencia sobre el tratamiento de datos (Ley N° 25.326) y control de tu cuenta
                             </p>
                         </div>
                     </CardHeader>
                     <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
-                    <CardBody className="px-5 pb-5 pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed max-w-2xl">
-                            Tu avance se guarda por defecto en el dispositivo y el Analítico SAWeb se procesa localmente sin subir archivos ni conservar DNI o legajo.
-                        </p>
-                        <Link
-                            to="/legal"
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#6EE7B7] border border-[#E2E8F0] dark:border-[#2A3540] hover:underline shrink-0"
-                        >
-                            <i className="fa-solid fa-file-shield text-[11px]" aria-hidden="true" />
-                            Aviso legal y privacidad
-                        </Link>
+                    <CardBody className="px-5 pb-5 pt-2 flex flex-col gap-4">
+                        {pendingAccountDeletion?.stage === 'firestore_deleted_auth_pending' && (
+                            <div
+                                role="alert"
+                                className="rounded-xl bg-amber-50 dark:bg-amber-950/35 border border-amber-200 dark:border-amber-800/60 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                            >
+                                <div className="space-y-1 text-xs text-amber-900 dark:text-amber-200">
+                                    <p className="font-semibold">
+                                        Eliminación incompleta pendiente de finalizar
+                                    </p>
+                                    <p className="leading-relaxed">
+                                        Tus datos en Cloud Firestore ya fueron eliminados, pero falló la baja en Firebase Auth.
+                                        {pendingAccountDeletion.lastErrorMessage
+                                            ? ` Detalle: ${pendingAccountDeletion.lastErrorMessage}`
+                                            : ''}
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    color="warning"
+                                    variant="flat"
+                                    className="font-semibold text-xs rounded-xl shrink-0"
+                                    onPress={() => {
+                                        setDeleteDialogError(null);
+                                        setIsDeleteDialogOpen(true);
+                                    }}
+                                >
+                                    Reintentar eliminar cuenta
+                                </Button>
+                            </div>
+                        )}
+
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed max-w-2xl">
+                                Tu avance se guarda por defecto en el dispositivo y el Analítico SAWeb se procesa localmente sin subir archivos ni conservar DNI o legajo.
+                            </p>
+                            <Link
+                                to="/legal"
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#6EE7B7] border border-[#E2E8F0] dark:border-[#2A3540] hover:underline shrink-0"
+                            >
+                                <i className="fa-solid fa-file-shield text-[11px]" aria-hidden="true" />
+                                Aviso legal y privacidad
+                            </Link>
+                        </div>
+
+                        {user && (
+                            <div className="pt-3 border-t border-[#F1F5F9] dark:border-[#2A3540] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-semibold text-red-700 dark:text-red-400">
+                                        Eliminar cuenta y datos en la nube
+                                    </p>
+                                    <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                        Reautentica tu sesión de Google, borra tu documento de Cloud Firestore y da de baja tu usuario de Firebase Auth.
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    color="danger"
+                                    variant="bordered"
+                                    className="font-semibold text-xs h-9 rounded-xl shrink-0"
+                                    startContent={<i className="fa-solid fa-trash-can text-xs" aria-hidden="true" />}
+                                    onPress={() => {
+                                        setDeleteDialogError(null);
+                                        setIsDeleteDialogOpen(true);
+                                    }}
+                                >
+                                    Eliminar cuenta y datos en la nube
+                                </Button>
+                            </div>
+                        )}
                     </CardBody>
                 </Card>
             </div>
+
+            <DeleteAccountDialog
+                isOpen={isDeleteDialogOpen}
+                onClose={() => {
+                    setIsDeleteDialogOpen(false);
+                    setDeleteDialogError(null);
+                }}
+                onConfirm={handleConfirmDeleteAccount}
+                onExportBackup={handleExport}
+                pendingDeletion={pendingAccountDeletion}
+                isDeleting={isDeletingAccount}
+                errorMessage={deleteDialogError}
+                userEmail={user?.email || null}
+            />
         </div>
     );
 }
