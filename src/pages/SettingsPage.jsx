@@ -578,7 +578,7 @@ export default function SettingsPage({ plan, setPlan }) {
                                         Aplicación instalable offline
                                     </p>
                                     <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
-                                        Usá el portal como app independiente sin conexión.
+                                        Instalá el simulador como app en tu PC o celular para abrirlo sin conexión.
                                     </p>
                                 </div>
                                 <button
@@ -590,14 +590,20 @@ export default function SettingsPage({ plan, setPlan }) {
                                         if (res.outcome === 'accepted') {
                                             addToast({
                                                 title: 'Aplicación instalada',
-                                                description: 'Ya podés abrir el simulador desde tu pantalla de inicio.',
+                                                description: 'Ya podés abrir el simulador desde tu escritorio o pantalla de inicio.',
                                                 color: 'success',
+                                            });
+                                        } else if (res.outcome === 'error' || res.outcome === 'unsupported') {
+                                            addToast({
+                                                title: 'Instalación desde el navegador',
+                                                description: 'Podés instalarla desde el ícono de instalar en la barra de direcciones o desde el menú de tu navegador.',
+                                                color: 'warning',
                                             });
                                         }
                                     }}
                                     className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 h-8 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38] hover:opacity-90 cursor-pointer shrink-0 aria-disabled:opacity-60"
                                 >
-                                    <i className="fa-solid fa-mobile-screen-button text-[11px]" aria-hidden="true" />
+                                    <i className="fa-solid fa-download text-[11px]" aria-hidden="true" />
                                     Instalar app
                                 </button>
                             </div>

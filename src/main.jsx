@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client'
 import { HeroUIProvider, ToastProvider } from '@heroui/react'
 import { ThemeProvider as NextThemesProvider } from "next-themes"
 import App from './App.jsx'
+import { initPwaInstallListener } from './hooks/usePwaInstall.js'
 import './main.css'
 import '@fortawesome/fontawesome-free/css/fontawesome.min.css'
 import '@fortawesome/fontawesome-free/css/solid.min.css'
@@ -13,6 +14,8 @@ if (import.meta.env.PROD) {
   console.warn = () => { };
   // console.info = () => {}; // Descomenta si también quieres quitar los "info"
 }
+
+initPwaInstallListener();
 
 createRoot(document.getElementById('root')).render(
   <HeroUIProvider>

@@ -1,13 +1,26 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
-import usePwaInstall from './usePwaInstall';
+import usePwaInstall, { __resetPwaInstallStoreForTests } from './usePwaInstall';
 
 describe('usePwaInstall - Instalación progresiva (Web Install API + beforeinstallprompt fallback)', () => {
     const originalInstall = Navigator.prototype.install;
 
+    const clearManifestLinks = () => {
+        document.querySelectorAll('link[rel="manifest"]').forEach((el) => el.remove());
+    };
+
+    const addManifestLink = () => {
+        const link = document.createElement('link');
+        link.rel = 'manifest';
+        link.href = '/manifest.webmanifest';
+        document.head.appendChild(link);
+    };
+
     beforeEach(() => {
         vi.clearAllMocks();
+        __resetPwaInstallStoreForTests();
+        clearManifestLinks();
         delete Navigator.prototype.install;
         Object.defineProperty(window, 'matchMedia', {
             configurable: true,
@@ -16,6 +29,8 @@ describe('usePwaInstall - Instalación progresiva (Web Install API + beforeinsta
     });
 
     afterEach(() => {
+        __resetPwaInstallStoreForTests();
+        clearManifestLinks();
         if (originalInstall) {
             Navigator.prototype.install = originalInstall;
         } else {
@@ -28,6 +43,12 @@ describe('usePwaInstall - Instalación progresiva (Web Install API + beforeinsta
         const { result } = renderHook(() => usePwaInstall());
         expect(result.current.canInstall).toBe(false);
         expect(result.current.isInstalled).toBe(false);
+    });
+
+    it('oculta la opción de instalación (canInstall: false) si existe navigator.install pero falta link[rel="manifest"] (modo dev)', () => {
+        Navigator.prototype.install = vi.fn().mockResolvedValue(undefined);
+        const { result } = renderHook(() => usePwaInstall());
+        expect(result.current.canInstall).toBe(false);
     });
 
     it('captura beforeinstallprompt, descarta el evento de un solo uso antes de esperar y oculta el botón tras aceptar', async () => {
@@ -57,8 +78,11 @@ describe('usePwaInstall - Instalación progresiva (Web Install API + beforeinsta
         expect(result.current.canInstall).toBe(false);
     });
 
-    it('prioriza navigator.install() cuando está disponible y conserva el botón ante AbortError', async () => {
-        const mockNavInstall = vi.fn().mockRejectedValueOnce(Object.assign(new Error('cancel'), { name: 'AbortError' }))
+    it('prioriza navigator.install() cuando hay manifest y conserva el botón ante AbortError', async () => {
+        addManifestLink();
+        const mockNavInstall = vi
+            .fn()
+            .mockRejectedValueOnce(Object.assign(new Error('cancel'), { name: 'AbortError' }))
             .mockResolvedValueOnce(undefined);
 
         Navigator.prototype.install = mockNavInstall;
