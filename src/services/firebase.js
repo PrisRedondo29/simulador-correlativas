@@ -6,15 +6,27 @@ import { isAnalyticsHostAllowed } from '../utils/analyticsAttribution';
 const isTestEnv = import.meta.env.MODE === 'test' || Boolean(import.meta.env.VITEST);
 
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || (isTestEnv ? 'test-api-key' : undefined),
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || (isTestEnv ? 'localhost' : undefined),
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || (isTestEnv ? 'demo-simulador-unlu' : undefined),
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    apiKey:
+        import.meta.env.VITE_FIREBASE_API_KEY ||
+        (isTestEnv ? 'AIzaSyFakeKeyForCiTestingAndMocking12345' : undefined),
+    authDomain:
+        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN ||
+        (isTestEnv ? 'localhost' : undefined),
+    projectId:
+        import.meta.env.VITE_FIREBASE_PROJECT_ID ||
+        (isTestEnv ? 'demo-simulador-unlu' : undefined),
+    storageBucket:
+        import.meta.env.VITE_FIREBASE_STORAGE_BUCKET ||
+        (isTestEnv ? 'demo-simulador-unlu.firebasestorage.app' : undefined),
+    messagingSenderId:
+        import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID ||
+        (isTestEnv ? '000000000000' : undefined),
     appId:
         import.meta.env.VITE_FIREBASE_APP_ID ||
         (isTestEnv ? '1:000000000000:web:000000000000' : undefined),
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    measurementId:
+        import.meta.env.VITE_FIREBASE_MEASUREMENT_ID ||
+        (isTestEnv ? 'G-0000000000' : undefined),
 };
 
 export const app = initializeApp(firebaseConfig);
