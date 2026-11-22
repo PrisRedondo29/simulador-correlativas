@@ -17,7 +17,7 @@ const DATA_INVENTORY = [
     },
     {
         channel: 'Sincronización opcional en la nube (Firebase Auth + Cloud Firestore)',
-        data: 'UID, correo electrónico, nombre y foto de perfil de Google, alias opcional y copia sincronizada de tu progreso académico bajo /users/{uid}.',
+        data: 'Identificador de cuenta, correo electrónico, nombre y foto de perfil de Google, alias opcional y copia sincronizada de tu progreso académico asociada a tu cuenta.',
         purpose: 'Respaldar y sincronizar tu progreso entre dispositivos cuando elegís iniciar sesión.',
         retention: 'Mientras mantengas tu cuenta; podés exportarla en JSON o eliminar tu cuenta y datos en la nube directamente desde Configuración.',
     },

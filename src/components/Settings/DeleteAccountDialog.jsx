@@ -75,7 +75,7 @@ function DeleteAccountDialogContent({
                     </p>
                     <ol className="list-decimal pl-5 space-y-1 text-xs">
                         <li>Reautenticación con Google para verificar tu identidad.</li>
-                        <li>Eliminación definitiva de tu documento en Cloud Firestore (<code>/users/&#123;uid&#125;</code>).</li>
+                        <li>Eliminación definitiva de tus datos sincronizados en la nube (Cloud Firestore).</li>
                         <li>Eliminación de tu usuario en Firebase Authentication.</li>
                     </ol>
                 </div>
