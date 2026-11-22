@@ -17,6 +17,7 @@ import {
 import {
   ArrowRightLeft,
   Award,
+  BarChart3,
   BookOpenCheck,
   ChevronRight,
   Clock,
@@ -376,7 +377,18 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
                   final o promocionada cargada.
                 </p>
               </ModalBody>
-              <ModalFooter className="border-t border-[#E2E8F0] dark:border-[#24303C]">
+              <ModalFooter className="border-t border-[#E2E8F0] dark:border-[#24303C] flex flex-wrap items-center justify-between gap-2">
+                <Button
+                  as={Link}
+                  to="/estadisticas"
+                  size="sm"
+                  variant="flat"
+                  onPress={onClose}
+                  className="bg-[#ECFDF5] text-[#005A36] dark:bg-[#102A20] dark:text-[#6EE7B7] font-semibold"
+                  startContent={<BarChart3 className="w-3.5 h-3.5" />}
+                >
+                  Ver estadísticas
+                </Button>
                 <Button
                   size="sm"
                   className="bg-[#005A36] text-white font-medium"

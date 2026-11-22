@@ -46,6 +46,13 @@ export const ROUTE_SEO = {
             'Proyectá tu avance cuatrimestre a cuatrimestre, explorá cadenas de correlatividades en el grafo interactivo y estimá tu fecha de egreso.',
         canonicalPath: '/simulador',
     },
+    '/estadisticas': {
+        title: 'Estadísticas Académicas',
+        documentTitle: 'Estadísticas Académicas | Simulador de Correlativas UNLu',
+        description:
+            'Visualizá tu histograma de notas, materias y evolución de promedio por cuatrimestre, efectividad en finales y avance por año del plan.',
+        canonicalPath: '/estadisticas',
+    },
     '/equivalencias': {
         title: 'Equivalencias entre Planes',
         documentTitle: 'Equivalencias entre Planes | Simulador de Correlativas UNLu',

@@ -26,6 +26,7 @@ const ROUTE_TITLES = {
     '/mi-agenda': 'Mi Agenda',
     '/cursada': 'Mi Agenda',
     '/simulador': 'Simulador de Avance',
+    '/estadisticas': 'Estadísticas',
     '/equivalencias': 'Equivalencias',
     '/cambio-plan': 'Cambio de Plan',
     '/transicion': 'Cambio de Plan',

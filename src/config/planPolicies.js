@@ -170,6 +170,7 @@ export function getAcademicNavItems(plan, registry = CAREERS_REGISTRY) {
         { name: 'Mis Materias', icon: 'fa-graduation-cap', path: '/mis-materias' },
         { name: 'Mi Agenda', icon: 'fa-calendar-days', path: '/mi-agenda' },
         { name: 'Simulador de Avance', icon: 'fa-route', path: '/simulador' },
+        { name: 'Estadísticas', icon: 'fa-chart-column', path: '/estadisticas' },
     ];
 
     if (canUseFeature(plan, 'equivalencias', registry)) {

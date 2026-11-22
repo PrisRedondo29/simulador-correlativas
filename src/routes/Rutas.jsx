@@ -7,6 +7,7 @@ const Inicio = lazy(() => import('../pages/Inicio'));
 const Progreso = lazy(() => import('../pages/Progreso'));
 const Cursada = lazy(() => import('../pages/Cursada'));
 const Simulador = lazy(() => import('../pages/Simulador'));
+const Estadisticas = lazy(() => import('../pages/Estadisticas'));
 const Equivalencias = lazy(() => import('../pages/Equivalencias'));
 const TransicionPlan = lazy(() => import('../pages/TransicionPlan'));
 const ComoUsar = lazy(() => import('../pages/ComoUsar'));
@@ -44,6 +45,10 @@ const Rutas = ({ plan, setPlan }) => {
         {
             path: '/simulador',
             element: <Simulador plan={plan} setPlan={setPlan} />,
+        },
+        {
+            path: '/estadisticas',
+            element: <Estadisticas />,
         },
         {
             path: '/equivalencias',
