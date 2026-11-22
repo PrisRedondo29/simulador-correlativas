@@ -298,7 +298,7 @@ function TransicionPlan() {
                                         className="w-full md:w-auto bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-xs px-4 h-10 rounded-xl"
                                         endContent={<ArrowRight size={14} />}
                                     >
-                                        Simular egreso ({cuatrimestreHabilitado}°C{' '}
+                                        Simular cambio de plan ({cuatrimestreHabilitado}°C{' '}
                                         {puedeCambiarseHoy ? anioEvaluado : anioHabilitado})
                                     </Button>
                                     <Button

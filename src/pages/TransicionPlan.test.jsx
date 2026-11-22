@@ -103,7 +103,7 @@ describe('TransicionPlan - Veredicto directo sin clic extra', () => {
         await waitFor(() => {
             expect(screen.getByText('Comparativa de Avance')).toBeTruthy();
         });
-        expect(screen.getByRole('button', { name: /Simular egreso/i })).toBeTruthy();
+        expect(screen.getByRole('button', { name: /Simular cambio de plan/i })).toBeTruthy();
         expect(screen.getByText('Ver Equivalencias')).toBeTruthy();
         expect(screen.queryByText(/Evaluar si me corresponde el cambio/i)).toBeNull();
     });
