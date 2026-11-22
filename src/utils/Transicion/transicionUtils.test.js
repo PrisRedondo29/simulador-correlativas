@@ -5,6 +5,7 @@ import {
     obtenerResumenPaso1,
     evaluarElegibilidadActual,
     evaluarTransicionCompleta,
+    calcularProyeccionMultianual,
 } from './transicionUtils';
 
 const plan1713 = sistemasData.find((p) => p.plan_numero === '17.13');
@@ -217,5 +218,51 @@ describe('transicionUtils - Reglas Res. HCS 89/2025 (17.13 -> 17.14)', () => {
             targetCode: 'SECONDARY_TARGET',
             blockedByTargetCode: '21279',
         });
+    });
+
+    it('separa diferenciaNominalHoras (218 hs) del ahorro individual real y elimina el fallback 202', () => {
+        // Sin materias aprobadas: diferencia individual = 3592 - 3374 = 218 hs nominales
+        const sinAvance = evaluarTransicionCompleta({
+            progreso: {},
+            materias1713,
+            materias1714,
+            equivalenciasData,
+            anioAnalisis: 2026,
+        });
+        expect(sinAvance.diferenciaNominalHoras).toBe(218);
+        expect(sinAvance.diferenciaHoras).toBe(218);
+
+        // Con materias que existen en 17.13 pero no se trasladan automáticamente (ej. 11089 pendiente de confirmación),
+        // el ahorro individual real baja (< 218 o negativo) mientras diferenciaNominalHoras sigue siendo 218.
+        const conAvanceNoEquiv = evaluarTransicionCompleta({
+            progreso: { 11089: 'Aprobado', 41408: 'Aprobado' },
+            materias1713,
+            materias1714,
+            equivalenciasData,
+            anioAnalisis: 2026,
+        });
+        expect(conAvanceNoEquiv.diferenciaNominalHoras).toBe(218);
+        expect(conAvanceNoEquiv.diferenciaHoras).toBeLessThan(218);
+
+        // Con carga idéntica donde diferenciaHoras === 0 en escenario A, nunca usa el viejo fallback "202 hs"
+        const planSimetrico = [{ codigo: 'X1', nombre: 'X1', cuatrimestre: 1, horas_totales: 96, correlativas: [] }];
+        const ofertaAbierta = {
+            2025: { anio: 2025, plan1713: { cuatrimestres: [1], descripcion: '' }, plan1714: { cuatrimestres: [1], descripcion: '' } },
+            2026: { anio: 2026, plan1713: { cuatrimestres: [1], descripcion: '' }, plan1714: { cuatrimestres: [1], descripcion: '' } },
+            2027: { anio: 2027, plan1713: { cuatrimestres: [1], descripcion: '' }, plan1714: { cuatrimestres: [1], descripcion: '' } },
+            2028: { anio: 2028, plan1713: { cuatrimestres: [1], descripcion: '' }, plan1714: { cuatrimestres: [1], descripcion: '' } },
+            2029: { anio: 2029, plan1713: { cuatrimestres: [1], descripcion: '' }, plan1714: { cuatrimestres: [1], descripcion: '' } },
+        };
+        const projZero = calcularProyeccionMultianual({
+            progreso: {},
+            materias1713: planSimetrico,
+            materias1714: planSimetrico,
+            equivalenciasData: {},
+            anioActual: 2026,
+            ofertaPorAnio: ofertaAbierta,
+        });
+        expect(projZero.esViableActual).toBe(true);
+        expect(projZero.recomendacionCorta).not.toContain('202');
+        expect(projZero.recomendacionCorta).toContain('misma carga horaria restante');
     });
 });

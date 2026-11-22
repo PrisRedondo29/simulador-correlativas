@@ -21,7 +21,7 @@ const faqData = [
         id: 'cambio-plan-info',
         category: 'planes',
         question: '¿Qué pasa si cambio de plan de estudios?',
-        answer: 'Podés usar la sección de Equivalencias y Cambio de Plan para ver exactamente cómo se trasladan tus materias. Las materias aprobadas se mapean automáticamente según la tabla de equivalencias oficial aprobada por la UNLu (Res. HCS 89/25).',
+        answer: 'Podés usar la sección de Equivalencias y Cambio de Plan para ver cómo se trasladan tus materias. Las equivalencias directas se rigen por el Anexo VI de la Res. HCS 260/24 (y su rectificatoria Res. HCS 836/24), mientras que el cronograma de dictado progresivo corresponde al Plan de Transición 2025–2029 (Res. HCS 89/2025).',
         icon: 'fa-arrows-rotate',
     },
     {

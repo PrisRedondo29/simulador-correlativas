@@ -675,6 +675,7 @@ export interface ResultadoTransicion {
         listaAprobadas: Materia[];
     };
     diferenciaHoras: number;
+    diferenciaNominalHoras?: number;
     motivosBache: string[];
     equivalenciasReconocidasCount: number;
     equivalenciasPorConfirmar?: EquivalenciaAdvisoryItem[];

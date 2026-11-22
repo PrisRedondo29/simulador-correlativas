@@ -25,10 +25,10 @@ vi.mock('../context/PlanContext', () => ({
         transitionInfo: {
             sourcePlan: '17.13',
             targetPlan: '17.14',
-            resolution: 'Res. HCS 89/2025',
+            resolution: 'Plan de Transición 2025 (Res. HCS 89/2025)',
             shortBadge: 'Res. 89/25',
             route: '/cambio-plan',
-            savedHours: 202,
+            savedHours: 218,
             closingYear: 2029,
         },
     }),
@@ -190,5 +190,48 @@ describe('TransicionPlan - Veredicto directo sin clic extra', () => {
         });
         expect(screen.getByText(/11289 · Inteligencia Artificial/i)).toBeTruthy();
         expect(screen.getByText(/Posible equivalencia · confirmar con UNLu/i)).toBeTruthy();
+    });
+
+    it('separa la diferencia nominal (218 hs) del ahorro individual real calculado en horas restantes', async () => {
+        mockGetPlanByNumber.mockImplementation((planNum) =>
+            Promise.resolve(
+                planNum === '17.14'
+                    ? PLAN_1714_MOCK
+                    : {
+                          plan_numero: '17.13',
+                          materias: [
+                              ...PLAN_1713_MOCK.materias,
+                              {
+                                  codigo: '11099',
+                                  nombre: 'Materia adicional 17.13',
+                                  cuatrimestre: 5,
+                                  horas_totales: 218,
+                                  correlativas: [],
+                              },
+                          ],
+                      },
+            ),
+        );
+
+        storageRepository.setProgreso('17.13', {
+            '11071': 'Aprobado',
+            '11099': 'Aprobado',
+        });
+
+        render(
+            <MemoryRouter initialEntries={['/cambio-plan']}>
+                <TransicionPlan />
+            </MemoryRouter>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText('Comparativa de Avance')).toBeTruthy();
+        });
+
+        expect(screen.queryByText(/-202 hs cursada/i)).toBeNull();
+        expect(screen.getByText(/Misma carga restante/i)).toBeTruthy();
+        expect(screen.getByText(/Diferencia nominal entre planes completos:/i)).toBeTruthy();
+        expect(screen.getByText(/218 hs/i)).toBeTruthy();
+        expect(screen.getByText(/Res\. HCS 260\/24 Anexo VI y Res\. HCS 836\/24/i)).toBeTruthy();
     });
 });

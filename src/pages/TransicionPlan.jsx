@@ -117,6 +117,9 @@ function TransicionPlan() {
         recomendacionCorta,
     } = elegibilidad;
 
+    const diferenciaNominalHoras = resultadoHoy?.diferenciaNominalHoras ?? savedHours;
+    const ahorroIndividual = resultadoHoy?.diferenciaHoras ?? 0;
+
     if (!planOrigen || !planDestino || !equivalenciasData) {
         return (
             <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F1419] flex items-center justify-center">
@@ -313,13 +316,21 @@ function TransicionPlan() {
                         {resultadoHoy && (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-5 space-y-4">
-                                    <div className="flex items-center justify-between border-b border-[#F1F5F9] dark:border-[#2A3540] pb-3">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap border-b border-[#F1F5F9] dark:border-[#2A3540] pb-3">
                                         <h3 className="font-semibold text-sm text-[#1E293B] dark:text-[#F1F5F9]">
                                             Comparativa de Avance
                                         </h3>
-                                        {savedHours > 0 && (
-                                            <Chip size="sm" variant="flat" color="primary" className="font-semibold text-xs">
-                                                -{savedHours} hs cursada
+                                        {ahorroIndividual > 0 ? (
+                                            <Chip size="sm" variant="flat" color="success" className="font-semibold text-xs">
+                                                Tu ahorro: -{ahorroIndividual} hs restantes
+                                            </Chip>
+                                        ) : ahorroIndividual < 0 ? (
+                                            <Chip size="sm" variant="flat" color="warning" className="font-semibold text-xs">
+                                                +{Math.abs(ahorroIndividual)} hs restantes en {targetPlan}
+                                            </Chip>
+                                        ) : (
+                                            <Chip size="sm" variant="flat" className="font-semibold text-xs">
+                                                Misma carga restante
                                             </Chip>
                                         )}
                                     </div>
@@ -329,7 +340,7 @@ function TransicionPlan() {
                                             <div className="flex justify-between text-xs font-medium text-[#475569] dark:text-[#CBD5E1] mb-1 tabular-nums">
                                                 <span>Plan {sourcePlan} (actual)</span>
                                                 <span className="font-semibold">
-                                                    {resultadoHoy.avance1713.porcentaje}% ({resultadoHoy.avance1713.aprobadas}/{resultadoHoy.avance1713.totales})
+                                                    {resultadoHoy.avance1713.porcentaje}% ({resultadoHoy.avance1713.aprobadas}/{resultadoHoy.avance1713.totales}) · {resultadoHoy.avance1713.horasRestantes} hs rest.
                                                 </span>
                                             </div>
                                             <Progress
@@ -347,7 +358,7 @@ function TransicionPlan() {
                                             <div className="flex justify-between text-xs font-medium text-[#005A36] dark:text-[#86EFAC] mb-1 tabular-nums">
                                                 <span>Plan {targetPlan} (por equivalencias)</span>
                                                 <span className="font-semibold">
-                                                    {resultadoHoy.avance1714.porcentaje}% ({resultadoHoy.avance1714.aprobadas}/{resultadoHoy.avance1714.totales})
+                                                    {resultadoHoy.avance1714.porcentaje}% ({resultadoHoy.avance1714.aprobadas}/{resultadoHoy.avance1714.totales}) · {resultadoHoy.avance1714.horasRestantes} hs rest.
                                                 </span>
                                             </div>
                                             <Progress
@@ -362,12 +373,19 @@ function TransicionPlan() {
                                         </div>
                                     </div>
 
-                                    <div className="p-3 bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl text-xs text-[#475569] dark:text-[#CBD5E1]">
-                                        Se reconocen automáticamente{' '}
-                                        <strong className="text-[#1E293B] dark:text-[#F1F5F9]">
-                                            {resultadoHoy.equivalenciasReconocidasCount} equivalencias directas
-                                        </strong>{' '}
-                                        sin trámites adicionales.
+                                    <div className="p-3 bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl text-xs text-[#475569] dark:text-[#CBD5E1] space-y-1">
+                                        <p>
+                                            Se reconocen automáticamente{' '}
+                                            <strong className="text-[#1E293B] dark:text-[#F1F5F9]">
+                                                {resultadoHoy.equivalenciasReconocidasCount} equivalencias directas
+                                            </strong>{' '}
+                                            sin trámites adicionales.
+                                        </p>
+                                        {diferenciaNominalHoras > 0 && (
+                                            <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                                Diferencia nominal entre planes completos: <strong>{diferenciaNominalHoras} hs</strong> ({resultadoHoy.avance1713.horasTotales} hs vs. {resultadoHoy.avance1714.horasTotales} hs). Tu ahorro individual real se calcula sobre tus horas restantes.
+                                            </p>
+                                        )}
                                     </div>
 
                                     {resultadoHoy.equivalenciasPorConfirmar?.length > 0 && (
@@ -477,7 +495,7 @@ function TransicionPlan() {
                             className="border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730]"
                         >
                             <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pb-2">
-                                Según la reglamentación oficial ({resolution}), las materias con cursada regular y final pendiente <strong>no otorgan equivalencia automática directa</strong> en el Plan {targetPlan}. Se recomienda rendir el examen final en el Plan {sourcePlan} para obtener el reconocimiento automático.
+                                Según el régimen oficial de equivalencias (Res. HCS 260/24 Anexo VI y Res. HCS 836/24) y el {resolution}, las materias con cursada regular y final pendiente <strong>no otorgan equivalencia automática directa</strong> en el Plan {targetPlan}. Se recomienda rendir el examen final en el Plan {sourcePlan} para obtener el reconocimiento automático.
                             </p>
                         </AccordionItem>
 
@@ -493,16 +511,16 @@ function TransicionPlan() {
                             </p>
                         </AccordionItem>
 
-                        {savedHours > 0 && (
+                        {diferenciaNominalHoras > 0 && (
                             <AccordionItem
                                 key="3"
                                 aria-label={`¿Por qué el Plan ${targetPlan} tiene menos horas totales?`}
-                                title={<span className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]">¿Por qué el Plan {targetPlan} tiene {savedHours} horas menos de cursada?</span>}
+                                title={<span className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9]">¿Por qué el Plan {targetPlan} tiene {diferenciaNominalHoras} horas nominales menos que el Plan {sourcePlan}?</span>}
                                 startContent={<TrendingDown className="text-[#005A36] dark:text-[#6EE7B7] shrink-0" size={17} />}
                                 className="border border-[#E2E8F0] dark:border-[#2A3540] shadow-none rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730]"
                             >
                                 <p className="text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed pb-2">
-                                    El Plan {targetPlan} optimiza los contenidos curriculares y actualiza la carga horaria adaptándose a estándares CIN/CONFEDI, logrando una cursada más ágil sin perder calidad académica.
+                                    Esas {diferenciaNominalHoras} horas corresponden a la diferencia nominal entre los planes completos (Res. HCS 260/24). Tu ahorro individual real depende de qué materias ya tengas aprobadas y sus equivalencias al momento del pase.
                                 </p>
                             </AccordionItem>
                         )}

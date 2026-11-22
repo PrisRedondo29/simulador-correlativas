@@ -539,7 +539,7 @@
                 "nombre": "Competencias Básicas en Informática",
                 "anio": "1",
                 "cuatrimestre": "1",
-                "horas_semanales": "8",
+                "horas_semanales": "",
                 "horas_totales": "0",
                 "correlativas": [],
                 "notas": [
@@ -553,7 +553,7 @@
                 "nombre": "Competencias Básicas en Idioma Inglés",
                 "anio": "1",
                 "cuatrimestre": "1",
-                "horas_semanales": "6",
+                "horas_semanales": "",
                 "horas_totales": "0",
                 "correlativas": [],
                 "notas": [
@@ -566,7 +566,7 @@
                 "nombre": "Taller Introductorio de Interpretación de Problemas",
                 "anio": "1",
                 "cuatrimestre": "1",
-                "horas_semanales": "6",
+                "horas_semanales": "8",
                 "horas_totales": "48",
                 "correlativas": [],
                 "notas": [
@@ -610,7 +610,7 @@
             },
             {
                 "codigo": "11256",
-                "nombre": "Sistemas de Información 1",
+                "nombre": "Sistemas de Información I",
                 "anio": "1",
                 "cuatrimestre": "2",
                 "horas_semanales": "6",
@@ -652,7 +652,7 @@
             },
             {
                 "codigo": "13021",
-                "nombre": "Algebra Lineal y Geometría",
+                "nombre": "Álgebra Lineal y Geometría",
                 "anio": "1",
                 "cuatrimestre": "2",
                 "horas_semanales": "6",

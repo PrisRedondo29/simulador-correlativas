@@ -23,12 +23,12 @@ Este proyecto transforma un plan de estudios estático en un **Sistema de Soport
 ## 🚀 Módulos y Funcionalidades Principales
 
 ### 1. 🧭 Simulador Predictivo de Cursada
-* **Proyección temporal cuatrimestre a cuatrimestre:** Permite simular qué materias cursar y aprobar a futuro, estimando la fecha de graduación y la obtención del **Título Intermedio (Analista Universitario en Sistemas)**.
+* **Proyección temporal cuatrimestre a cuatrimestre:** Permite simular qué materias cursar y aprobar a futuro, estimando la fecha de graduación y la obtención del **Título Intermedio (Analista Programador/a Universitario/a)**.
 * **Múltiples vistas interactivas:** Vista de **Malla Curricular**, vista de **Grafo de Red** y vista de **Lista detallada**.
 * **Gestión de cupos y restricciones:** Validación de carga horaria máxima y correlatividades requeridas por cuatrimestre.
 
 ### 2. 🔄 Motor de Transición de Planes y Equivalencias
-* **Homologación automática:** Evalúa el avance actual en el Plan 17.13 y proyecta la equivalencia directa e indirecta en el nuevo Plan 17.14 (según la **Resolución HCS N° 89/2025**).
+* **Homologación automática:** Evalúa el avance actual en el Plan 17.13 y proyecta las equivalencias confirmadas hacia el nuevo Plan 17.14 (**Res. HCS 260/24 Anexo VI y Res. HCS 836/24**), integrando además la viabilidad según el cronograma multianual del **Plan de Transición 2025–2029 (Res. HCS 89/2025)**.
 * **Análisis de impacto:** Muestra materias acreditadas automáticamente, materias con integración curricular pendiente y materias nuevas a cursar.
 
 ### 3. 🕸️ Red de Materias (Visualizador de Grafos)

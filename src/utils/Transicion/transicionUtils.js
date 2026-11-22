@@ -1,8 +1,9 @@
 /**
  * transicionUtils.js
- * Motor de cálculo y reglas oficiales de transición entre Plan 17.13 y Plan 17.14
- * de la Licenciatura en Sistemas de Información (UNLu)
- * según RESOLUCIÓN H. CONSEJO SUPERIOR RESHCS : 89 / 2025.
+ * Motor de cálculo del cambio de plan entre Plan 17.13 y Plan 17.14
+ * de la Licenciatura en Sistemas de Información (UNLu).
+ * Equivalencias regidas por Res. HCS 260/24 (Anexo VI) y Res. HCS 836/24;
+ * cronograma multianual de dictado por el Plan de Transición 2025–2029 (Res. HCS 89/2025).
  */
 
 /** @typedef {import('../../types/domain').Materia} Materia */
@@ -286,6 +287,7 @@ export const evaluarTransicionCompleta = ({
     const porcentaje1714 =
         materias1714.length > 0 ? Math.round((aprobadas1714.length / materias1714.length) * 100) : 0;
 
+    const diferenciaNominalHoras = horasTotales1713 - horasTotales1714;
     const diferenciaHoras = horasRestantes1713 - horasRestantes1714;
 
     /** @type {'A' | 'B'} */
@@ -365,6 +367,7 @@ export const evaluarTransicionCompleta = ({
             listaAprobadas: aprobadas1714,
         },
         diferenciaHoras,
+        diferenciaNominalHoras,
         motivosBache,
         equivalenciasReconocidasCount: aprobadas1714.length,
         equivalenciasPorConfirmar,
@@ -430,8 +433,16 @@ export const calcularProyeccionMultianual = ({
     let recomendacionCorta = '';
 
     if (esViableActual) {
+        const cursablesCount = resultadoActual.resultado.avance1714.materiasCursables.length;
+        const diffIndiv = resultadoActual.resultado.diferenciaHoras;
         mensajePrincipal = `¡Te conviene cambiarte de plan ahora en ${anioActual}!`;
-        recomendacionCorta = `Tenés ${resultadoActual.resultado.avance1714.materiasCursables.length} materias activas para cursar de inmediato y reducís la carga horaria en ${Math.abs(resultadoActual.resultado.diferenciaHoras) || 202} hs.`;
+        if (diffIndiv > 0) {
+            recomendacionCorta = `Tenés ${cursablesCount} materias activas para cursar de inmediato y en tu trayectoria actual ahorrarías ${diffIndiv} hs restantes al pasar al Plan ${targetPlan}.`;
+        } else if (diffIndiv < 0) {
+            recomendacionCorta = `Tenés ${cursablesCount} materias activas para cursar de inmediato; según tu avance actual tendrías ${Math.abs(diffIndiv)} hs restantes adicionales en el Plan ${targetPlan}.`;
+        } else {
+            recomendacionCorta = `Tenés ${cursablesCount} materias activas para cursar de inmediato manteniendo la misma carga horaria restante en ambos planes.`;
+        }
     } else if (primerAnioViable && primerAnioViable > anioActual) {
         mensajePrincipal = `Por ahora te conviene esperar. Tu año óptimo es ${primerAnioViable}.`;
         recomendacionCorta = `En ${anioActual} habría baches por falta de materias intermedias en ${targetPlan}. En ${primerAnioViable} abrirá el dictado correspondiente a tu nivel sin demoras.`;

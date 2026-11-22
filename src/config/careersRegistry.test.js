@@ -128,4 +128,30 @@ describe('careersRegistry - Registro declarativo multi-carrera', () => {
             expect(entry.estimatedSubjects).toBe(planData.materias.length);
         });
     });
+
+    it('configura APU 17.14 oficial (24 códigos), citas 260/24+836/24, diferencia nominal 218 hs y cargas de sistemas.json', () => {
+        const entry14 = getPlanEntry('17.14');
+        const entry13 = getPlanEntry('17.13');
+        const materias13 = sistemasPlans.find((p) => p.plan_numero === '17.13')?.materias || [];
+        const materias14 = sistemasPlans.find((p) => p.plan_numero === '17.14')?.materias || [];
+
+        expect(entry14?.intermediateTitle?.name).toBe('Analista Programador/a Universitario/a');
+        expect(entry14?.intermediateTitle?.codigos).toHaveLength(24);
+        expect(entry14?.intermediateTitle?.codigos).not.toContain('11278');
+        expect(entry14?.intermediateTitle?.codigos).not.toContain('14028');
+        expect(entry14?.equivalencias?.resolution).toBe('Res. HCS 260/24 (Anexo VI) y Res. HCS 836/24');
+        expect(entry13?.equivalencias?.resolution).toBe('Res. HCS 260/24 (Anexo VI) y Res. HCS 836/24');
+
+        const tot13 = materias13.reduce((s, m) => s + (Number(m.horas_totales) || 0), 0);
+        const tot14 = materias14.reduce((s, m) => s + (Number(m.horas_totales) || 0), 0);
+        expect(tot13 - tot14).toBe(218);
+        expect(entry13?.transition?.savedHours).toBe(218);
+
+        const byCode14 = Object.fromEntries(materias14.map((m) => [m.codigo, m]));
+        expect(byCode14['14026'].horas_semanales).toBe('8');
+        expect(byCode14['19054'].horas_semanales).toBe('');
+        expect(byCode14['39553'].horas_semanales).toBe('');
+        expect(byCode14['11256'].nombre).toBe('Sistemas de Información I');
+        expect(byCode14['13021'].nombre).toBe('Álgebra Lineal y Geometría');
+    });
 });

@@ -102,19 +102,40 @@ describe('notificationStrategies - Patrón Strategy de alertas académicas', () 
     });
 
     it('notifica cercanía y logro del Título Intermedio', () => {
-        // En 17.14 intermedio son las de cuatrimestre <= 6 (M1, M2, M3 = 3 materias)
+        // En Plan 17.14 el APU usa los 24 códigos oficiales (excluye 11278 y 14028)
+        const materiasApu1714 = [
+            { codigo: '11271', nombre: 'Introducción a la Programación', cuatrimestre: '1', tesis: false },
+            { codigo: '13014', nombre: 'Matemática Básica', cuatrimestre: '1', tesis: false },
+            { codigo: '21256', nombre: 'Introducción a los Sistemas de Información', cuatrimestre: '1', tesis: false },
+            { codigo: '14028', nombre: 'Matemática Computacional', cuatrimestre: '6', tesis: false },
+            { codigo: '11278', nombre: 'Bases de Datos Distribuidas', cuatrimestre: '6', tesis: false },
+        ];
+
         const cerca = estrategiaTituloIntermedio({
             activePlan: '17.14',
-            materias: MATERIAS_MOCK,
-            progreso: { M1: 'Aprobado', M2: 'Promocionado', M3: 'Regular' },
+            materias: materiasApu1714,
+            progreso: {
+                11271: 'Aprobado',
+                13014: 'Promocionado',
+                21256: 'Regular',
+                14028: 'Disponible',
+                11278: 'Disponible',
+            },
         });
         expect(cerca).not.toBeNull();
         expect(cerca.title).toContain('Muy cerca');
+        expect(cerca.description).toContain('Analista Programador/a Universitario/a');
 
         const completo = estrategiaTituloIntermedio({
             activePlan: '17.14',
-            materias: MATERIAS_MOCK,
-            progreso: { M1: 'Aprobado', M2: 'Promocionado', M3: 'Aprobado' },
+            materias: materiasApu1714,
+            progreso: {
+                11271: 'Aprobado',
+                13014: 'Promocionado',
+                21256: 'Aprobado',
+                14028: 'Disponible',
+                11278: 'Disponible',
+            },
         });
         expect(completo).not.toBeNull();
         expect(completo.title).toContain('Completaste');

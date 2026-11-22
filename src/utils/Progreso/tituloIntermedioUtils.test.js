@@ -12,8 +12,21 @@ describe('tituloIntermedioUtils - Título Intermedio declarativo por plan', () =
 
         expect(intermedio14.length).toBeGreaterThan(0);
         expect(intermedio14.every((m) => Number(m.cuatrimestre) <= 6 && !m.tesis)).toBe(true);
-        // Bases de Datos Distribuidas (11278) pertenece a la Licenciatura en Plan 17.14
+        // Bases de Datos Distribuidas (11278) y Matemática Computacional (14028) pertenecen a la Licenciatura en Plan 17.14
         expect(intermedio14.some((m) => m.codigo === '11278')).toBe(false);
+        expect(intermedio14.some((m) => m.codigo === '14028')).toBe(false);
+        expect(tituloIntermedioUtils.getTituloIntermedioNombre('17.14')).toBe(
+            'Analista Programador/a Universitario/a',
+        );
+        expect(intermedio14).toHaveLength(24);
+        const totalHorasApu14 = intermedio14.reduce(
+            (sum, m) => sum + (Number(m.horas_totales) || 0),
+            0,
+        );
+        expect(totalHorasApu14).toBe(1888);
+        expect(intermedio14.map((m) => m.codigo)).toEqual(
+            expect.arrayContaining(['19054', '39553', '14026', '21279', '11287']),
+        );
 
         expect(intermedio13.length).toBeGreaterThan(0);
         expect(intermedio13.every((m) => Number(m.cuatrimestre) <= 7 && !m.tesis)).toBe(true);
