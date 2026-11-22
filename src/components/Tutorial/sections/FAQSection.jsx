@@ -28,7 +28,7 @@ const faqData = [
         id: 'vencimiento-regularidad',
         category: 'progreso',
         question: '¿Cómo funciona el vencimiento de la regularidad?',
-        answer: 'Cuando marcás una materia como "Regular" y cargás el año y cuatrimestre de cursada, el sistema calcula automáticamente la fecha límite de validez (3 años y medio). Te mostrará un indicador visible en la tarjeta para avisarte.',
+        answer: 'Cuando marcás una materia como "Regular" y cargás el año y cuatrimestre de cursada, el sistema calcula automáticamente la fecha límite de validez (5 cuatrimestres consecutivos según el Reglamento General de Estudios — RGE). Te mostrará un indicador visible en la tarjeta para avisarte.',
         icon: 'fa-clock',
     },
     {

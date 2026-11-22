@@ -201,7 +201,7 @@ export const trackDescargaPDF = ({ plan }) =>
  * Trackea cuando el usuario elige o cambia de plan o carrera.
  * @param {{ plan: string, origen_plan: 'settings' | 'settings_career' | 'welcome_modal' | 'saweb_import_onboarding', carrera?: string }} params
  */
-export const trackSeleccionCarrera = ({ plan, origen_plan, carrera = 'Analista en Sistemas' }) =>
+export const trackSeleccionCarrera = ({ plan, origen_plan, carrera = 'Licenciatura en Sistemas de Información' }) =>
     track('seleccion_carrera', {
         plan,
         origen_plan,

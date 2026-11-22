@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mergeSawebImportWithExisting, parseSawebTexts } from './sawebParser';
 import { esMateriaIncompleta } from './Progreso/materiasUtils';
 import { calcularPromedioGeneral } from './Progreso/regularidadUtils';
@@ -654,5 +654,74 @@ ${threeOptsText}
         });
         expect(resFour.progreso['21279']).toBe('Promocionado');
         expect(resFour.progreso['AO-1714']).toBe('Aprobado');
+    });
+});
+
+describe('Privacidad y filtrado anti-PII (procesamiento 100% local)', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    it('descarta Nombre/Apellido, DNI, Legajo y email del texto SAWeb y opera 100% local sin llamadas de red ni logs', () => {
+        const plan1714Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.14')?.materias || [];
+
+        const piiTokens = [
+            'PEREZ GOMEZ',
+            'MARIA SOL',
+            '38.456.789',
+            '38456789',
+            '196677',
+            'maria.perez@ejemplo.edu.ar',
+        ];
+
+        const sawebWithPii = `
+Universidad Nacional de Luján
+CERTIFICADO ANALITICO DE ACTIVIDADES ACADEMICAS RENDIDAS
+Apellido y Nombre: PEREZ GOMEZ, MARIA SOL
+DNI: 38456789
+Legajo: 196677
+Correo electrónico: maria.perez@ejemplo.edu.ar
+consta que PEREZ GOMEZ, MARIA SOL, DNI: 38.456.789, Nº de Legajo 196677, ingresó a la Universidad en el año 2021, habiendo rendido las siguientes asignaturas correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1713:
+11071 P-INTRODUCCION A LA PROGRAMACION 9(NUEVE) 0475-047 10-07-2021
+11074 R-PROGRAMACION I 8(OCHO) 0546-020 15-12-2021
+21420 P-TALLER DE EMPRENDIMIENTOS TECNOLOGICOS (OPT.) 9(NUEVE) 0651-010 20-07-2025
+        `;
+
+        const consoleSpies = [
+            vi.spyOn(console, 'log').mockImplementation(() => {}),
+            vi.spyOn(console, 'info').mockImplementation(() => {}),
+            vi.spyOn(console, 'warn').mockImplementation(() => {}),
+            vi.spyOn(console, 'debug').mockImplementation(() => {}),
+            vi.spyOn(console, 'error').mockImplementation(() => {}),
+        ];
+        const fetchSpy =
+            typeof globalThis.fetch === 'function'
+                ? vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('No network expected'))
+                : null;
+
+        const parsed = parseSawebTexts(sawebWithPii, plan1714Materias);
+        const merged = mergeSawebImportWithExisting(parsed, {}, {}, plan1714Materias);
+
+        expect(parsed.detectedPlan).toBe('17.13');
+        expect(parsed.progreso['11271']).toBe('Promocionado');
+        expect(parsed.progreso['11274']).toBe('Aprobado');
+        expect(parsed.progreso['19054']).toBe('Aprobado');
+        expect(parsed.advisoryEquivalencias.map((x) => x.targetCode)).toContain('21279');
+
+        const serializedParsed = JSON.stringify(parsed);
+        const serializedMerged = JSON.stringify(merged);
+
+        for (const token of piiTokens) {
+            expect(serializedParsed).not.toContain(token);
+            expect(serializedMerged).not.toContain(token);
+        }
+
+        for (const spy of consoleSpies) {
+            expect(spy).not.toHaveBeenCalled();
+        }
+        if (fetchSpy) {
+            expect(fetchSpy).not.toHaveBeenCalled();
+        }
     });
 });

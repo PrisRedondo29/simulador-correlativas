@@ -29,8 +29,8 @@ function LeyendaEstados({ materias = [] }) {
         >
             <AccordionItem
                 key="referencias"
-                aria-label="Referencias de estados y Estatuto UNLu"
-                title="Referencias de estados y Estatuto UNLu"
+                aria-label="Referencias de estados y Reglamento General de Estudios (RGE)"
+                title="Referencias de estados y Reglamento General de Estudios (RGE)"
                 subtitle={`Carga horaria total del plan: ${horasTotales} hs`}
                 startContent={
                     <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center">
@@ -67,23 +67,23 @@ function LeyendaEstados({ materias = [] }) {
                         <div className="flex items-center justify-between flex-wrap gap-2">
                             <span className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2">
                                 <i className="fa-solid fa-building-columns text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
-                                Estatuto UNLu · Régimen General de Estudios
+                                Reglamento General de Estudios (RGE) · UNLu
                             </span>
                             <a
-                                href="https://www.unlu.edu.ar/estatuto_unlu.pdf"
+                                href="https://www.unlu.edu.ar/estudiantes.html"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-[#005A36] dark:text-[#6EE7B7] hover:underline flex items-center gap-1 font-medium"
                             >
-                                <i className="fa-solid fa-file-pdf" aria-hidden="true" />
-                                Ver Estatuto Completo (PDF)
+                                <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
+                                Normativa estudiantil UNLu
                             </a>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <div className="flex gap-3 items-start bg-[#F8FAFC] dark:bg-[#1E2730] p-3.5 rounded-xl border border-[#E2E8F0] dark:border-[#2A3540]">
                                 <Chip size="sm" variant="flat" color="primary" className="font-semibold shrink-0">
-                                    Art. 16
+                                    RGE
                                 </Chip>
                                 <div className="flex flex-col gap-0.5">
                                     <span className="font-semibold text-xs text-[#1E293B] dark:text-[#F1F5F9]">
