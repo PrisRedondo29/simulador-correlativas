@@ -273,9 +273,30 @@ function TransicionPlan() {
 
                                 <div className="shrink-0 w-full md:w-auto flex flex-col sm:flex-row gap-2">
                                     <Button
-                                        onPress={() => navigate('/equivalencias')}
-                                        className="w-full md:w-auto bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-xs px-5 h-10 rounded-xl"
+                                        onPress={() =>
+                                            navigate('/simulador', {
+                                                state: {
+                                                    plan: sourcePlan,
+                                                    planTransition: {
+                                                        enabled: true,
+                                                        targetPlan: targetPlan || '17.14',
+                                                        anio: puedeCambiarseHoy ? anioEvaluado : anioHabilitado,
+                                                        cuatri: String(cuatrimestreHabilitado || 1),
+                                                    },
+                                                    autoImportFromTransition: true,
+                                                },
+                                            })
+                                        }
+                                        className="w-full md:w-auto bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-xs px-4 h-10 rounded-xl"
                                         endContent={<ArrowRight size={14} />}
+                                    >
+                                        Simular egreso ({cuatrimestreHabilitado}°C{' '}
+                                        {puedeCambiarseHoy ? anioEvaluado : anioHabilitado})
+                                    </Button>
+                                    <Button
+                                        variant="bordered"
+                                        onPress={() => navigate('/equivalencias')}
+                                        className="w-full md:w-auto border-[#005A36]/40 dark:border-[#6EE7B7]/40 text-[#005A36] dark:text-[#86EFAC] font-semibold text-xs px-4 h-10 rounded-xl"
                                     >
                                         Ver Equivalencias
                                     </Button>

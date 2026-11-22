@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 
 const mockGetPlanByNumber = vi.fn();
+const mockGetEquivalenciasByPlan = vi.fn();
 const mockAddToast = vi.fn();
 
 vi.mock('@heroui/react', () => ({
@@ -12,6 +13,7 @@ vi.mock('@heroui/react', () => ({
 vi.mock('../../services/planService', () => ({
     default: {
         getPlanByNumber: (...args) => mockGetPlanByNumber(...args),
+        getEquivalenciasByPlan: (...args) => mockGetEquivalenciasByPlan(...args),
     },
 }));
 
@@ -130,5 +132,114 @@ describe('useSimuladorEstado - Navegación de semestres, retroceso y finalizaci�
         expect(result.current.anioActual).toBe(2026);
         expect(result.current.cuatri).toBe('1');
         expect(result.current.simulacionTerminada).toBe(false);
+    });
+
+    it('simula transición híbrida 17.13 -> 17.14 al alcanzar el cuatrimestre elegido y revierte con handleAnterior', async () => {
+        const materias1713 = [
+            { codigo: '11071', nombre: 'Intro Prog', anio: 1, cuatrimestre: 1, correlativas: [] },
+            { codigo: '11074', nombre: 'Prog I', anio: 1, cuatrimestre: 2, correlativas: ['11071'] },
+        ];
+        const materias1714 = [
+            { codigo: '11271', nombre: 'Intro Prog (17.14)', anio: 1, cuatrimestre: 1, correlativas: [] },
+            { codigo: '11274', nombre: 'Prog Estructurada', anio: 1, cuatrimestre: 2, correlativas: ['11271'] },
+            { codigo: '11275', nombre: 'EDA I', anio: 2, cuatrimestre: 3, correlativas: ['11274'] },
+        ];
+
+        mockGetPlanByNumber.mockImplementation(async (p) =>
+            p === '17.13'
+                ? { plan_numero: '17.13', materias: materias1713 }
+                : { plan_numero: '17.14', materias: materias1714 },
+        );
+        mockGetEquivalenciasByPlan.mockResolvedValue({
+            11271: ['11071'],
+            11274: ['11074'],
+        });
+
+        const { result } = renderHook(() =>
+            useSimuladorEstado({
+                plan: '17.13',
+                anioInicio: 2026,
+                cuatriInicio: '2',
+                planTransition: { enabled: true, targetPlan: '17.14', anio: 2027, cuatri: '1' },
+            }),
+        );
+
+        await waitFor(() => {
+            expect(result.current.materias).toHaveLength(2);
+            expect(result.current.targetPlanData.materiasTarget).toHaveLength(3);
+        });
+
+        expect(result.current.activePlan).toBe('17.13');
+
+        // En 2°C 2026 aprueba 11071 en Plan 17.13 y avanza a 1°C 2027 (cuatrimestre de cambio)
+        act(() => {
+            result.current.setProgresoSimulado((prev) => ({ ...prev, 11071: 'Cursado' }));
+        });
+        act(() => {
+            result.current.handleSiguiente([materias1713[0]]);
+        });
+
+        expect(result.current.activePlan).toBe('17.14');
+        expect(result.current.anioActual).toBe(2027);
+        expect(result.current.cuatri).toBe('1');
+        expect(result.current.materias.map((m) => m.codigo)).toEqual(['11271', '11274', '11275']);
+        expect(result.current.progresoSimulado).toEqual({
+            11271: 'Cursado',
+            11274: 'No Cursado',
+            11275: 'No Cursado',
+        });
+        expect(result.current.transitionAppliedInfo).toMatchObject({
+            fromPlan: '17.13',
+            toPlan: '17.14',
+            anio: 2027,
+            cuatri: '1',
+            equivalenciasCount: 1,
+        });
+
+        // Retroceder con handleAnterior vuelve al 2°C 2026 en Plan 17.13
+        act(() => {
+            result.current.handleAnterior();
+        });
+
+        expect(result.current.activePlan).toBe('17.13');
+        expect(result.current.anioActual).toBe(2026);
+        expect(result.current.cuatri).toBe('2');
+        expect(result.current.transitionAppliedInfo).toBeNull();
+        expect(result.current.materias.map((m) => m.codigo)).toEqual(['11071', '11074']);
+
+        // Restaurar una simulación guardada previamente (incluyendo transición a 17.14)
+        act(() => {
+            result.current.cargarSimulacionGuardada({
+                activePlan: '17.14',
+                anioActual: 2027,
+                cuatri: '2',
+                simulacionTerminada: false,
+                progresoSimulado: { 11271: 'Cursado', 11274: 'Cursado', 11275: 'No Cursado' },
+                progresoBase: { 11271: 'Cursado', 11274: 'Cursado', 11275: 'No Cursado' },
+                transitionAppliedInfo: {
+                    fromPlan: '17.13',
+                    toPlan: '17.14',
+                    anio: 2027,
+                    cuatri: '1',
+                    equivalenciasCount: 1,
+                },
+                historialSemestres: [
+                    {
+                        anioActual: 2026,
+                        cuatri: '2',
+                        materiasDelSemestre: [materias1713[0]],
+                        progresoSnapshot: { 11071: 'Cursado' },
+                        progresoBaseSnapshot: {},
+                        planSemestre: '17.13',
+                    },
+                ],
+            });
+        });
+
+        expect(result.current.activePlan).toBe('17.14');
+        expect(result.current.anioActual).toBe(2027);
+        expect(result.current.cuatri).toBe('2');
+        expect(result.current.materias.map((m) => m.codigo)).toEqual(['11271', '11274', '11275']);
+        expect(result.current.transitionAppliedInfo?.equivalenciasCount).toBe(1);
     });
 });

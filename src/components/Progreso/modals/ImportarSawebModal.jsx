@@ -15,12 +15,14 @@ import {
   CheckCircle2,
   ExternalLink,
   FileCheck2,
+  FileDown,
   FileUp,
   Sparkles,
   Trash2,
 } from "lucide-react";
 import { parseSawebTexts } from "../../../utils/sawebParser";
 import { extractTextFromPdfFile } from "../../../utils/pdfTextExtractor";
+import { downloadPlanillaPlanPDF } from "../../../hooks/Simulador/useSimuladorPDF";
 import planService from "../../../services/planService";
 import { PLAN_POLICIES } from "../../../config/planPolicies";
 
@@ -42,6 +44,7 @@ export default function ImportarSawebModal({
   const [verifiedResult, setVerifiedResult] = useState(null);
   const [verifying, setVerifying] = useState(false);
   const [readingPdf, setReadingPdf] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const fileInputRef = useRef(null);
 
   const hasContent = Boolean(pdfText);
@@ -341,6 +344,37 @@ export default function ImportarSawebModal({
                       forman parte del Plan {effectivePlan || "activo"} (
                       {verifiedResult.omittedCodes.map((o) => o.codigo).join(", ")}).
                     </p>
+                  )}
+
+                  {verifiedResult.totalMatched > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#E2E8F0] dark:border-[#24303C] bg-[#F8FAFC] dark:bg-[#11171D] px-3.5 py-2.5">
+                      <span className="text-xs text-[#475569] dark:text-[#CBD5E1]">
+                        ¿Querés llevarte esta planilla ordenada por año e imprimible?
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="flat"
+                        isLoading={exportingPdf}
+                        className="bg-[#005A36]/10 text-[#005A36] dark:bg-[#2E8B63]/20 dark:text-[#6EE7B7] font-semibold shrink-0"
+                        startContent={!exportingPdf && <FileDown className="w-3.5 h-3.5" />}
+                        onPress={async () => {
+                          setExportingPdf(true);
+                          try {
+                            await downloadPlanillaPlanPDF({
+                              materias: verifiedResult.targetMaterias || materias,
+                              plan: verifiedResult.targetPlan || effectivePlan,
+                              progreso: verifiedResult.progreso,
+                              progresoDetalles: verifiedResult.progresoDetalles,
+                              includeProgress: true,
+                            });
+                          } finally {
+                            setExportingPdf(false);
+                          }
+                        }}
+                      >
+                        Descargar PDF del progreso
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}

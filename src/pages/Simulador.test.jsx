@@ -165,6 +165,14 @@ vi.mock('@heroui/react', () => {
         CardHeader: ({ children }) => <div>{children}</div>,
         CardFooter: ({ children }) => <div>{children}</div>,
         Chip: ({ children }) => <span>{children}</span>,
+        Switch: ({ isSelected, onValueChange, 'aria-label': ariaLabel }) => (
+            <input
+                type="checkbox"
+                aria-label={ariaLabel}
+                checked={Boolean(isSelected)}
+                onChange={(e) => onValueChange?.(e.target.checked)}
+            />
+        ),
     };
 });
 

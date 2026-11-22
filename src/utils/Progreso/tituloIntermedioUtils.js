@@ -36,10 +36,16 @@ const getMateriasIntermedio = (plan, materias, registry = CAREERS_REGISTRY) => {
     const config = getIntermediateTitleConfig(plan, registry);
     if (!config) return [];
 
+    const excludedSet = new Set((config.excludeCodigos || []).map(String));
+
     if (Array.isArray(config.codigos) && config.codigos.length > 0) {
         const codigoSet = new Set(config.codigos.map(String));
         return materias.filter(
-            (m) => codigoSet.has(String(m.codigo)) && !m.tesis && m.codigo !== 'N/A',
+            (m) =>
+                codigoSet.has(String(m.codigo)) &&
+                !excludedSet.has(String(m.codigo)) &&
+                !m.tesis &&
+                m.codigo !== 'N/A',
         );
     }
 
@@ -48,6 +54,7 @@ const getMateriasIntermedio = (plan, materias, registry = CAREERS_REGISTRY) => {
         return materias.filter(
             (m) =>
                 Number(m.cuatrimestre) <= maxCuatrimestre &&
+                !excludedSet.has(String(m.codigo)) &&
                 !m.tesis &&
                 m.codigo !== 'N/A',
         );

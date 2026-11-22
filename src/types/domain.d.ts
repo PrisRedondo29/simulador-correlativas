@@ -303,6 +303,7 @@ export interface IntermediateTitleConfig {
     name: string;
     maxCuatrimestre?: number;
     codigos?: string[];
+    excludeCodigos?: string[];
 }
 
 export type EquivalenciasMap = Record<string, string[]>;
@@ -528,6 +529,21 @@ export interface MateriaImportada extends Materia {
     esAproximado: boolean;
 }
 
+export interface PreTransitionSnapshot {
+    activePlan: string;
+    materias: Materia[];
+    progresoSimulado: ProgresoSimuladorMap;
+    progresoBase: ProgresoSimuladorMap;
+}
+
+export interface TransitionAppliedInfo {
+    fromPlan: string;
+    toPlan: string;
+    anio: number;
+    cuatri: string;
+    equivalenciasCount: number;
+}
+
 export interface HistorialSemestre {
     anioActual: number;
     cuatri: string;
@@ -536,6 +552,10 @@ export interface HistorialSemestre {
     progresoBaseSnapshot: ProgresoSimuladorMap;
     esImportado?: boolean;
     esVacio?: boolean;
+    esProyectado?: boolean;
+    planSemestre?: string;
+    transicionAplicada?: TransitionAppliedInfo | null;
+    preTransitionSnapshot?: PreTransitionSnapshot | null;
 }
 
 export interface ResultadoReconstruccionHistorial {

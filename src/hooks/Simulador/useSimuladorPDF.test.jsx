@@ -4,7 +4,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { jsPDF } from 'jspdf';
 import sistemasPlanes from '../../data/sistemas.json';
-import useSimuladorPDF, { buildSimuladorPDFDocument } from './useSimuladorPDF';
+import useSimuladorPDF, {
+    buildCompleteSimulationSemesters,
+    buildPlanillaPlanPDFDocument,
+    buildSimuladorPDFDocument,
+} from './useSimuladorPDF';
 
 const mockAddToast = vi.fn();
 vi.mock('@heroui/react', () => ({
@@ -228,5 +232,147 @@ describe('useSimuladorPDF - Planilla vectorial imprimible con jsPDF', () => {
         expect(setDescargandoPDF).toHaveBeenCalledWith(true);
         expect(setDescargandoPDF).toHaveBeenLastCalledWith(false);
         expect(mockTrackDescargaPDF).toHaveBeenCalledWith({ plan: '17.14' });
+    });
+
+    it('genera la planilla del plan en blanco y pre-rellenada con progreso, notas y optativas', () => {
+        const spyBlank = createSpyJsPDFClass();
+        const plan1713 = sistemasPlanes.find((p) => p.plan_numero === '17.13')?.materias || [];
+        const subset = [
+            plan1713[0], // 11071
+            plan1713[1], // 11072
+            plan1713.find((m) => m.codigo === 'OP1'),
+        ].filter(Boolean);
+
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spyBlank.MockJsPDF),
+            materias: subset,
+            plan: '17.13',
+            includeProgress: false,
+        });
+
+        expect(spyBlank.textCalls.some((t) => t.includes('Planilla del Plan de Estudios'))).toBe(true);
+        // En blanco no marca ninguna tilde (todas en rect mode 'S')
+        const filledBoxesBlank = spyBlank.rectCalls.filter(
+            ([, , w, h, style]) => w === 2.9 && h === 2.9 && style === 'FD',
+        );
+        expect(filledBoxesBlank).toHaveLength(0);
+
+        const spyProgress = createSpyJsPDFClass();
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spyProgress.MockJsPDF),
+            materias: subset,
+            plan: '17.13',
+            progreso: {
+                [subset[0].codigo]: 'Promocionado',
+                [subset[1].codigo]: 'Regular',
+                OP1: 'Promocionado',
+            },
+            progresoDetalles: {
+                [subset[0].codigo]: { notaFinal: 8, notaRegularizacion: 8 },
+                [subset[1].codigo]: { notaRegularizacion: 6, fechaRegularidad: { anio: 2025, cuatrimestre: 1 } },
+                OP1: { notaFinal: 9, notaRegularizacion: 9, nombreOptativa: 'COMPILADORES', codigoOptativa: '11809' },
+            },
+            includeProgress: true,
+        });
+
+        expect(spyProgress.textCalls.some((t) => t.includes('Planilla de Avance Académico'))).toBe(
+            true,
+        );
+        expect(
+            spyProgress.textCalls.some((t) => t.includes('Optativa I: COMPILADORES (Acta 11809)')),
+        ).toBe(true);
+        expect(spyProgress.textCalls).toContain('8');
+        expect(spyProgress.textCalls).toContain('9');
+        const filledBoxesProgress = spyProgress.rectCalls.filter(
+            ([, , w, h, style]) => w === 2.9 && h === 2.9 && style === 'FD',
+        );
+        // Al menos Promocionado (2) + Regular (1) = 3 casillas marcadas
+        expect(filledBoxesProgress.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('imprime el hito de transición 17.13 -> 17.14 dentro del PDF de simulación', () => {
+        const spy = createSpyJsPDFClass();
+        buildSimuladorPDFDocument({
+            jsPDF: /** @type {any} */ (spy.MockJsPDF),
+            historialSemestres: [
+                {
+                    cuatri: '2',
+                    anioActual: 2026,
+                    planSemestre: '17.13',
+                    materiasDelSemestre: [MOCK_MATERIAS[0]],
+                    progresoSnapshot: { '11071': 'Cursado' },
+                    progresoBaseSnapshot: {},
+                    transicionAplicada: {
+                        fromPlan: '17.13',
+                        toPlan: '17.14',
+                        anio: 2027,
+                        cuatri: '1',
+                        equivalenciasCount: 12,
+                    },
+                },
+            ],
+            plan: '17.14',
+            materias: MOCK_MATERIAS,
+        });
+
+        expect(
+            spy.textCalls.some((t) =>
+                t.includes('Cambio de plan aplicado (1°C 2027): Plan 17.13 -> Plan 17.14 · 12 materias homologadas'),
+            ),
+        ).toBe(true);
+    });
+
+    it('completa automáticamente el PDF hasta finalizar la carrera por el camino más corto cuando aún faltan materias', () => {
+        const materiasCadena = [
+            { codigo: 'M1', nombre: 'Intro', anio: 1, cuatrimestre: 1, horas_semanales: 6, horas_totales: 96, correlativas: [] },
+            { codigo: 'M2', nombre: 'Prog I', anio: 1, cuatrimestre: 2, horas_semanales: 6, horas_totales: 96, correlativas: ['M1'] },
+            { codigo: 'M3', nombre: 'Algo I', anio: 2, cuatrimestre: 3, horas_semanales: 6, horas_totales: 96, correlativas: ['M2'] },
+            { codigo: 'TES', nombre: 'Tesina de Grado', anio: 5, cuatrimestre: 11, horas_totales: 120, correlativas: [], tesis: true },
+        ];
+
+        const completos = buildCompleteSimulationSemesters({
+            historialSemestres: [
+                {
+                    cuatri: '1',
+                    anioActual: 2026,
+                    materiasDelSemestre: [materiasCadena[0]],
+                    progresoSnapshot: { M1: 'Cursado', M2: 'No Cursado', M3: 'No Cursado', TES: 'No Cursado' },
+                    progresoBaseSnapshot: {},
+                    planSemestre: '17.14',
+                },
+            ],
+            materias: materiasCadena,
+            progresoSimulado: { M1: 'Cursado', M2: 'No Cursado', M3: 'No Cursado', TES: 'No Cursado' },
+            progresoBase: { M1: 'Cursado', M2: 'No Cursado', M3: 'No Cursado', TES: 'No Cursado' },
+            anioActual: 2026,
+            cuatri: '2',
+            plan: '17.14',
+        });
+
+        expect(completos.map((s) => `${s.cuatri}°C-${s.anioActual}`)).toEqual([
+            '1°C-2026',
+            '2°C-2026',
+            '1°C-2027',
+            '2°C-2027',
+        ]);
+        expect(completos[1].esProyectado).toBe(true);
+        expect(completos[1].materiasDelSemestre.map((m) => m.codigo)).toEqual(['M2']);
+        expect(completos[2].materiasDelSemestre.map((m) => m.codigo)).toEqual(['M3']);
+        expect(completos[3].materiasDelSemestre.map((m) => m.codigo)).toEqual(['TES']);
+
+        const spy = createSpyJsPDFClass();
+        buildSimuladorPDFDocument({
+            jsPDF: /** @type {any} */ (spy.MockJsPDF),
+            historialSemestres: completos.slice(0, 1),
+            materias: materiasCadena,
+            progresoSimulado: { M1: 'Cursado', M2: 'No Cursado', M3: 'No Cursado', TES: 'No Cursado' },
+            progresoBase: { M1: 'Cursado', M2: 'No Cursado', M3: 'No Cursado', TES: 'No Cursado' },
+            anioActual: 2026,
+            cuatri: '2',
+            plan: '17.14',
+        });
+
+        expect(spy.textCalls.some((t) => t.includes('(Proyectado - camino más corto)'))).toBe(true);
+        expect(spy.textCalls.some((t) => t.includes('Tesina de Grado'))).toBe(true);
     });
 });

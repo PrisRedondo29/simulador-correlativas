@@ -36,6 +36,7 @@ export const CAREERS_REGISTRY = [
                 intermediateTitle: {
                     name: 'Título Intermedio (Analista)',
                     maxCuatrimestre: 6,
+                    excludeCodigos: ['11278'],
                 },
                 features: {
                     planTransition: false,

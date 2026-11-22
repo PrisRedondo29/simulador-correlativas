@@ -12,6 +12,8 @@ describe('tituloIntermedioUtils - Título Intermedio declarativo por plan', () =
 
         expect(intermedio14.length).toBeGreaterThan(0);
         expect(intermedio14.every((m) => Number(m.cuatrimestre) <= 6 && !m.tesis)).toBe(true);
+        // Bases de Datos Distribuidas (11278) pertenece a la Licenciatura en Plan 17.14
+        expect(intermedio14.some((m) => m.codigo === '11278')).toBe(false);
 
         expect(intermedio13.length).toBeGreaterThan(0);
         expect(intermedio13.every((m) => Number(m.cuatrimestre) <= 7 && !m.tesis)).toBe(true);

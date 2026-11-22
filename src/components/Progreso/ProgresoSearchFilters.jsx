@@ -13,6 +13,7 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   ClipboardPaste,
+  FileDown,
   LayoutGrid,
   List,
   MoreVertical,
@@ -53,6 +54,7 @@ export default function ProgresoSearchFilters({
   onRequestApproveGroup,
   onRequestReset,
   onOpenSawebImport,
+  onOpenExportPdf = null,
 }) {
   const inputRef = useRef(null);
 
@@ -223,6 +225,20 @@ export default function ProgresoSearchFilters({
               >
                 <span className="hidden sm:inline">Importar Analítico</span>
                 <span className="sm:hidden">Analítico</span>
+              </Button>
+            )}
+
+            {/* Descargar planilla imprimible (con progreso o en blanco) */}
+            {onOpenExportPdf && (
+              <Button
+                size="sm"
+                variant="bordered"
+                onPress={onOpenExportPdf}
+                className="inline-flex border-[#E2E8F0] dark:border-[#24303C] text-[#334155] dark:text-[#CBD5E1] font-medium min-h-9"
+                startContent={<FileDown className="w-3.5 h-3.5 text-[#005A36] dark:text-[#6EE7B7]" />}
+              >
+                <span className="hidden sm:inline">Descargar PDF</span>
+                <span className="sm:hidden">PDF</span>
               </Button>
             )}
 

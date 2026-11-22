@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { addToast, Button, Spinner, useDisclosure, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from '@heroui/react';
 
 import HeaderSimulador from '../components/Simulador/HeaderSimulador';
@@ -24,15 +25,32 @@ import { CloudDownload, Columns2, FileDown, GraduationCap, Layers, Maximize2, Mi
 import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
+import { evaluarElegibilidadActual, OFERTA_RESOLUCION_89_2025 } from '../utils/Transicion/transicionUtils';
 import { useAuth } from '../context/AuthContext';
 import { trackCambioVista, trackGuardarSimulacion } from '../services/analyticsService';
-import storageRepository from '../services/storageRepository';
+import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 
 function Simulador({ plan: initialPlan }) {
-    const [plan, setPlan] = useState(() => initialPlan || storageRepository.getPlanActivo() || DEFAULT_PLAN);
+    const location = useLocation();
+    const routeState = location.state || null;
+    const [plan, setPlan] = useState(
+        () => routeState?.plan || initialPlan || storageRepository.getPlanActivo() || DEFAULT_PLAN,
+    );
     const [anioInicio, setAnioInicio] = useState('2026');
     const [cuatriInicio, setCuatriInicio] = useState('1');
+    const [customPlanTransition, setCustomPlanTransition] = useState(() => {
+        if (routeState?.planTransition) {
+            return {
+                enabled: Boolean(routeState.planTransition.enabled),
+                targetPlan: routeState.planTransition.targetPlan || '17.14',
+                anio: Number(routeState.planTransition.anio) || 2027,
+                cuatri: String(routeState.planTransition.cuatri || '1'),
+            };
+        }
+        return null;
+    });
+    const autoImportedTransitionRef = React.useRef(false);
 
     const [openedAccordions, setOpenedAccordions] = useState(new Set());
     const [descargandoPDF, setDescargandoPDF] = useState(false);
@@ -109,6 +127,10 @@ function Simulador({ plan: initialPlan }) {
 
     const {
         materias,
+        sourceMaterias,
+        activePlan: rawActivePlan,
+        targetPlanData,
+        transitionAppliedInfo = null,
         cargando,
         progresoSimulado, setProgresoSimulado,
         progresoBase,
@@ -122,7 +144,55 @@ function Simulador({ plan: initialPlan }) {
         handleAnterior,
         handleSiguiente,
         importarHistorialReconstruido,
-    } = useSimuladorEstado({ plan, anioInicio, cuatriInicio });
+        syncPlanTransition,
+        cargarSimulacionGuardada,
+    } = useSimuladorEstado({
+        plan,
+        anioInicio,
+        cuatriInicio,
+        planTransition: customPlanTransition,
+    });
+
+    const activePlan = rawActivePlan || plan;
+    const basePlanMaterias = sourceMaterias?.length ? sourceMaterias : materias;
+
+    const suggestedTransitionPeriod = React.useMemo(() => {
+        if (plan !== '17.13' || !targetPlanData?.materiasTarget?.length || !basePlanMaterias?.length) {
+            return { anio: 2027, cuatri: '1' };
+        }
+        const eleg = evaluarElegibilidadActual({
+            progreso: progresoReal || {},
+            materias1713: basePlanMaterias,
+            materias1714: targetPlanData.materiasTarget,
+            equivalenciasData: targetPlanData.equivalencias || {},
+            anioActual: new Date().getFullYear(),
+            sourcePlan: '17.13',
+            targetPlan: '17.14',
+        });
+        return {
+            anio: eleg.puedeCambiarseHoy ? eleg.anioEvaluado : eleg.anioHabilitado,
+            cuatri: String(eleg.cuatrimestreHabilitado || 1),
+        };
+    }, [plan, targetPlanData, basePlanMaterias, progresoReal]);
+
+    const planTransition = React.useMemo(
+        () =>
+            customPlanTransition || {
+                enabled: false,
+                targetPlan: '17.14',
+                anio: suggestedTransitionPeriod.anio,
+                cuatri: suggestedTransitionPeriod.cuatri,
+            },
+        [customPlanTransition, suggestedTransitionPeriod],
+    );
+
+    const handleChangePlanTransition = React.useCallback(
+        (nextTransition) => {
+            setCustomPlanTransition(nextTransition);
+            syncPlanTransition?.(nextTransition);
+        },
+        [syncPlanTransition],
+    );
 
     const handleImportarProgreso = () => {
         if (!progresoReal || Object.keys(progresoReal).length === 0) {
@@ -136,8 +206,12 @@ function Simulador({ plan: initialPlan }) {
         onConfirmImportOpen();
     };
 
-    const ejecutarImportacion = () => {
-        const resultado = importUtils.reconstruirHistorial(progresoReal, progresoDetallesReal, materias);
+    const ejecutarImportacion = React.useCallback(() => {
+        const resultado = importUtils.reconstruirHistorial(
+            progresoReal,
+            progresoDetallesReal,
+            basePlanMaterias,
+        );
         if (resultado) {
             importarHistorialReconstruido(resultado);
             if (resultado.historial.length > 0) {
@@ -151,7 +225,29 @@ function Simulador({ plan: initialPlan }) {
                 color: 'warning',
             });
         }
-    };
+    }, [progresoReal, progresoDetallesReal, basePlanMaterias, importarHistorialReconstruido]);
+
+    React.useEffect(() => {
+        if (
+            !routeState?.autoImportFromTransition ||
+            autoImportedTransitionRef.current ||
+            cargando ||
+            !basePlanMaterias?.length ||
+            !progresoReal
+        ) {
+            return undefined;
+        }
+        const hayImportables = basePlanMaterias.some((m) =>
+            ['Regular', 'Aprobado', 'Promocionado'].includes(progresoReal[m.codigo]),
+        );
+        if (!hayImportables) return undefined;
+
+        autoImportedTransitionRef.current = true;
+        const timer = setTimeout(() => {
+            ejecutarImportacion();
+        }, 0);
+        return () => clearTimeout(timer);
+    }, [routeState, cargando, basePlanMaterias, progresoReal, ejecutarImportacion]);
 
     const {
         tituloIntermedioNombre,
@@ -159,8 +255,8 @@ function Simulador({ plan: initialPlan }) {
         progresoIntermedio,
         isIntermedioCompletado,
     } = React.useMemo(() => {
-        const nombre = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
-        const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
+        const nombre = tituloIntermedioUtils.getTituloIntermedioNombre(activePlan);
+        const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(activePlan, materias);
         const codigosSet = new Set(materiasIntermedio.map((m) => String(m.codigo)));
 
         const mappedProgreso = {};
@@ -177,7 +273,7 @@ function Simulador({ plan: initialPlan }) {
             progresoIntermedio: progreso,
             isIntermedioCompletado: progreso.totales > 0 && progreso.completadas === progreso.totales,
         };
-    }, [plan, materias, progresoSimulado]);
+    }, [activePlan, materias, progresoSimulado]);
 
     const { cambioDeEstado, materiasCursables } = useSimuladorMaterias(
         materias,
@@ -189,6 +285,60 @@ function Simulador({ plan: initialPlan }) {
         semestreActualPlan
     );
 
+    const oferta1713Note = React.useMemo(() => {
+        if (activePlan !== '17.13' || !planTransition?.enabled) return null;
+        const anioLookup = Math.min(Math.max(Number(anioActual) || 2026, 2024), 2029);
+        const oferta = OFERTA_RESOLUCION_89_2025[anioLookup]?.plan1713;
+        if (!oferta) return null;
+        const cerradas = (materiasCursables || []).filter(
+            (m) => !oferta.cuatrimestres.includes(Number(m.cuatrimestre) || 1),
+        );
+        if (cerradas.length > 0) {
+            return `Oferta 17.13 en ${anioLookup}: ${oferta.descripcion}. ${cerradas.length} ${
+                cerradas.length === 1 ? 'materia disponible ya cerró cursado regular' : 'materias disponibles ya cerraron cursado regular'
+            } en 17.13 (solo final).`;
+        }
+        return `Oferta 17.13 en ${anioLookup}: ${oferta.descripcion}.`;
+    }, [activePlan, planTransition?.enabled, anioActual, materiasCursables]);
+
+    const [savedSimRevision, setSavedSimRevision] = useState(0);
+
+    React.useEffect(() => {
+        return subscribeStorageChanges(() => setSavedSimRevision((prev) => prev + 1));
+    }, []);
+
+    const savedSimulation = React.useMemo(() => {
+        void savedSimRevision;
+        if (!activePlan) return null;
+        return (
+            storageRepository.getSimulacion(activePlan, null) ||
+            (plan && plan !== activePlan ? storageRepository.getSimulacion(plan, null) : null) ||
+            null
+        );
+    }, [activePlan, plan, savedSimRevision]);
+
+    const handleCargarSimulacionGuardada = React.useCallback(() => {
+        if (!savedSimulation) return;
+        cargarSimulacionGuardada?.(savedSimulation);
+        if (savedSimulation.transitionAppliedInfo) {
+            setCustomPlanTransition({
+                enabled: true,
+                targetPlan: savedSimulation.transitionAppliedInfo.toPlan || '17.14',
+                anio: Number(savedSimulation.transitionAppliedInfo.anio) || 2027,
+                cuatri: String(savedSimulation.transitionAppliedInfo.cuatri || '1'),
+            });
+        }
+        try {
+            addToast({
+                title: 'Simulación restaurada',
+                description: 'Se cargó tu última simulación guardada.',
+                color: 'success',
+            });
+        } catch {
+            /* Toast opcional */
+        }
+    }, [savedSimulation, cargarSimulacionGuardada]);
+
     const projection = React.useMemo(() => {
         if (!materias.length || !progresoBase) return null;
         return calculateProjection({
@@ -197,8 +347,9 @@ function Simulador({ plan: initialPlan }) {
             progresoBase,
             cuatriActual: cuatri,
             anioActual,
+            equivalenciasMap: targetPlanData?.equivalencias || null,
         });
-    }, [materias, historialSemestres, progresoBase, cuatri, anioActual]);
+    }, [materias, historialSemestres, progresoBase, cuatri, anioActual, targetPlanData]);
 
     const handleNodeClick = React.useCallback((codigo) => {
         if (interactionMode === 'explorar') {
@@ -248,8 +399,12 @@ function Simulador({ plan: initialPlan }) {
 
     const { handleDownloadPDF } = useSimuladorPDF({
         historialSemestres,
-        plan,
+        plan: activePlan,
         materias,
+        progresoSimulado,
+        progresoBase,
+        anioActual,
+        cuatri,
         setDescargandoPDF,
     });
 
@@ -263,22 +418,25 @@ function Simulador({ plan: initialPlan }) {
     const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
 
     const handleGuardarSimulacion = () => {
-        const existe = storageRepository.getSimulacion(plan, null);
+        const existe = storageRepository.getSimulacion(activePlan, null);
         if (existe) {
             onHistoryClose();
             setIsFinishModalOpen(false);
             onGuardarOpen();
             return;
         }
-        setSimulacionLocal(plan, {
+        setSimulacionLocal(activePlan, {
             historialSemestres,
             progresoSimulado,
             progresoBase,
             anioActual,
             cuatri,
             simulacionTerminada,
+            activePlan,
+            transitionAppliedInfo,
         });
-        trackGuardarSimulacion({ plan, semestresCompletados: historialSemestres.length });
+        setSavedSimRevision((prev) => prev + 1);
+        trackGuardarSimulacion({ plan: activePlan, semestresCompletados: historialSemestres.length });
         try {
             addToast({ title: 'Éxito', description: 'Simulación guardada', color: 'success' });
         } catch {
@@ -469,14 +627,17 @@ function Simulador({ plan: initialPlan }) {
                 onClose={onConfigClose}
                 setAnio={setAnioInicio}
                 setCuatri={setCuatriInicio}
-                setPlan={setPlan}
+                setPlan={(nextPlan) => {
+                    setPlan(nextPlan);
+                    setCustomPlanTransition(null);
+                }}
                 initialPlan={initialPlan}
             />
             <GuardarSimulacion
                 isOpen={isGuardarOpen}
                 onOpenChange={onGuardarOpenChange}
                 onClose={onGuardarClose}
-                plan={plan}
+                plan={activePlan}
                 historialSemestres={historialSemestres}
                 progresoSimulado={progresoSimulado}
                 progresoBase={progresoBase}
@@ -490,7 +651,7 @@ function Simulador({ plan: initialPlan }) {
                 onConfirm={ejecutarImportacion}
                 progresoReal={progresoReal}
                 progresoDetalles={progresoDetallesReal}
-                materias={materias}
+                materias={basePlanMaterias}
             />
             <SimuladorModeModal
                 isOpen={Boolean(plan) && !cargando && isModeModalOpen}
@@ -502,7 +663,7 @@ function Simulador({ plan: initialPlan }) {
                 onClose={() => setIsFinishModalOpen(false)}
                 anioActual={anioActual}
                 cuatri={cuatri}
-                plan={plan}
+                plan={activePlan}
                 historialSemestres={historialSemestres}
                 progresoSimulado={progresoSimulado}
                 progresoBase={progresoBase}
@@ -525,9 +686,10 @@ function Simulador({ plan: initialPlan }) {
                                 <span className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9]">
                                     Historial Académico
                                 </span>
-                                {plan && (
+                                {activePlan && (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold">
-                                        Plan {plan}
+                                        Plan {activePlan}
+                                        {plan !== activePlan ? ` (desde ${plan})` : ''}
                                     </span>
                                 )}
                             </ModalHeader>
@@ -536,9 +698,11 @@ function Simulador({ plan: initialPlan }) {
                                     historialSemestres={historialSemestres}
                                     openedAccordions={openedAccordions}
                                     setOpenedAccordions={setOpenedAccordions}
-                                    plan={plan}
+                                    plan={activePlan}
                                     materias={materias}
                                     embedded={true}
+                                    onDownloadPDF={handleDownloadPDF}
+                                    descargandoPDF={descargandoPDF}
                                 />
                             </ModalBody>
                             {historialSemestres.length > 0 && (
@@ -699,7 +863,8 @@ function Simulador({ plan: initialPlan }) {
 
                             {isSidePanelOpen && (
                                 <SimuladorSidePanel
-                                    plan={plan}
+                                    plan={activePlan}
+                                    basePlan={plan}
                                     interactionMode={interactionMode}
                                     onChangeInteractionMode={handleChangeInteractionMode}
                                     cuatri={cuatri}
@@ -716,10 +881,18 @@ function Simulador({ plan: initialPlan }) {
                                     isIntermedioCompletado={isIntermedioCompletado}
                                     historialSemestres={historialSemestres}
                                     onOpenHistory={onHistoryOpen}
+                                    onDownloadPDF={handleDownloadPDF}
+                                    descargandoPDF={descargandoPDF}
+                                    planTransition={planTransition}
+                                    onChangePlanTransition={handleChangePlanTransition}
+                                    suggestedTransitionPeriod={suggestedTransitionPeriod}
+                                    transitionAppliedInfo={transitionAppliedInfo}
+                                    oferta1713Note={oferta1713Note}
                                     selectedMateria={selectedMateria}
                                     selectedRelations={selectedRelations}
                                     onSelectCodigo={setSelectedCodigo}
                                     onImportarProgreso={handleImportarProgreso}
+                                    onCargarSimulacion={savedSimulation ? handleCargarSimulacionGuardada : null}
                                     onOpenConfig={onConfigOpen}
                                     onOpenTutorial={() => setTourOpenKey((k) => k + 1)}
                                     onClose={() => setIsSidePanelOpen(false)}
@@ -749,6 +922,10 @@ function Simulador({ plan: initialPlan }) {
                                     rounded={false}
                                     topOverlayContent={
                                         <SimuladorFloatingHud
+                                            plan={activePlan}
+                                            basePlan={plan}
+                                            planTransition={planTransition}
+                                            transitionAppliedInfo={transitionAppliedInfo}
                                             interactionMode={interactionMode}
                                             onChangeInteractionMode={handleChangeInteractionMode}
                                             cuatri={cuatri}
@@ -762,6 +939,8 @@ function Simulador({ plan: initialPlan }) {
                                             onOpenFinishModal={() => setIsFinishModalOpen(true)}
                                             historialSemestres={historialSemestres}
                                             onOpenHistory={onHistoryOpen}
+                                            onDownloadPDF={handleDownloadPDF}
+                                            descargandoPDF={descargandoPDF}
                                             selectedMateria={selectedMateria}
                                             selectedStats={selectedStats}
                                             onClearSelected={() => setSelectedCodigo(null)}
@@ -796,7 +975,8 @@ function Simulador({ plan: initialPlan }) {
                     />
 
                     <HeaderSimulador
-                        plan={plan}
+                        plan={activePlan}
+                        basePlan={plan}
                         anioActual={anioActual}
                         cuatri={cuatri}
                         anioInicio={anioInicio}
@@ -805,6 +985,15 @@ function Simulador({ plan: initialPlan }) {
                         onChangeInteractionMode={handleChangeInteractionMode}
                         onOpenConfig={onConfigOpen}
                         onImportarProgreso={handleImportarProgreso}
+                        onCargarSimulacion={savedSimulation ? handleCargarSimulacionGuardada : null}
+                        onDownloadPDF={handleDownloadPDF}
+                        descargandoPDF={descargandoPDF}
+                        hasHistorial={historialSemestres.length > 0}
+                        planTransition={planTransition}
+                        onChangePlanTransition={handleChangePlanTransition}
+                        suggestedTransitionPeriod={suggestedTransitionPeriod}
+                        transitionAppliedInfo={transitionAppliedInfo}
+                        oferta1713Note={oferta1713Note}
                         simulacionTerminada={simulacionTerminada}
                     />
 
@@ -818,15 +1007,17 @@ function Simulador({ plan: initialPlan }) {
                                 historialSemestres={historialSemestres}
                                 openedAccordions={openedAccordions}
                                 setOpenedAccordions={setOpenedAccordions}
-                                plan={plan}
+                                plan={activePlan}
                                 materias={materias}
+                                onDownloadPDF={handleDownloadPDF}
+                                descargandoPDF={descargandoPDF}
                             />
 
                             <div className="flex-1 min-h-0 flex flex-col">
                                 {simulacionTerminada ? (
                                     <CarreraFinalizada
                                         anioActual={anioActual}
-                                        plan={plan}
+                                        plan={activePlan}
                                         historialSemestres={historialSemestres}
                                         progresoSimulado={progresoSimulado}
                                         progresoBase={progresoBase}

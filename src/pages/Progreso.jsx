@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { Spinner } from "@heroui/react";
+import { Spinner, useDisclosure } from "@heroui/react";
 import { useActivePlan, usePlanCapabilities } from "../context/PlanContext";
 import usePlanData from "../hooks/usePlanData";
 import useProgresoDashboard from "../hooks/Progreso/useProgresoDashboard";
@@ -11,6 +11,7 @@ import MateriaContextPanel from "../components/Progreso/MateriaContextPanel";
 import LeyendaEstados from "../components/Progreso/LeyendaEstados";
 import PlanSelectionModal from "../components/Progreso/modals/PlanSelectionModal";
 import ImportarSawebModal from "../components/Progreso/modals/ImportarSawebModal";
+import ExportarPlanillaPDFModal from "../components/Progreso/modals/ExportarPlanillaPDFModal";
 import InteractiveTourOverlay from "../components/Tutorial/InteractiveTourOverlay";
 import { TOUR_IDS, TUTORIAL_TOURS } from "../config/tutorialTours";
 
@@ -43,6 +44,12 @@ export default function Progreso() {
     setProgresoDetalles,
     initialSoloIncompletas: Boolean(location.state?.soloIncompletas),
   });
+
+  const {
+    isOpen: isExportPdfOpen,
+    onOpen: onExportPdfOpen,
+    onOpenChange: onExportPdfOpenChange,
+  } = useDisclosure();
 
   const handleBeforeTourStep = useCallback(
     (step) => {
@@ -112,6 +119,7 @@ export default function Progreso() {
         onRequestApproveGroup={dashboard.requestApproveGroup}
         onRequestReset={dashboard.onResetOpen}
         onOpenSawebImport={dashboard.onSawebImportOpen}
+        onOpenExportPdf={onExportPdfOpen}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
@@ -178,6 +186,17 @@ export default function Progreso() {
         plan={plan}
         materias={materias}
         onApplyImport={dashboard.importarDesdeSaweb}
+      />
+
+      <ExportarPlanillaPDFModal
+        isOpen={isExportPdfOpen}
+        onOpenChange={onExportPdfOpenChange}
+        plan={plan}
+        materias={materias}
+        progreso={progreso}
+        progresoDetalles={progresoDetalles}
+        kpis={dashboard.kpis}
+        onOpenSawebImport={dashboard.onSawebImportOpen}
       />
     </div>
   );

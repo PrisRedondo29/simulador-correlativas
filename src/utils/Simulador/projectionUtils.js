@@ -53,14 +53,17 @@ function esActividadFlexible(materia) {
  *   progresoBase?: ProgresoSimuladorMap,
  *   cuatriActual: string | number,
  *   anioActual: string | number,
+ *   equivalenciasMap?: import('../../types/domain').EquivalenciasMap | null,
  * }} params
  * @returns {ProyeccionCarrera}
  */
 export const calculateProjection = ({
     materias,
     historialSemestres,
+    progresoBase = {},
     cuatriActual,
     anioActual,
+    equivalenciasMap = null,
 }) => {
     /** @type {Record<string, ProyeccionItem>} */
     const items = {};
@@ -69,10 +72,14 @@ export const calculateProjection = ({
     /** @type {Record<number, string>} */
     const labels = {};
     const materiasRestantes = [...materias];
+    const materiasSet = new Set(materias.map((m) => m.codigo));
 
     // 1. Mapear materias ya aprobadas (Pasado)
     /** @type {Set<string>} */
     const colocadas = new Set();
+    /** @type {Map<string, number>} */
+    const completedColByCode = new Map();
+
     historialSemestres.forEach((semestre, index) => {
         const col = index + 1;
         labels[col] = `C${semestre.cuatri} ${semestre.anioActual}`;
@@ -82,12 +89,18 @@ export const calculateProjection = ({
             const isCompleted = st === 'Cursado' || st === 'Aprobado' || st === 'Promocionado' || st === 'Regular';
 
             if (isCompleted) {
-                items[m.codigo] = {
-                    columna: col,
-                    estado: 'Aprobada',
-                };
-                colocadas.add(m.codigo);
+                if (!completedColByCode.has(m.codigo)) {
+                    completedColByCode.set(m.codigo, col);
+                }
+                if (materiasSet.has(m.codigo)) {
+                    items[m.codigo] = {
+                        columna: col,
+                        estado: 'Aprobada',
+                    };
+                    colocadas.add(m.codigo);
+                }
             } else if (
+                materiasSet.has(m.codigo) &&
                 semestre.progresoBaseSnapshot?.[m.codigo] !== 'Cursado' &&
                 semestre.progresoBaseSnapshot?.[m.codigo] !== 'Aprobado'
             ) {
@@ -100,6 +113,40 @@ export const calculateProjection = ({
             }
         });
     });
+
+    // Homologadas en progresoBase (ej. transición 17.13 -> 17.14): ubicarlas en el cuatrimestre real donde aprobaron su origen
+    if (progresoBase) {
+        const fallbackCol = historialSemestres.length === 0 ? 0 : historialSemestres.length;
+        materias.forEach((m) => {
+            if (colocadas.has(m.codigo)) return;
+            const st = progresoBase[m.codigo];
+            if (st === 'Cursado' || st === 'Aprobado' || st === 'Promocionado') {
+                let targetCol = completedColByCode.get(m.codigo) ?? null;
+
+                if (targetCol == null && equivalenciasMap) {
+                    const reqs = equivalenciasMap[m.codigo];
+                    if (Array.isArray(reqs) && reqs.length > 0) {
+                        const sourceCols = reqs
+                            .map((reqCode) => completedColByCode.get(reqCode))
+                            .filter(/** @returns {c is number} */ (c) => typeof c === 'number');
+                        if (sourceCols.length > 0) {
+                            targetCol = Math.max(...sourceCols);
+                        }
+                    }
+                }
+
+                const resolvedCol = targetCol ?? fallbackCol;
+                if (resolvedCol === 0 && !labels[0]) {
+                    labels[0] = 'Equiv.';
+                }
+                items[m.codigo] = {
+                    columna: resolvedCol,
+                    estado: 'Aprobada',
+                };
+                colocadas.add(m.codigo);
+            }
+        });
+    }
 
     // Si ya se completaron todas las materias del plan, no agregamos una columna vacía futura.
     if (materias.length > 0 && colocadas.size >= materias.length) {

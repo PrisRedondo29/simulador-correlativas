@@ -6,6 +6,7 @@ import {
     ChevronRight,
     CloudDownload,
     Compass,
+    FileDown,
     GitBranch,
     GraduationCap,
     History,
@@ -15,6 +16,7 @@ import {
     X,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import PlanTransitionControl from './PlanTransitionControl';
 
 /**
  * Alternativa 2 (Split View): Panel lateral derecho colapsable para escritorio.
@@ -23,6 +25,7 @@ import { Link } from 'react-router-dom';
  */
 function SimuladorSidePanel({
     plan,
+    basePlan = null,
     interactionMode,
     onChangeInteractionMode,
     cuatri,
@@ -39,10 +42,18 @@ function SimuladorSidePanel({
     isIntermedioCompletado,
     historialSemestres,
     onOpenHistory,
+    onDownloadPDF = null,
+    descargandoPDF = false,
+    planTransition = null,
+    onChangePlanTransition = null,
+    suggestedTransitionPeriod = null,
+    transitionAppliedInfo = null,
+    oferta1713Note = null,
     selectedMateria,
     selectedRelations,
     onSelectCodigo,
     onImportarProgreso,
+    onCargarSimulacion = null,
     onOpenConfig,
     onOpenTutorial,
     onClose,
@@ -66,6 +77,7 @@ function SimuladorSidePanel({
                     {plan && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-[11px] font-semibold shrink-0">
                             Plan {plan}
+                            {basePlan && basePlan !== plan ? ` (desde ${basePlan})` : ''}
                         </span>
                     )}
                 </div>
@@ -227,6 +239,18 @@ function SimuladorSidePanel({
                             </div>
                         )}
 
+                        {/* Hito programado de Cambio de Plan (17.13 -> 17.14) */}
+                        <PlanTransitionControl
+                            basePlan={basePlan || plan}
+                            activePlan={plan}
+                            anioActual={anioActual}
+                            planTransition={planTransition}
+                            onChangePlanTransition={onChangePlanTransition}
+                            suggestedPeriod={suggestedTransitionPeriod}
+                            transitionAppliedInfo={transitionAppliedInfo}
+                            oferta1713Note={oferta1713Note}
+                        />
+
                         {/* Resumen de Historial */}
                         {historialSemestres?.length > 0 && (
                             <div className="bg-[#F8FAFC] dark:bg-[#0F1419] border border-[#E2E8F0] dark:border-[#2A3540] rounded-xl p-3 flex items-center justify-between gap-2">
@@ -240,16 +264,32 @@ function SimuladorSidePanel({
                                         {historialSemestres.length === 1 ? '' : 's'}
                                     </span>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    variant="flat"
-                                    onPress={onOpenHistory}
-                                    title="Abrir el detalle de cuatrimestres simulados"
-                                    startContent={<History size={14} />}
-                                    className="font-semibold text-xs h-8 rounded-lg bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#005A36] dark:text-[#6EE7B7] shrink-0"
-                                >
-                                    Ver ({historialSemestres.length})
-                                </Button>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                    {onDownloadPDF && (
+                                        <Button
+                                            size="sm"
+                                            variant="flat"
+                                            onPress={onDownloadPDF}
+                                            isLoading={descargandoPDF}
+                                            title="Descargar planilla PDF imprimible"
+                                            aria-label="Descargar PDF"
+                                            startContent={!descargandoPDF && <FileDown size={13} />}
+                                            className="font-semibold text-xs h-8 px-2.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-[#005A36] dark:text-[#86EFAC]"
+                                        >
+                                            PDF
+                                        </Button>
+                                    )}
+                                    <Button
+                                        size="sm"
+                                        variant="flat"
+                                        onPress={onOpenHistory}
+                                        title="Abrir el detalle de cuatrimestres simulados"
+                                        startContent={<History size={14} />}
+                                        className="font-semibold text-xs h-8 rounded-lg bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#005A36] dark:text-[#6EE7B7] shrink-0"
+                                    >
+                                        Ver ({historialSemestres.length})
+                                    </Button>
+                                </div>
                             </div>
                         )}
                     </>
@@ -387,6 +427,19 @@ function SimuladorSidePanel({
                         startContent={<CloudDownload size={14} />}
                     >
                         Importar desde Mis Materias
+                    </Button>
+                )}
+
+                {onCargarSimulacion && (
+                    <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={onCargarSimulacion}
+                        title="Restaurar tu última simulación guardada"
+                        className="w-full font-semibold rounded-xl text-xs h-9 bg-white dark:bg-[#161D24] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38]"
+                        startContent={<History size={14} />}
+                    >
+                        Cargar simulación guardada
                     </Button>
                 )}
 

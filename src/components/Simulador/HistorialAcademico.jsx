@@ -1,11 +1,13 @@
 import React from 'react';
 import { Accordion, AccordionItem, Button } from '@heroui/react';
 import {
+    ArrowRightLeft,
     CalendarRange,
     CheckCircle2,
     ChevronsUpDown,
     Clock,
     CloudDownload,
+    FileDown,
     GraduationCap,
 } from 'lucide-react';
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
@@ -20,6 +22,8 @@ function HistorialAcademico({
     plan,
     materias,
     embedded = false,
+    onDownloadPDF = null,
+    descargandoPDF = false,
 }) {
     if (!historialSemestres || historialSemestres.length === 0) return null;
 
@@ -91,15 +95,29 @@ function HistorialAcademico({
                     </span>
                 </div>
 
-                <Button
-                    size="sm"
-                    variant="flat"
-                    onPress={handleToggleAll}
-                    startContent={<ChevronsUpDown size={14} />}
-                    className="font-medium text-xs h-8 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
-                >
-                    {allOpened ? 'Contraer todos' : 'Expandir todos'}
-                </Button>
+                <div className="flex items-center gap-1.5">
+                    {onDownloadPDF && (
+                        <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={onDownloadPDF}
+                            isLoading={descargandoPDF}
+                            startContent={!descargandoPDF && <FileDown size={14} />}
+                            className="font-semibold text-xs h-8 rounded-xl bg-[#ECFDF5] dark:bg-[#102A20] border border-[#A7F3D0] dark:border-[#1E4D38] text-[#005A36] dark:text-[#86EFAC]"
+                        >
+                            PDF
+                        </Button>
+                    )}
+                    <Button
+                        size="sm"
+                        variant="flat"
+                        onPress={handleToggleAll}
+                        startContent={<ChevronsUpDown size={14} />}
+                        className="font-medium text-xs h-8 rounded-xl bg-[#F1F5F9] dark:bg-[#1E2730] text-[#334155] dark:text-[#E2E8F0]"
+                    >
+                        {allOpened ? 'Contraer todos' : 'Expandir todos'}
+                    </Button>
+                </div>
             </div>
 
             {/* Lista Moderna de Cuatrimestres */}
@@ -165,6 +183,12 @@ function HistorialAcademico({
                                         <span className="text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums">
                                             {item.cuatri}° Cuatrimestre · {item.anioActual}
                                         </span>
+
+                                        {item.planSemestre && (
+                                            <span className="px-1.5 py-0.5 rounded-md bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[10px] font-semibold text-[#475569] dark:text-[#CBD5E1]">
+                                                Plan {item.planSemestre}
+                                            </span>
+                                        )}
 
                                         {item.esImportado && (
                                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-[#E0F2FE] dark:bg-[#16384F] text-[#075985] dark:text-[#7DD3FC] text-[10px] font-semibold">
@@ -273,6 +297,17 @@ function HistorialAcademico({
                                                     </span>
                                                 ))}
                                             </div>
+                                        </div>
+                                    )}
+
+                                    {item.transicionAplicada && (
+                                        <div className="mt-3 rounded-xl border border-[#A7F3D0] dark:border-[#1E4D38] bg-[#ECFDF5] dark:bg-[#102A20]/70 px-3 py-2 flex items-center gap-2 text-xs font-semibold text-[#005A36] dark:text-[#86EFAC]">
+                                            <ArrowRightLeft size={14} className="shrink-0" aria-hidden="true" />
+                                            <span>
+                                                Cambio de plan aplicado en {item.transicionAplicada.cuatri}°C{' '}
+                                                {item.transicionAplicada.anio}: Plan {item.transicionAplicada.fromPlan} →{' '}
+                                                {item.transicionAplicada.toPlan} ({item.transicionAplicada.equivalenciasCount} equivalencias)
+                                            </span>
                                         </div>
                                     )}
                                 </>

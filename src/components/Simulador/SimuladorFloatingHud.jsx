@@ -6,6 +6,7 @@ import {
     ChevronRight,
     CloudDownload,
     Compass,
+    FileDown,
     GitBranch,
     GraduationCap,
     History,
@@ -24,6 +25,10 @@ const GLASS_ISLAND_CLASS =
  * flotando directamente sobre el lienzo punteado del grafo en escritorio.
  */
 function SimuladorFloatingHud({
+    plan = null,
+    basePlan = null,
+    planTransition = null,
+    transitionAppliedInfo = null,
     interactionMode,
     onChangeInteractionMode,
     cuatri,
@@ -37,6 +42,8 @@ function SimuladorFloatingHud({
     onOpenFinishModal,
     historialSemestres,
     onOpenHistory,
+    onDownloadPDF = null,
+    descargandoPDF = false,
     selectedMateria,
     selectedStats,
     onClearSelected,
@@ -110,6 +117,15 @@ function SimuladorFloatingHud({
                         ) : (
                             <>
                                 <div className="flex items-center gap-1.5 px-1">
+                                    {plan && (
+                                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] whitespace-nowrap">
+                                            {transitionAppliedInfo
+                                                ? `${plan} (desde ${basePlan || '17.13'})`
+                                                : basePlan === '17.13' && planTransition?.enabled
+                                                  ? `${plan} -> 17.14 (${planTransition.cuatri}°C ${planTransition.anio})`
+                                                  : `Plan ${plan}`}
+                                        </span>
+                                    )}
                                     <span className="text-xs font-bold text-[#005A36] dark:text-[#6EE7B7] tabular-nums whitespace-nowrap">
                                         {cuatri}° Cuatri · {anioActual}
                                     </span>
@@ -142,6 +158,20 @@ function SimuladorFloatingHud({
                                 >
                                     Historial ({historialSemestres.length})
                                 </Button>
+                                {onDownloadPDF && (
+                                    <Button
+                                        size="sm"
+                                        variant="flat"
+                                        onPress={onDownloadPDF}
+                                        isLoading={descargandoPDF}
+                                        aria-label="Descargar PDF"
+                                        title="Descargar planilla PDF imprimible"
+                                        startContent={!descargandoPDF && <FileDown size={13} />}
+                                        className="font-semibold text-xs h-8 px-2 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC]"
+                                    >
+                                        PDF
+                                    </Button>
+                                )}
                             </>
                         )}
                     </div>

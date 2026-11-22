@@ -105,4 +105,50 @@ describe('projectionUtils - Proyección de cuatrimestres del Simulador', () => {
         expect(res.currentCol).toBeNull();
         expect(res.maxCol).toBe(historialCompleto.length);
     });
+
+    it('distribuye equivalencias 17.13 -> 17.14 en los cuatrimestres reales sin generar columna Postergado', () => {
+        const historial1713 = [
+            {
+                cuatri: '1',
+                anioActual: 2025,
+                materiasDelSemestre: [{ codigo: '11071', nombre: 'Intro Old', anio: 1, cuatrimestre: 1, correlativas: [] }],
+                progresoSnapshot: { '11071': 'Cursado' },
+                progresoBaseSnapshot: {},
+            },
+            {
+                cuatri: '2',
+                anioActual: 2025,
+                materiasDelSemestre: [{ codigo: '11074', nombre: 'Prog I Old', anio: 1, cuatrimestre: 2, correlativas: ['11071'] }],
+                progresoSnapshot: { '11074': 'Cursado' },
+                progresoBaseSnapshot: { '11071': 'Cursado' },
+            },
+        ];
+
+        const materias1714 = [
+            { codigo: '11271', nombre: 'Intro New', cuatrimestre: '1', correlativas: [] },
+            { codigo: '11274', nombre: 'Prog Estructurada', cuatrimestre: '2', correlativas: ['11271'] },
+            { codigo: '11275', nombre: 'EDA I', cuatrimestre: '3', correlativas: ['11274'] },
+            { codigo: 'TES', nombre: 'Tesina', cuatrimestre: '11', tesis: true, correlativas: [] },
+        ];
+
+        const res = calculateProjection({
+            materias: materias1714,
+            historialSemestres: historial1713,
+            progresoBase: { '11271': 'Cursado', '11274': 'Cursado' },
+            cuatriActual: '1',
+            anioActual: 2026,
+            equivalenciasMap: {
+                '11271': ['11071'],
+                '11274': ['11074'],
+            },
+        });
+
+        // No debe contabilizar códigos viejos (11071/11074) ni mandar el resto a Postergado
+        expect(res.items['11071']).toBeUndefined();
+        expect(res.items['11271']).toEqual({ columna: 1, estado: 'Aprobada' });
+        expect(res.items['11274']).toEqual({ columna: 2, estado: 'Aprobada' });
+        expect(res.items['11275']).toEqual({ columna: 3, estado: 'Presente' });
+        expect(res.items.TES).toEqual({ columna: 4, estado: 'Proyectada' });
+        expect(Object.values(res.labels)).not.toContain('Postergado');
+    });
 });

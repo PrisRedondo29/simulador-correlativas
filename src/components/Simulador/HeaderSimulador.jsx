@@ -1,10 +1,12 @@
 import React from 'react';
 import { Button, ButtonGroup } from '@heroui/react';
-import { CalendarRange, CloudDownload, GitBranch, SlidersHorizontal } from 'lucide-react';
+import { CalendarRange, CloudDownload, FileDown, GitBranch, History, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import PlanTransitionControl from './PlanTransitionControl';
 
 function HeaderSimulador({
     plan,
+    basePlan = null,
     anioActual,
     cuatri,
     anioInicio,
@@ -13,6 +15,15 @@ function HeaderSimulador({
     onChangeInteractionMode,
     onOpenConfig,
     onImportarProgreso,
+    onCargarSimulacion = null,
+    onDownloadPDF = null,
+    descargandoPDF = false,
+    hasHistorial = false,
+    planTransition = null,
+    onChangePlanTransition = null,
+    suggestedTransitionPeriod = null,
+    transitionAppliedInfo = null,
+    oferta1713Note = null,
     simulacionTerminada,
 }) {
     const cuatriDisplay = cuatri || cuatriInicio || '1';
@@ -35,6 +46,7 @@ function HeaderSimulador({
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38] text-xs font-semibold">
                                 <i className="fa-solid fa-graduation-cap text-[10px]" aria-hidden="true" />
                                 Plan {plan}
+                                {basePlan && basePlan !== plan ? ` (desde ${basePlan})` : ''}
                             </span>
                         )}
                         {!simulacionTerminada && interactionMode === 'planificar' && (
@@ -98,6 +110,29 @@ function HeaderSimulador({
                                 Importar desde Mis Materias
                             </Button>
                         )}
+                        {onCargarSimulacion && (
+                            <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={onCargarSimulacion}
+                                className="font-semibold rounded-xl text-xs h-9 bg-white dark:bg-[#161D24] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38]"
+                                startContent={<History size={14} />}
+                            >
+                                Cargar guardada
+                            </Button>
+                        )}
+                        {hasHistorial && onDownloadPDF && (
+                            <Button
+                                size="sm"
+                                variant="flat"
+                                onPress={onDownloadPDF}
+                                isLoading={descargandoPDF}
+                                className="font-semibold rounded-xl text-xs h-9 bg-[#ECFDF5] dark:bg-[#102A20] text-[#005A36] dark:text-[#86EFAC] border border-[#A7F3D0] dark:border-[#1E4D38]"
+                                startContent={!descargandoPDF && <FileDown size={14} />}
+                            >
+                                PDF
+                            </Button>
+                        )}
                         <Button
                             data-tour="simulador-opciones"
                             size="sm"
@@ -111,6 +146,20 @@ function HeaderSimulador({
                     </div>
                 </div>
             </div>
+
+            {interactionMode === 'planificar' && (basePlan || plan) === '17.13' && (
+                <PlanTransitionControl
+                    compact={true}
+                    basePlan={basePlan || plan}
+                    activePlan={plan}
+                    anioActual={anioDisplay}
+                    planTransition={planTransition}
+                    onChangePlanTransition={onChangePlanTransition}
+                    suggestedPeriod={suggestedTransitionPeriod}
+                    transitionAppliedInfo={transitionAppliedInfo}
+                    oferta1713Note={oferta1713Note}
+                />
+            )}
         </header>
     );
 }
