@@ -191,7 +191,14 @@ export function calcularEstadisticasAcademicas({
     const safeProgreso = progreso || {};
     const safeDetalles = progresoDetalles || {};
 
-    /** @type {Array<{ codigo: string, nombre: string, nota: number, modalidad: 'Promoción' | 'Final Regular' | 'Final Libre' | 'Aplazo', fecha: string | null }>} */
+    /** @type {Array<{
+     *   codigo: string,
+     *   nombre: string,
+     *   nota: number,
+     *   modalidad: 'Promoción' | 'Final Regular' | 'Final Libre' | 'Aplazo',
+     *   fecha: string | null,
+     *   periodo?: { anio: number, cuatri: 1 | 2, label: string } | null,
+     * }>} */
     const registrosNotas = [];
 
     /** @type {Map<string, {
@@ -290,15 +297,23 @@ export function calcularEstadisticasAcademicas({
             const notaNum = Number(intento.nota);
             if (!Number.isFinite(notaNum) || notaNum < 1 || notaNum > 10) return;
 
+            const periodoAplazo = inferirPeriodoDesdeFechaIso(intento.fecha);
+
             registrosNotas.push({
                 codigo,
                 nombre: displayNombre,
                 nota: notaNum,
                 modalidad: 'Aplazo',
                 fecha: intento.fecha || null,
+                periodo: periodoAplazo
+                    ? {
+                          anio: periodoAplazo.anio,
+                          cuatri: periodoAplazo.cuatri,
+                          label: `${periodoAplazo.cuatri}°C ${periodoAplazo.anio}`,
+                      }
+                    : null,
             });
 
-            const periodoAplazo = inferirPeriodoDesdeFechaIso(intento.fecha);
             if (periodoAplazo) {
                 const bucket = ensurePeriodoBucket(periodoAplazo);
                 bucket.sumaNotasTodas += notaNum;
@@ -432,6 +447,13 @@ export function calcularEstadisticasAcademicas({
                 nota: notaAprobada,
                 modalidad: modalidadHistograma,
                 fecha: detalles?.fechaAprobacion || intentoAprobado?.fecha || null,
+                periodo: periodoMateria
+                    ? {
+                          anio: periodoMateria.anio,
+                          cuatri: periodoMateria.cuatri,
+                          label: `${periodoMateria.cuatri}°C ${periodoMateria.anio}`,
+                      }
+                    : null,
             });
         }
 
@@ -673,6 +695,11 @@ export function calcularEstadisticasAcademicas({
         promedios,
     };
 
+    const cronologiaNotas = {
+        sinAplazos: soloAprobadasRegistros,
+        conAplazos: registrosNotas,
+    };
+
     return {
         resumen,
         histograma,
@@ -680,6 +707,7 @@ export function calcularEstadisticasAcademicas({
         modalidadesYFinales,
         avancePorAnio,
         listadoDesagregado,
+        cronologiaNotas,
     };
 }
 

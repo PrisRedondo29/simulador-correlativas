@@ -189,6 +189,12 @@ describe('Estadisticas - Página de métricas y gráficos académicos', () => {
         fireEvent.click(screen.getByLabelText('Nota 8: 2 actas'));
         expect(screen.getByText('Nota 8 · 2 actas')).toBeTruthy();
 
+        // Pestaña Materia por materia en Bloque 1
+        fireEvent.click(screen.getByRole('tab', { name: 'Materia por materia (Desagrupado)' }));
+        expect(screen.getByText(/materias con calificación/i)).toBeTruthy();
+        expect(screen.getByLabelText('Intro a la Programación - Nota 8')).toBeTruthy();
+        expect(screen.getByLabelText('Álgebra y Lógica - Nota 8')).toBeTruthy();
+
         // Pestaña 1 por defecto: Materias por cuatri -> cambia a Promedio por cuatri
         expect(screen.getByRole('button', { name: 'Horas' })).toBeTruthy();
         fireEvent.click(screen.getByRole('tab', { name: 'Promedio por cuatri' }));

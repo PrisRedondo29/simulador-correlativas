@@ -708,6 +708,230 @@ function PromedioTimelineChart({ items, includeAplazos }) {
 }
 
 /**
+ * Gráfico individual de notas materia por materia (desagrupado),
+ * donde cada barrita representa una materia cursada/rendida con su nota correspondiente del 1 al 10.
+ */
+function NotasMateriaPorMateriaChart({ items = [], incluirAplazos = false }) {
+  const [orden, setOrden] = useState("cronologico");
+  const [selectedKey, setSelectedKey] = useState(null);
+
+  const filteredItems = useMemo(() => {
+    return items.filter((item) => {
+      if (!incluirAplazos && item.modalidad === "Aplazo") return false;
+      return item.nota != null && Number.isFinite(item.nota);
+    });
+  }, [items, incluirAplazos]);
+
+  const sortedItems = useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      if (orden === "cronologico") {
+        const aVal = a.periodo ? a.periodo.anio * 10 + a.periodo.cuatri : 0;
+        const bVal = b.periodo ? b.periodo.anio * 10 + b.periodo.cuatri : 0;
+        if (aVal !== bVal) return aVal - bVal;
+        if (a.fecha && b.fecha) return a.fecha.localeCompare(b.fecha);
+        return a.nombre.localeCompare(b.nombre);
+      }
+      if (orden === "nota-desc") {
+        if (b.nota !== a.nota) return b.nota - a.nota;
+        return a.nombre.localeCompare(b.nombre);
+      }
+      return 0;
+    });
+  }, [filteredItems, orden]);
+
+  const selectedItem = useMemo(() => {
+    if (!selectedKey) return null;
+    return (
+      sortedItems.find((it, idx) => `${it.codigo}-${idx}` === selectedKey) ||
+      null
+    );
+  }, [selectedKey, sortedItems]);
+
+  if (sortedItems.length === 0) {
+    return (
+      <div className="py-10 text-center text-xs text-[#64748B] dark:text-[#94A3B8]">
+        No hay materias con notas numéricas registradas para graficar.
+      </div>
+    );
+  }
+
+  const colWidth = 38;
+  const minWidth = Math.max(360, sortedItems.length * colWidth);
+
+  return (
+    <div className="space-y-3">
+      {/* Barra superior de controles */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+          Mostrando {sortedItems.length} materias con calificación
+        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+            Orden:
+          </span>
+          <select
+            value={orden}
+            onChange={(e) => setOrden(e.target.value)}
+            aria-label="Ordenar materias en el gráfico"
+            className="h-7 px-2 rounded-lg text-[11px] bg-[#F8FAFC] dark:bg-[#11171D] text-[#1E293B] dark:text-[#F1F5F9] border border-[#E2E8F0] dark:border-[#2A3540] focus:outline-hidden"
+          >
+            <option value="cronologico">Cronológico (por cursada)</option>
+            <option value="nota-desc">Por Nota (mayor a menor)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Gráfico de barras scrollable */}
+      <div className="overflow-x-auto pb-2 border-b border-[#E2E8F0] dark:border-[#24303C]">
+        <div
+          className="relative pt-6 pb-2"
+          style={{ minWidth: `${minWidth}px` }}
+        >
+          {/* Líneas guía: Nota 7 (Promoción) y Nota 4 (Aprobación) */}
+          <div
+            className="absolute left-0 right-0 border-b border-dashed border-[#005A36]/40 dark:border-[#6EE7B7]/40 pointer-events-none z-0"
+            style={{ top: "30%" }}
+            title="Línea de Promoción (Nota 7)"
+          >
+            <span className="absolute -top-3.5 right-1 text-[9px] font-semibold text-[#005A36] dark:text-[#6EE7B7] bg-white/90 dark:bg-[#161D24]/90 px-1 rounded-xs">
+              7 Promoción
+            </span>
+          </div>
+
+          <div
+            className="absolute left-0 right-0 border-b border-dashed border-[#64748B]/30 dark:border-[#94A3B8]/30 pointer-events-none z-0"
+            style={{ top: "60%" }}
+            title="Línea de Aprobación (Nota 4)"
+          >
+            <span className="absolute -top-3.5 right-1 text-[9px] font-semibold text-[#64748B] dark:text-[#94A3B8] bg-white/90 dark:bg-[#161D24]/90 px-1 rounded-xs">
+              4 Aprobación
+            </span>
+          </div>
+
+          {/* Grilla de columnas */}
+          <div
+            className="grid gap-1.5 items-end h-40 relative z-10"
+            style={{
+              gridTemplateColumns: `repeat(${sortedItems.length}, minmax(32px, 1fr))`,
+            }}
+          >
+            {sortedItems.map((item, idx) => {
+              const itemKey = `${item.codigo}-${idx}`;
+              const isSelected = selectedKey === itemKey;
+              const heightPct = Math.min(
+                100,
+                Math.max(10, Math.round((item.nota / 10) * 100)),
+              );
+
+              let barColor = "bg-[#2563EB] dark:bg-[#60A5FA]";
+              if (item.modalidad === "Promoción") {
+                barColor = "bg-[#005A36] dark:bg-[#4A9D68]";
+              } else if (item.modalidad === "Final Libre") {
+                barColor = "bg-[#7C3AED] dark:bg-[#A78BFA]";
+              } else if (item.modalidad === "Aplazo") {
+                barColor = "bg-[#DC2626] dark:bg-[#F87171]";
+              }
+
+              return (
+                <button
+                  key={itemKey}
+                  type="button"
+                  onClick={() => setSelectedKey(isSelected ? null : itemKey)}
+                  className="group flex flex-col items-center gap-1 focus:outline-hidden cursor-pointer"
+                  aria-label={`${item.nombre} - Nota ${item.nota}`}
+                >
+                  <span
+                    className={`text-[11px] font-bold tabular-nums transition-colors ${
+                      isSelected
+                        ? "text-[#005A36] dark:text-[#6EE7B7]"
+                        : "text-[#1E293B] dark:text-[#F1F5F9]"
+                    }`}
+                  >
+                    {item.nota}
+                  </span>
+
+                  <div className="w-full flex flex-col justify-end h-28">
+                    <div
+                      style={{ height: `${heightPct}%` }}
+                      className={`w-full max-w-[24px] mx-auto rounded-t-md transition-all ${barColor} ${
+                        isSelected
+                          ? "ring-2 ring-[#005A36] dark:ring-[#6EE7B7] ring-offset-1 scale-105"
+                          : "group-hover:opacity-90"
+                      }`}
+                    />
+                  </div>
+
+                  <span className="text-[10px] font-semibold text-[#475569] dark:text-[#CBD5E1] truncate w-full text-center">
+                    {item.codigo}
+                  </span>
+
+                  {item.periodo && (
+                    <span className="text-[9px] text-[#64748B] dark:text-[#94A3B8] truncate w-full text-center leading-none">
+                      {item.periodo.label.replace("Cuatri", "C")}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Tarjeta de inspección al hacer click */}
+      {selectedItem ? (
+        <div className="rounded-xl bg-[#F8FAFC] dark:bg-[#11171D] border border-[#E2E8F0] dark:border-[#24303C] p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="space-y-0.5">
+            <div className="text-xs font-bold text-[#1E293B] dark:text-[#F1F5F9]">
+              {selectedItem.nombre}
+            </div>
+            <div className="text-[11px] text-[#64748B] dark:text-[#94A3B8] flex items-center gap-2">
+              <span>Cód. {selectedItem.codigo}</span>
+              {selectedItem.periodo && (
+                <span>· {selectedItem.periodo.label}</span>
+              )}
+              {selectedItem.fecha && (
+                <span>· {formatFechaDisplay(selectedItem.fecha)}</span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span
+              className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold border ${
+                MODALIDAD_STYLES[selectedItem.modalidad] ||
+                MODALIDAD_STYLES["Final Regular"]
+              }`}
+            >
+              {selectedItem.modalidad}
+            </span>
+            <div className="text-right">
+              <span className="text-xs text-[#64748B] dark:text-[#94A3B8] block text-[10px]">
+                Nota
+              </span>
+              <span className="text-base font-bold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums">
+                {selectedItem.nota}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedKey(null)}
+              className="text-xs text-[#64748B] hover:text-[#1E293B] dark:text-[#94A3B8] ml-1"
+              aria-label="Cerrar detalle"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] text-center italic">
+          Hacé clic en cualquier barrita para ver la materia, fecha y condición.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
  * Página de Estadísticas Académicas (`/estadisticas`).
  * Presenta 4 bloques visuales claros sobre el historial cargado del estudiante.
  */
@@ -732,6 +956,7 @@ export default function Estadisticas() {
 
   const [incluirAplazosHist, setIncluirAplazosHist] = useState(false);
   const [selectedNotaBin, setSelectedNotaBin] = useState(null);
+  const [modoVisualizacionNotas, setModoVisualizacionNotas] = useState("histograma");
   const [cuatriTab, setCuatriTab] = useState("materias");
   const [cuatriMetrica, setCuatriMetrica] = useState("materias");
   const [incluirAplazosCurva, setIncluirAplazosCurva] = useState(false);
@@ -1093,6 +1318,25 @@ export default function Estadisticas() {
                     </div>
                   </div>
 
+                  {/* Pestañas de modo: Histograma agrupado vs Materia por materia */}
+                  <Tabs
+                    size="sm"
+                    variant="underlined"
+                    selectedKey={modoVisualizacionNotas}
+                    onSelectionChange={setModoVisualizacionNotas}
+                    aria-label="Modo de visualización de calificaciones"
+                    classNames={{
+                      tabList: "gap-4 border-b border-[#E2E8F0] dark:border-[#24303C] p-0",
+                      tab: "h-8 px-1 text-xs",
+                    }}
+                  >
+                    <Tab key="histograma" title="Histograma (Agrupado por nota)" />
+                    <Tab
+                      key="materia-por-materia"
+                      title="Materia por materia (Desagrupado)"
+                    />
+                  </Tabs>
+
                   {/* Leyenda de colores */}
                   <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#475569] dark:text-[#CBD5E1]">
                     <span className="inline-flex items-center gap-1.5">
@@ -1116,7 +1360,12 @@ export default function Estadisticas() {
                   </div>
                 </div>
 
-                {vistaHist.totalActas === 0 ? (
+                {modoVisualizacionNotas === "materia-por-materia" ? (
+                  <NotasMateriaPorMateriaChart
+                    items={stats.cronologiaNotas?.conAplazos || []}
+                    incluirAplazos={incluirAplazosHist}
+                  />
+                ) : vistaHist.totalActas === 0 ? (
                   <div className="py-10 text-center text-xs text-[#64748B] dark:text-[#94A3B8]">
                     Todavía no hay notas numéricas cargadas en este plan.
                   </div>
