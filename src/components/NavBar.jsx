@@ -412,9 +412,9 @@ export default function NavBar({ plan, isCollapsed, setIsCollapsed }) {
     const pageTitle = ROUTE_TITLES[location.pathname] || tenant?.portalTitle || 'Simulador Estudiantil';
     const activePlan = plan || DEFAULT_PLAN;
 
-    const handleSignIn = async (rememberMe) => {
+    const handleSignIn = async () => {
         try {
-            const loggedUser = await signIn(rememberMe);
+            const loggedUser = await signIn();
             if (loggedUser) {
                 addToast({ title: '¡Bienvenido!', description: 'Sesión iniciada correctamente', color: 'success' });
                 if (firestoreWarning) {

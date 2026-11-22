@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Button, Switch } from '@heroui/react';
+import { Modal, ModalBody, ModalContent, ModalFooter, ModalHeader, Button } from '@heroui/react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../context/AuthContext';
 
 const LoginModal = ({ isOpen, onClose, onConfirm }) => {
-    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const { authError, clearAuthError } = useAuth();
 
@@ -13,7 +12,7 @@ const LoginModal = ({ isOpen, onClose, onConfirm }) => {
         setLoading(true);
         clearAuthError();
         try {
-            const success = await onConfirm(rememberMe);
+            const success = await onConfirm();
             if (success) onClose();
         } catch {
             /* El error se muestra en authError desde AuthContext */
@@ -58,23 +57,8 @@ const LoginModal = ({ isOpen, onClose, onConfirm }) => {
                         {loading ? 'Conectando…' : 'Continuar con Google'}
                     </button>
 
-                    <div className="flex items-center justify-between px-1 py-2 border-t border-default-200 mt-2">
-                        <div className="flex flex-col">
-                            <span className="text-sm font-semibold">Recordarme</span>
-                            <span className="text-xs text-foreground/50">
-                                {rememberMe ? 'Sesión activa por 7 días' : 'Sesión activa por 24 horas'}
-                            </span>
-                        </div>
-                        <Switch
-                            size="sm"
-                            isSelected={rememberMe}
-                            onValueChange={setRememberMe}
-                            color="primary"
-                        />
-                    </div>
-
                     <p className="text-[11px] text-foreground/65 leading-relaxed px-1 pt-2 border-t border-default-200">
-                        Iniciar sesión es opcional y almacena tu UID, correo y progreso académico en Firebase únicamente para sincronizar entre dispositivos.{' '}
+                        Iniciar sesión es opcional y almacena tu correo y progreso académico en Firebase únicamente para sincronizar entre dispositivos.{' '}
                         <Link
                             to="/legal"
                             onClick={onClose}

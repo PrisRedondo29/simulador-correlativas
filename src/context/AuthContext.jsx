@@ -40,22 +40,9 @@ import { AuthContext } from './authContextInstance';
 // CONSTANTES Y HELPERS DE SESIÓN
 // ============================================================================
 
-const SESSION_KEY = 'auth_session';
-const EXPIRY_SHORT = 24 * 60 * 60 * 1000;  // 24 horas
-const EXPIRY_LONG = 7 * 24 * 60 * 60 * 1000; // 7 días
+const LEGACY_SESSION_KEY = 'auth_session';
 
-const saveSession = (rememberMe) => {
-    const expiry = Date.now() + (rememberMe ? EXPIRY_LONG : EXPIRY_SHORT);
-    storageRepository.setJSON(SESSION_KEY, { expiry, rememberMe }, { silent: true });
-};
-
-const clearSession = () => storageRepository.remove(SESSION_KEY, { silent: true });
-
-const isSessionExpired = () => {
-    const parsed = storageRepository.getJSON(SESSION_KEY, null);
-    if (!parsed || typeof parsed.expiry !== 'number') return true;
-    return Date.now() > parsed.expiry;
-};
+const clearLegacySession = () => storageRepository.remove(LEGACY_SESSION_KEY, { silent: true });
 
 const isAcademicStorageKey = (key) =>
     Boolean(key) &&
@@ -300,15 +287,10 @@ export function AuthProvider({ children }) {
 
     // --- Efecto Principal: Observer de Autenticación ---
     useEffect(() => {
-        if (isSessionExpired()) {
-            logout().catch(() => {});
-            clearSession();
-        }
-
         const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
             setLoading(true);
             try {
-                if (firebaseUser && !isSessionExpired()) {
+                if (firebaseUser) {
                     setUser(firebaseUser);
                     userRef.current = firebaseUser;
 
@@ -359,10 +341,9 @@ export function AuthProvider({ children }) {
     const clearFirestoreWarning = useCallback(() => setFirestoreWarning(null), []);
 
     const signIn = useCallback(
-        async (rememberMe = false) => {
+        async () => {
             clearAuthError();
             clearFirestoreWarning();
-            saveSession(rememberMe);
 
             try {
                 const { user: loggedUser, firestoreWarning: warning } = await loginConGoogle();
@@ -374,7 +355,7 @@ export function AuthProvider({ children }) {
 
                 return loggedUser;
             } catch (err) {
-                clearSession();
+                clearLegacySession();
                 if (isIntentionalAuthCancel(err)) return null;
 
                 logError(err, { route: window?.location?.pathname });
@@ -394,7 +375,7 @@ export function AuthProvider({ children }) {
         } catch {
             // La limpieza de sesión local es suficiente si falla Firebase Auth
         } finally {
-            clearSession();
+            clearLegacySession();
             setUserRole('user');
             dispatchSync({ type: 'SIGNED_OUT' });
         }
@@ -987,7 +968,7 @@ export function AuthProvider({ children }) {
             // Etapa 4: Completado integral -> limpiar estado pendiente, sesión y (opcional) datos locales
             storageRepository.clearPendingAccountDeletion();
             setPendingAccountDeletion(null);
-            clearSession();
+            clearLegacySession();
             clearAuthError();
             clearFirestoreWarning();
 

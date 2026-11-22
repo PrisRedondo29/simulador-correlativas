@@ -176,10 +176,10 @@ export default function OnboardingGate({ children }) {
         (devSimulateNewcomer || onboardingVersion < CURRENT_ONBOARDING_VERSION) &&
         !isFreeRoute;
 
-    const handleSignIn = async (rememberMe) => {
+    const handleSignIn = async () => {
         awaitingCloudLoginRef.current = true;
         try {
-            const loggedUser = await signIn(rememberMe);
+            const loggedUser = await signIn();
             if (!loggedUser) {
                 awaitingCloudLoginRef.current = false;
                 return null;
