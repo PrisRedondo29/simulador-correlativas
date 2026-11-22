@@ -1,7 +1,7 @@
 import React from 'react';
-import { Clock, Calendar, CheckCircle2, AlertCircle, Circle, HelpCircle, Unlock } from 'lucide-react';
+import { Clock, Calendar, CheckCircle2, AlertCircle, AlertTriangle, Circle, HelpCircle, Unlock } from 'lucide-react';
 
-const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
+const MateriaCard = ({ materia, estado, isNewPlan = false, advisoryMessage = null, onClick }) => {
     const getStatusConfig = () => {
         switch (estado) {
             case 'Aprobado':
@@ -12,7 +12,7 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                     bg: 'bg-[#ECFDF5] dark:bg-[#102A20]/80',
                     accent: 'text-[#166534] dark:text-[#86EFAC]',
                     badgeClass: 'bg-[#D1FAE5] text-[#166534] dark:bg-[#173A24] dark:text-[#86EFAC]',
-                    icon: <CheckCircle2 size={11} strokeWidth={2.5} />,
+                    icon: <CheckCircle2 size={11} strokeWidth={2.5} aria-hidden="true" />,
                     label: 'Aprobada',
                 };
             case 'Cursando':
@@ -22,7 +22,7 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                     bg: 'bg-[#FAF5FF] dark:bg-[#2E1065]/75',
                     accent: 'text-[#6B21A8] dark:text-[#E9D5FF]',
                     badgeClass: 'bg-[#7E22CE] text-white dark:bg-[#9333EA] dark:text-white',
-                    icon: <Clock size={11} strokeWidth={2.5} />,
+                    icon: <Clock size={11} strokeWidth={2.5} aria-hidden="true" />,
                     label: 'Cursando',
                 };
             case 'Regular':
@@ -32,8 +32,18 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                     bg: 'bg-[#FFFBEB] dark:bg-[#2D2210]/70',
                     accent: 'text-[#92400E] dark:text-[#FCD34D]',
                     badgeClass: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D]',
-                    icon: <AlertCircle size={11} strokeWidth={2.5} />,
+                    icon: <AlertCircle size={11} strokeWidth={2.5} aria-hidden="true" />,
                     label: 'Regular',
+                };
+            case 'Posible equivalencia':
+                return {
+                    border: 'border-[#FDE68A] dark:border-[#5C4318]',
+                    sideBar: 'bg-[#D97706]',
+                    bg: 'bg-[#FFFBEB] dark:bg-[#2D2210]/70',
+                    accent: 'text-[#92400E] dark:text-[#FCD34D]',
+                    badgeClass: 'bg-[#FEF3C7] text-[#92400E] dark:bg-[#423115] dark:text-[#FCD34D]',
+                    icon: <AlertTriangle size={11} strokeWidth={2.5} aria-hidden="true" />,
+                    label: 'Confirmar UNLu',
                 };
             case 'Sin equivalencia':
                 return {
@@ -42,7 +52,7 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                     bg: 'bg-[#F8FAFC] dark:bg-[#161D24] opacity-75',
                     accent: 'text-[#64748B] dark:text-[#94A3B8]',
                     badgeClass: 'bg-[#F1F5F9] text-[#64748B] dark:bg-[#1E2730] dark:text-[#94A3B8]',
-                    icon: <HelpCircle size={11} />,
+                    icon: <HelpCircle size={11} aria-hidden="true" />,
                     label: 'Sin equiv.',
                 };
             case 'Disponible':
@@ -95,6 +105,12 @@ const MateriaCard = ({ materia, estado, isNewPlan = false, onClick }) => {
                 <h4 className="text-xs sm:text-sm font-semibold text-[#1E293B] dark:text-[#F1F5F9] leading-snug line-clamp-3 sm:line-clamp-2">
                     {materia.nombre}
                 </h4>
+
+                {advisoryMessage && (
+                    <p className="text-[11px] font-medium text-[#92400E] dark:text-[#FCD34D] bg-[#FEF3C7]/70 dark:bg-[#423115]/60 rounded-lg px-2 py-1 leading-snug">
+                        {advisoryMessage}
+                    </p>
+                )}
 
                 <div className="flex items-center gap-2 mt-auto pt-1.5 border-t border-[#E2E8F0]/60 dark:border-[#2A3540] text-[10px] sm:text-xs text-[#64748B] dark:text-[#94A3B8] font-medium tabular-nums">
                     <span className="inline-flex items-center gap-1">

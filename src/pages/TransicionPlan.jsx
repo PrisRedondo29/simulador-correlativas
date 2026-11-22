@@ -46,11 +46,15 @@ function TransicionPlan() {
     const [progreso, setProgreso] = useState(() =>
         sourcePlan ? storageRepository.getProgreso(sourcePlan, {}) : {},
     );
+    const [progresoDetalles, setProgresoDetalles] = useState(() =>
+        sourcePlan ? storageRepository.getProgresoDetalles(sourcePlan, {}) : {},
+    );
 
     useEffect(() => {
         if (!sourcePlan) return undefined;
         const handleStorage = () => {
             setProgreso(storageRepository.getProgreso(sourcePlan, {}));
+            setProgresoDetalles(storageRepository.getProgresoDetalles(sourcePlan, {}));
         };
         handleStorage();
         return subscribeStorageChanges(handleStorage);
@@ -92,6 +96,7 @@ function TransicionPlan() {
     const elegibilidad = useMemo(() => {
         return evaluarElegibilidadActual({
             progreso,
+            progresoDetalles,
             materias1713: materiasOrigen,
             materias1714: materiasDestino,
             equivalenciasData: equivalenciasData || {},
@@ -99,7 +104,7 @@ function TransicionPlan() {
             sourcePlan,
             targetPlan,
         });
-    }, [progreso, materiasOrigen, materiasDestino, equivalenciasData, anioActual, sourcePlan, targetPlan]);
+    }, [progreso, progresoDetalles, materiasOrigen, materiasDestino, equivalenciasData, anioActual, sourcePlan, targetPlan]);
 
     const {
         anioEvaluado,
@@ -364,6 +369,30 @@ function TransicionPlan() {
                                         </strong>{' '}
                                         sin trámites adicionales.
                                     </div>
+
+                                    {resultadoHoy.equivalenciasPorConfirmar?.length > 0 && (
+                                        <div
+                                            role="status"
+                                            className="p-3 bg-[#FFFBEB] dark:bg-[#2D2210]/70 border border-[#FDE68A] dark:border-[#5C4318] rounded-xl text-xs text-[#92400E] dark:text-[#FCD34D] space-y-2"
+                                        >
+                                            <div className="flex items-start gap-2 font-semibold">
+                                                <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+                                                <span>
+                                                    Posibles equivalencias por confirmar con UNLu (no sumadas automáticamente)
+                                                </span>
+                                            </div>
+                                            <ul className="space-y-1 pl-5 list-disc">
+                                                {resultadoHoy.equivalenciasPorConfirmar.map((item) => (
+                                                    <li key={item.targetCode}>
+                                                        <strong>
+                                                            {item.targetCode} · {item.targetName || item.materia?.nombre}
+                                                        </strong>{' '}
+                                                        — {item.message}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl p-5 space-y-4 flex flex-col justify-between">

@@ -346,6 +346,30 @@ export default function ImportarSawebModal({
                     </p>
                   )}
 
+                  {verifiedResult.advisoryEquivalencias?.length > 0 && (
+                    <div
+                      role="status"
+                      className="rounded-xl border border-[#FDE68A] dark:border-[#5C4318] bg-[#FFFBEB] dark:bg-[#2D2210]/70 p-3 text-xs text-[#92400E] dark:text-[#FCD34D] space-y-1.5"
+                    >
+                      <div className="flex items-start gap-2 font-semibold">
+                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>
+                          Posibles equivalencias detectadas (requieren confirmación con UNLu y no se acreditaron automáticamente)
+                        </span>
+                      </div>
+                      <ul className="list-disc pl-5 space-y-0.5 text-[11px]">
+                        {verifiedResult.advisoryEquivalencias.map((item) => (
+                          <li key={item.targetCode}>
+                            <strong>
+                              {item.targetCode} · {item.targetName}
+                            </strong>{" "}
+                            — {item.message}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {verifiedResult.totalMatched > 0 && (
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-[#E2E8F0] dark:border-[#24303C] bg-[#F8FAFC] dark:bg-[#11171D] px-3.5 py-2.5">
                       <span className="text-xs text-[#475569] dark:text-[#CBD5E1]">

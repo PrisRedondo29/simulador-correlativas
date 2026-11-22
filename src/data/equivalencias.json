@@ -1,120 +1,730 @@
 {
-  "19054": [
-    "11074"
-  ],
-  "39553": [
-    "31972"
-  ],
-  "14026": [
-    "11072"
-  ],
-  "11271": [
-    "11071"
-  ],
-  "13014": [
-    "11072"
-  ],
-  "21256": [
-    "21056"
-  ],
-  "11274": [
-    "11074"
-  ],
-  "11256": [
-    "11056"
-  ],
-  "13021": [
-    "11072",
-    "11073"
-  ],
-  "11275": [
-    "11075"
-  ],
-  "11258": [
-    "11058"
-  ],
-  "13022": [
-    "11081"
-  ],
-  "41426": [
-    "41406"
-  ],
-  "11276": [
-    "11076"
-  ],
-  "13923": [
-    "11082"
-  ],
-  "11259": [
-    "11059"
-  ],
-  "11286": [
-    "11086"
-  ],
-  "11277": [
-    "11077"
-  ],
-  "21279": [
-    "21240"
-  ],
-  "11287": [
-    "11087"
-  ],
-  "14030": [
-    "11075"
-  ],
-  "14027": [
-    "10040"
-  ],
-  "14028": [
-    "11072",
-    "11073"
-  ],
-  "41429": [
-    "41409"
-  ],
-  "11278": [
-    "11078"
-  ],
-  "11260": [
-    "11060"
-  ],
-  "21257": [
-    "21057"
-  ],
-  "11288": [
-    "11088"
-  ],
-  "11419": [
-    "11412",
-    "11417"
-  ],
-  "14034": [
-    "41408",
-    "11408"
-  ],
-  "11292": [
-    "11092"
-  ],
-  "11289": [
-    "11089",
-    "10043"
-  ],
-  "14033": [
-    "11090"
-  ],
-  "21258": [
-    "21058"
-  ],
-  "AO-1714": [
-    "OP1",
-    "OP2",
-    "OP3"
-  ],
-  "TES-1714": [
-    "11095"
-  ],
-  "14029": [
-    "11085"
-  ]
+  "19054": {
+    "targetCode": "19054",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11074"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "39553": {
+    "targetCode": "39553",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["31972"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14026": {
+    "targetCode": "14026",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11072"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11271": {
+    "targetCode": "11271",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11071"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "13014": {
+    "targetCode": "13014",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11072"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "21256": {
+    "targetCode": "21256",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["21056"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11274": {
+    "targetCode": "11274",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11074"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11256": {
+    "targetCode": "11256",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11056"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "13021": {
+    "targetCode": "13021",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11072", "11073"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11275": {
+    "targetCode": "11275",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11075"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11258": {
+    "targetCode": "11258",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11058"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "13022": {
+    "targetCode": "13022",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11081"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "41426": {
+    "targetCode": "41426",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["41406"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11276": {
+    "targetCode": "11276",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11076"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "13923": {
+    "targetCode": "13923",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11082"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11259": {
+    "targetCode": "11259",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11059"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11286": {
+    "targetCode": "11286",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11086"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11277": {
+    "targetCode": "11277",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11077"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "21279": {
+    "targetCode": "21279",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        {
+          "allOf": ["21420"],
+          "label": "Optativa 21420 (Taller de Emprendimientos Tecnológicos)"
+        }
+      ]
+    },
+    "validationStatus": "pending_confirmation",
+    "applicationMode": "advisory",
+    "usagePolicy": "exclusive",
+    "priority": 10,
+    "advisoryMessage": "Posible equivalencia · confirmar con UNLu",
+    "notas": "Vincula 21279 (Gestión de Soluciones Innovadoras) con la optativa 21420 (Taller de Emprendimientos Tecnológicos) según Anexo VI; sujeta a confirmación administrativa UNLu y a regla de no doble cómputo con AO-1714.",
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11287": {
+    "targetCode": "11287",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11087"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14030": {
+    "targetCode": "14030",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11075"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14027": {
+    "targetCode": "14027",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["10040"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14028": {
+    "targetCode": "14028",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11072", "11073"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "41429": {
+    "targetCode": "41429",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["41409"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11278": {
+    "targetCode": "11278",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11078"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11260": {
+    "targetCode": "11260",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11060"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "21257": {
+    "targetCode": "21257",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["21057"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11288": {
+    "targetCode": "11288",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11088"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14031": {
+    "targetCode": "14031",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11412", "11417"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 836/24",
+      "annex": "Anexo VI (rectifica Res. HCS 260/24)"
+    }
+  },
+  "14034": {
+    "targetCode": "14034",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        {
+          "allOf": ["41408"],
+          "label": "Plan 17.13 (Modelos, Simulación y Teoría de la Decisión)"
+        },
+        {
+          "allOf": ["11408"],
+          "historical": true,
+          "label": "Plan histórico (código 11408)"
+        }
+      ]
+    },
+    "validationStatus": "pending_confirmation",
+    "applicationMode": "advisory",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "advisoryMessage": "Posible equivalencia · confirmar con UNLu",
+    "notas": "Alternativa histórica entre 41408 (17.13) y 11408 (plan histórico); pendiente de confirmación formal de UNLu para consolidar automáticamente.",
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11292": {
+    "targetCode": "11292",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11092"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "11289": {
+    "targetCode": "11289",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        {
+          "allOf": ["11089"],
+          "label": "Plan 17.13 (Sistemas Inteligentes)"
+        },
+        {
+          "allOf": ["10043"],
+          "historical": true,
+          "label": "Plan histórico (código 10043)"
+        }
+      ]
+    },
+    "validationStatus": "pending_confirmation",
+    "applicationMode": "advisory",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "advisoryMessage": "Posible equivalencia · confirmar con UNLu",
+    "notas": "Alternativa histórica entre 11089 (17.13) y 10043 (plan histórico); pendiente de confirmación formal de UNLu para consolidar automáticamente.",
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14033": {
+    "targetCode": "14033",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11090"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "21258": {
+    "targetCode": "21258",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["21058"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "AO-1714": {
+    "targetCode": "AO-1714",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["OP1", "OP2", "OP3"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "exclusive",
+    "priority": 50,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "TES-1714": {
+    "targetCode": "TES-1714",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11095"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  },
+  "14029": {
+    "targetCode": "14029",
+    "sourcePlan": "17.13",
+    "targetPlan": "17.14",
+    "requiredAcademicState": "approved",
+    "condition": {
+      "anyOf": [
+        { "allOf": ["11085"] }
+      ]
+    },
+    "validationStatus": "confirmed",
+    "applicationMode": "automatic",
+    "usagePolicy": "shared",
+    "priority": 100,
+    "source": {
+      "resolution": "Res. HCS 260/24",
+      "annex": "Anexo VI"
+    }
+  }
 }

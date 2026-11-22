@@ -118,4 +118,99 @@ describe('useEquivalencias - Mapeo 1:1, N:1, materias huérfanas, búsqueda sin 
         });
         expect(result.current.comparativaHoras?.nuevo.restantes).toBe(0);
     });
+
+    it('soporta reglas AND/OR enriquecidas, UX Opción A para pending_confirmation y optativa 21420 sin doble cómputo', async () => {
+        const plan1713Enriquecido = {
+            plan_numero: '17.13',
+            materias: [
+                { codigo: '11412', nombre: 'Teoría I', anio: 3, cuatrimestre: 5, horas_totales: '80', horas_semanales: '5' },
+                { codigo: '11417', nombre: 'Teoría II', anio: 4, cuatrimestre: 7, horas_totales: '80', horas_semanales: '5' },
+                { codigo: '11089', nombre: 'Sistemas Inteligentes', anio: 5, cuatrimestre: 9, horas_totales: '96', horas_semanales: '6' },
+                { codigo: 'OP1', nombre: 'Optativa I', anio: 5, cuatrimestre: 9, horas_totales: '64', horas_semanales: '4', es_optativa: true },
+            ],
+        };
+        const plan1714Enriquecido = {
+            plan_numero: '17.14',
+            materias: [
+                { codigo: '14031', nombre: 'Teoría de la Computación', anio: 4, cuatrimestre: 7, horas_totales: '96', horas_semanales: '6' },
+                { codigo: '11289', nombre: 'Inteligencia Artificial', anio: 4, cuatrimestre: 8, horas_totales: '96', horas_semanales: '6' },
+                { codigo: '21279', nombre: 'Gestión de Soluciones Innovadoras', anio: 3, cuatrimestre: 6, horas_totales: '64', horas_semanales: '4' },
+            ],
+        };
+
+        mockGetPlanByNumber.mockImplementation(async (plan) =>
+            plan === '17.13' ? plan1713Enriquecido : plan1714Enriquecido,
+        );
+        mockGetEquivalenciasByPlan.mockResolvedValue({
+            14031: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['11412', '11417'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'shared',
+            },
+            11289: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: {
+                    anyOf: [
+                        { allOf: ['11089'] },
+                        { allOf: ['10043'], historical: true },
+                    ],
+                },
+                validationStatus: 'pending_confirmation',
+                applicationMode: 'advisory',
+                usagePolicy: 'shared',
+            },
+            21279: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['21420'] }] },
+                validationStatus: 'pending_confirmation',
+                applicationMode: 'advisory',
+                usagePolicy: 'exclusive',
+                priority: 10,
+            },
+        });
+
+        storageRepository.setProgreso(
+            '17.13',
+            {
+                11412: 'Promocionado',
+                11417: 'Aprobado',
+                11089: 'Aprobado',
+                OP1: 'Aprobado',
+            },
+            { silent: true },
+        );
+        storageRepository.setProgresoDetalles(
+            '17.13',
+            {
+                OP1: { codigoOptativa: '21420', nombreOptativa: 'Taller de Emprendimientos Tecnológicos' },
+            },
+            { silent: true },
+        );
+
+        const { result } = renderHook(() => useEquivalencias(), { wrapper });
+
+        await waitFor(() => {
+            expect(result.current.materiasFiltradas.some((g) => g.materiaNueva.codigo === '14031')).toBe(true);
+        });
+
+        // Solo 14031 (confirmada AND) acredita en consolidado; 11289 y 21279 quedan por confirmar (Opción A)
+        expect(result.current.stats.aprobadasNuevas).toBe(1);
+        expect(result.current.stats.posiblesEquivalencias).toBe(2);
+        // Totales 17.14 = 96 + 96 + 64 = 256; solo descuenta 14031 (96) -> restantes = 160
+        expect(result.current.comparativaHoras?.nuevo).toEqual({ totales: 256, restantes: 160 });
+
+        const grupoIA = result.current.materiasFiltradas.find((g) => g.materiaNueva.codigo === '11289');
+        expect(grupoIA?.estaAprobada).toBe(false);
+        expect(grupoIA?.esPendienteConfirmacion).toBe(true);
+        expect(grupoIA?.advisoryMessage).toBe('Posible equivalencia · confirmar con UNLu');
+
+        const grupo21279 = result.current.materiasFiltradas.find((g) => g.materiaNueva.codigo === '21279');
+        expect(grupo21279?.materiasViejas[0]?.codigo).toBe('21420');
+        expect(grupo21279?.esPendienteConfirmacion).toBe(true);
+    });
 });

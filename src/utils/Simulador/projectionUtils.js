@@ -15,6 +15,10 @@ import {
     ESTADOS_MATERIA,
     evaluarElegibilidadMateria,
 } from '../Progreso/materiaStateMachine';
+import {
+    evaluateEquivalenciaRule,
+    getRuleSourceCodes,
+} from '../Plan/equivalenciasUtils';
 
 /**
  * Construye un mapa de progreso sintético donde los códigos en `codigosAprobados`
@@ -117,15 +121,35 @@ export const calculateProjection = ({
     // Homologadas en progresoBase (ej. transición 17.13 -> 17.14): ubicarlas en el cuatrimestre real donde aprobaron su origen
     if (progresoBase) {
         const fallbackCol = historialSemestres.length === 0 ? 0 : historialSemestres.length;
+        /** @type {Record<string, string>} */
+        const completedProgreso = {};
+        for (const cod of completedColByCode.keys()) {
+            completedProgreso[cod] = 'Cursado';
+        }
+
         materias.forEach((m) => {
             if (colocadas.has(m.codigo)) return;
             const st = progresoBase[m.codigo];
             if (st === 'Cursado' || st === 'Aprobado' || st === 'Promocionado') {
                 let targetCol = completedColByCode.get(m.codigo) ?? null;
 
-                if (targetCol == null && equivalenciasMap) {
-                    const reqs = equivalenciasMap[m.codigo];
-                    if (Array.isArray(reqs) && reqs.length > 0) {
+                if (targetCol == null && equivalenciasMap && equivalenciasMap[m.codigo]) {
+                    const ruleEntry = equivalenciasMap[m.codigo];
+                    const evaluation = evaluateEquivalenciaRule(
+                        ruleEntry,
+                        { sourcePlan: '17.13', targetPlan: '17.14', progreso: completedProgreso },
+                        {
+                            targetCode: m.codigo,
+                            treatSimuladorCursadoAsApproved: true,
+                            includeHistoricalBranches: true,
+                        },
+                    );
+                    const reqs =
+                        evaluation.satisfied && evaluation.matchedSourceCodes.length > 0
+                            ? evaluation.matchedSourceCodes
+                            : getRuleSourceCodes(ruleEntry, { includeHistorical: true });
+
+                    if (reqs.length > 0) {
                         const sourceCols = reqs
                             .map((reqCode) => completedColByCode.get(reqCode))
                             .filter(/** @returns {c is number} */ (c) => typeof c === 'number');

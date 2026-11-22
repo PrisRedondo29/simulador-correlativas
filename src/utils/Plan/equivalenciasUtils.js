@@ -11,6 +11,7 @@
  * @typedef {import('../../types/domain').EquivalenciaRule} EquivalenciaRule
  * @typedef {import('../../types/domain').EquivalenciaRuleEntry} EquivalenciaRuleEntry
  * @typedef {import('../../types/domain').EquivalenciasCatalogMap} EquivalenciasCatalogMap
+ * @typedef {import('../../types/domain').EquivalenciaProgresoEntry} EquivalenciaProgresoEntry
  * @typedef {import('../../types/domain').EquivalenciaEvaluationResult} EquivalenciaEvaluationResult
  * @typedef {import('../../types/domain').EquivalenciaAccreditationResult} EquivalenciaAccreditationResult
  * @typedef {import('../../types/domain').EquivalenciaSourceAllocation} EquivalenciaSourceAllocation
@@ -40,22 +41,85 @@ export const EQUIVALENCIA_ACCREDITATION_MODE = Object.freeze({
 
 export const DEFAULT_ADVISORY_MESSAGE = 'Posible equivalencia · confirmar con UNLu';
 
-const APPROVED_STATES = new Set(['aprobado', 'aprobada']);
+const APPROVED_STATES = new Set(['aprobado', 'aprobada', 'promocionado', 'promocionada']);
 const SIMULADOR_CURSADO_STATES = new Set(['cursado', 'cursada']);
-const REGULAR_OR_HIGHER_STATES = new Set(['aprobado', 'aprobada', 'regular', 'cursado', 'cursada']);
+const REGULAR_OR_HIGHER_STATES = new Set([
+    'aprobado',
+    'aprobada',
+    'promocionado',
+    'promocionada',
+    'regular',
+    'cursado',
+    'cursada',
+]);
+
+/**
+ * Extracts a raw state string from either a flat `EstadoMateria` / `EstadoSimulador`
+ * string entry or a structured `{ estado }` record.
+ *
+ * @param {EquivalenciaProgresoEntry} entry
+ * @returns {string | null}
+ */
+function extractAcademicState(entry) {
+    if (typeof entry === 'string') return entry;
+    if (entry && typeof entry === 'object' && typeof entry.estado === 'string') {
+        return entry.estado;
+    }
+    return null;
+}
+
+/**
+ * Clones a progress map without mutating the input and projects any real optative codes
+ * recorded in `progresoDetalles[slot].codigoOptativa` (e.g. `OP1` -> `21420`) along with
+ * deduplicated `optativeCodes` so shared equivalence evaluation prevents double-counting.
+ *
+ * @param {Record<string, EquivalenciaProgresoEntry>} [progreso={}]
+ * @param {Record<string, { codigoOptativa?: string | null } | null | undefined>} [progresoDetalles={}]
+ * @returns {{ progreso: Record<string, EquivalenciaProgresoEntry>, optativeCodes: string[] }}
+ */
+export function augmentProgresoWithOptativas(progreso = {}, progresoDetalles = {}) {
+    /** @type {Record<string, EquivalenciaProgresoEntry>} */
+    const enriched = { ...(progreso || {}) };
+    /** @type {string[]} */
+    const optativeCodes = [];
+    /** @type {Set<string>} */
+    const seen = new Set();
+
+    if (progresoDetalles && typeof progresoDetalles === 'object') {
+        for (const [slotCode, detalle] of Object.entries(progresoDetalles)) {
+            const codigoOptativa =
+                typeof detalle?.codigoOptativa === 'string' ? detalle.codigoOptativa.trim() : '';
+            if (!codigoOptativa) continue;
+
+            const slotEntry = enriched[slotCode];
+            if (slotEntry !== undefined && slotEntry !== null) {
+                if (enriched[codigoOptativa] === undefined) {
+                    enriched[codigoOptativa] = slotEntry;
+                }
+                if (!seen.has(codigoOptativa)) {
+                    seen.add(codigoOptativa);
+                    optativeCodes.push(codigoOptativa);
+                }
+            }
+        }
+    }
+
+    return { progreso: enriched, optativeCodes };
+}
 
 /**
  * Checks whether a course's academic state satisfies a rule's requirement.
  * Simulator `Cursado` only counts as approved when `treatSimuladorCursadoAsApproved` is enabled;
  * real-transcript `Regular` never counts as approved.
  *
- * @param {string | null | undefined} estado
+ * @param {EquivalenciaProgresoEntry} estado
  * @param {EquivalenciaRequiredState} [requiredState='approved']
  * @param {{ treatSimuladorCursadoAsApproved?: boolean }} [options]
  * @returns {boolean}
  */
 export function isAcademicStateSatisfied(estado, requiredState = 'approved', options = {}) {
-    const normalized = String(estado ?? '').trim().toLowerCase();
+    const rawEstado = extractAcademicState(estado);
+    const normalized = String(rawEstado ?? '').trim().toLowerCase();
     if (!normalized) return false;
 
     if (requiredState === 'regular') {
@@ -306,7 +370,7 @@ export function getRuleSourceCodes(rawRuleOrEntry, options = {}) {
  * without deciding whether the result should be accredited automatically.
  *
  * @param {EquivalenciaRuleEntry | EquivalenciaRule} rawRuleOrEntry
- * @param {{ sourcePlan?: string, targetPlan?: string, progreso?: Record<string, { estado?: string } | null | undefined> }} [trajectory={}]
+ * @param {{ sourcePlan?: string, targetPlan?: string, progreso?: Record<string, EquivalenciaProgresoEntry> }} [trajectory={}]
  * @param {{
  *   targetCode?: string,
  *   defaultSourcePlan?: string,
@@ -415,7 +479,7 @@ export function evaluateEquivalenciaRule(rawRuleOrEntry, trajectory = {}, option
                 consumedCodes.push(code);
                 blockedByConsumedSet.add(code);
             }
-            const estado = progreso[code]?.estado;
+            const estado = extractAcademicState(progreso[code]);
             if (
                 !isAcademicStateSatisfied(estado, rule.requiredAcademicState, {
                     treatSimuladorCursadoAsApproved,
@@ -596,7 +660,7 @@ function compareRulesForAllocation(a, b) {
  *   catalog?: EquivalenciasCatalogMap | Record<string, EquivalenciaRule>,
  *   sourcePlan?: string,
  *   targetPlan?: string,
- *   progreso?: Record<string, { estado?: string } | null | undefined>,
+ *   progreso?: Record<string, EquivalenciaProgresoEntry>,
  *   mode?: EquivalenciaAccreditationMode,
  *   optativeCodes?: string[],
  *   treatSimuladorCursadoAsApproved?: boolean,

@@ -7,6 +7,13 @@ import {
     trackIntencionCursada,
     trackAlertaDesercion,
 } from '../../services/analyticsService';
+import {
+    DEFAULT_ADVISORY_MESSAGE,
+    EQUIVALENCIA_ACCREDITATION_MODE,
+    isAcademicStateSatisfied,
+    normalizeEquivalenciasCatalog,
+    resolveEquivalenciasForTrajectory,
+} from '../../utils/Plan/equivalenciasUtils';
 
 /**
  * Compara dos períodos académicos `(anio, cuatri)` para determinar si A >= B.
@@ -23,32 +30,85 @@ export function esPeriodoIgualOPosterior(anioA, cuatriA, anioB, cuatriB) {
 }
 
 /**
- * Homologa el progreso simulado del Plan 17.13 al Plan 17.14 usando `equivalencias.json`.
- * Toda materia aprobada/cursada en `17.13` que satisfaga las equivalencias o coincida por código
- * inicia marcada como `'Cursado'` en el Plan 17.14.
+ * Homologa el progreso simulado del Plan 17.13 al Plan 17.14 usando el motor compartido `equivalenciasUtils`.
+ * En modo `'consolidated'` (default), solo acredita equivalencias confirmadas y mantiene las reglas
+ * `pending_confirmation`/`advisory` como avisos; en modo `'projection_with_advisory'`, también proyecta
+ * las equivalencias orientativas sin mutar el progreso consolidado oficial.
  *
  * @param {Record<string, string>} progreso1713
  * @param {Array<import('../../types/domain').Materia>} materias1714
  * @param {import('../../types/domain').EquivalenciasMap} equivalenciasMap
- * @returns {{ progreso1714: Record<string, string>, equivalenciasCount: number }}
+ * @param {{
+ *   sourcePlan?: string,
+ *   targetPlan?: string,
+ *   mode?: import('../../types/domain').EquivalenciaAccreditationMode,
+ *   optativeCodes?: string[],
+ * }} [options]
+ * @returns {{
+ *   progreso1714: Record<string, string>,
+ *   equivalenciasCount: number,
+ *   advisoryEquivalencias: import('../../types/domain').EquivalenciaAdvisoryItem[],
+ *   advisoryConflicts: import('../../types/domain').EquivalenciaAdvisoryConflict[],
+ * }}
  */
 export function homologarProgresoSimulado1713A1714(
     progreso1713 = {},
     materias1714 = [],
     equivalenciasMap = {},
+    options = {},
 ) {
+    const sourcePlan = options.sourcePlan || '17.13';
+    const targetPlan = options.targetPlan || '17.14';
+    const mode =
+        options.mode === EQUIVALENCIA_ACCREDITATION_MODE.PROJECTION_WITH_ADVISORY
+            ? EQUIVALENCIA_ACCREDITATION_MODE.PROJECTION_WITH_ADVISORY
+            : EQUIVALENCIA_ACCREDITATION_MODE.CONSOLIDATED;
+
+    const normalizedCatalog = normalizeEquivalenciasCatalog(equivalenciasMap || {}, {
+        sourcePlan,
+        targetPlan,
+    });
+    const trajectory = resolveEquivalenciasForTrajectory({
+        catalog: normalizedCatalog,
+        sourcePlan,
+        targetPlan,
+        progreso: progreso1713,
+        mode,
+        optativeCodes: options.optativeCodes || [],
+        treatSimuladorCursadoAsApproved: true,
+    });
+
     /** @type {Record<string, string>} */
     const progreso1714 = {};
+    /** @type {import('../../types/domain').EquivalenciaAdvisoryItem[]} */
+    const advisoryEquivalencias = [];
     let equivalenciasCount = 0;
 
     for (const mat14 of materias1714) {
-        const fuentes = equivalenciasMap?.[mat14.codigo];
+        const hasRule = Boolean(normalizedCatalog[mat14.codigo]);
         let aprobada = false;
 
-        if (Array.isArray(fuentes) && fuentes.length > 0) {
-            aprobada = fuentes.every((cod13) => progreso1713?.[cod13] === 'Cursado');
+        if (hasRule) {
+            const acc = trajectory.accreditationsByTarget[mat14.codigo];
+            aprobada =
+                mode === EQUIVALENCIA_ACCREDITATION_MODE.PROJECTION_WITH_ADVISORY
+                    ? Boolean(acc?.accredited || acc?.isProjected)
+                    : Boolean(acc?.accredited);
+            if (acc?.isAdvisory && acc?.satisfied) {
+                advisoryEquivalencias.push({
+                    targetCode: mat14.codigo,
+                    targetName: mat14.nombre,
+                    matchedSourceCodes: acc.matchedSourceCodes,
+                    status: acc.status,
+                    message: acc.statusMessage || DEFAULT_ADVISORY_MESSAGE,
+                    source: acc.source,
+                    materia: mat14,
+                });
+            }
         } else {
-            aprobada = progreso1713?.[mat14.codigo] === 'Cursado';
+            aprobada = isAcademicStateSatisfied(progreso1713?.[mat14.codigo], 'approved', {
+                treatSimuladorCursadoAsApproved: true,
+            });
         }
 
         if (aprobada) {
@@ -59,7 +119,12 @@ export function homologarProgresoSimulado1713A1714(
         }
     }
 
-    return { progreso1714, equivalenciasCount };
+    return {
+        progreso1714,
+        equivalenciasCount,
+        advisoryEquivalencias,
+        advisoryConflicts: trajectory.advisoryConflicts,
+    };
 }
 
 /**
@@ -162,11 +227,12 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
                     );
 
                 if (startInTargetPlan) {
-                    const { progreso1714, equivalenciasCount } = homologarProgresoSimulado1713A1714(
-                        nuevoProgreso,
-                        destPlanData.materias,
-                        eqMap || {},
-                    );
+                    const { progreso1714, equivalenciasCount, advisoryEquivalencias } =
+                        homologarProgresoSimulado1713A1714(
+                            nuevoProgreso,
+                            destPlanData.materias,
+                            eqMap || {},
+                        );
                     setPreImportedTransitionSnapshot({
                         activePlan: '17.13',
                         materias: data,
@@ -183,6 +249,8 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
                         anio: initAnio,
                         cuatri: String(initCuatri),
                         equivalenciasCount,
+                        advisoryCount: advisoryEquivalencias.length,
+                        advisoryEquivalencias,
                     });
                 } else {
                     setProgresoSimulado(nuevoProgreso);
@@ -216,11 +284,12 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
                 return null;
             }
 
-            const { progreso1714, equivalenciasCount } = homologarProgresoSimulado1713A1714(
-                progreso1713Actual,
-                targetPlanData.materiasTarget,
-                targetPlanData.equivalencias,
-            );
+            const { progreso1714, equivalenciasCount, advisoryEquivalencias } =
+                homologarProgresoSimulado1713A1714(
+                    progreso1713Actual,
+                    targetPlanData.materiasTarget,
+                    targetPlanData.equivalencias,
+                );
 
             const info = {
                 fromPlan: '17.13',
@@ -228,6 +297,8 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
                 anio: Number(targetAnio),
                 cuatri: String(targetCuatri),
                 equivalenciasCount,
+                advisoryCount: advisoryEquivalencias.length,
+                advisoryEquivalencias,
             };
 
             setActivePlan(info.toPlan);

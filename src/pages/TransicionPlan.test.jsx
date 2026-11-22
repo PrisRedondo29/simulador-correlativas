@@ -120,4 +120,75 @@ describe('TransicionPlan - Veredicto directo sin clic extra', () => {
         });
         expect(screen.queryByText('Comparativa de Avance')).toBeNull();
     });
+
+    it('muestra aviso amarillo en UX Opción A cuando hay posibles equivalencias por confirmar con UNLu', async () => {
+        mockGetPlanByNumber.mockImplementation((planNum) =>
+            Promise.resolve(
+                planNum === '17.14'
+                    ? {
+                          plan_numero: '17.14',
+                          materias: [
+                              ...PLAN_1714_MOCK.materias,
+                              {
+                                  codigo: '11289',
+                                  nombre: 'Inteligencia Artificial',
+                                  cuatrimestre: 8,
+                                  horas_totales: 96,
+                                  correlativas: [],
+                              },
+                          ],
+                      }
+                    : {
+                          plan_numero: '17.13',
+                          materias: [
+                              ...PLAN_1713_MOCK.materias,
+                              {
+                                  codigo: '11089',
+                                  nombre: 'Sistemas Inteligentes',
+                                  cuatrimestre: 9,
+                                  horas_totales: 96,
+                                  correlativas: [],
+                              },
+                          ],
+                      },
+            ),
+        );
+        mockGetEquivalenciasByPlan.mockResolvedValue({
+            11071: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['11071'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'shared',
+            },
+            11289: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['11089'] }] },
+                validationStatus: 'pending_confirmation',
+                applicationMode: 'advisory',
+                usagePolicy: 'shared',
+            },
+        });
+
+        storageRepository.setProgreso('17.13', {
+            '11071': 'Aprobado',
+            '11089': 'Aprobado',
+        });
+
+        render(
+            <MemoryRouter initialEntries={['/cambio-plan']}>
+                <TransicionPlan />
+            </MemoryRouter>,
+        );
+
+        await waitFor(() => {
+            expect(
+                screen.getByText(/Posibles equivalencias por confirmar con UNLu/i),
+            ).toBeTruthy();
+        });
+        expect(screen.getByText(/11289 · Inteligencia Artificial/i)).toBeTruthy();
+        expect(screen.getByText(/Posible equivalencia · confirmar con UNLu/i)).toBeTruthy();
+    });
 });

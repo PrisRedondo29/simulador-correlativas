@@ -7,11 +7,22 @@
 
 /** @typedef {import('../../types/domain').Materia} Materia */
 /** @typedef {import('../../types/domain').ProgresoMap} ProgresoMap */
+/** @typedef {import('../../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
 /** @typedef {import('../../types/domain').EquivalenciasMap} EquivalenciasMap */
+/** @typedef {import('../../types/domain').EquivalenciaAdvisoryItem} EquivalenciaAdvisoryItem */
 /** @typedef {import('../../types/domain').OfertaTransicionPorAnio} OfertaTransicionPorAnio */
 /** @typedef {import('../../types/domain').ResumenPaso1Transicion} ResumenPaso1Transicion */
 /** @typedef {import('../../types/domain').ResultadoTransicion} ResultadoTransicion */
 /** @typedef {import('../../types/domain').ElegibilidadTransicion} ElegibilidadTransicion */
+
+import {
+    augmentProgresoWithOptativas,
+    DEFAULT_ADVISORY_MESSAGE,
+    EQUIVALENCIA_ACCREDITATION_MODE,
+    isAcademicStateSatisfied,
+    normalizeEquivalenciasCatalog,
+    resolveEquivalenciasForTrajectory,
+} from '../Plan/equivalenciasUtils';
 
 /** @type {OfertaTransicionPorAnio} */
 export const OFERTA_RESOLUCION_89_2025 = {
@@ -128,6 +139,7 @@ export const obtenerResumenPaso1 = (progreso = {}, materias1713 = []) => {
  * Evalúa la conveniencia de pasar del plan origen al plan destino en un año dado.
  * @param {{
  *   progreso?: ProgresoMap,
+ *   progresoDetalles?: ProgresoDetallesMap,
  *   materias1713?: Materia[],
  *   materias1714?: Materia[],
  *   equivalenciasData?: EquivalenciasMap,
@@ -140,6 +152,7 @@ export const obtenerResumenPaso1 = (progreso = {}, materias1713 = []) => {
  */
 export const evaluarTransicionCompleta = ({
     progreso = {},
+    progresoDetalles = {},
     materias1713 = [],
     materias1714 = [],
     equivalenciasData = {},
@@ -150,9 +163,26 @@ export const evaluarTransicionCompleta = ({
 }) => {
     const ofertaAnio = ofertaPorAnio[anioAnalisis] || ofertaPorAnio[2025];
 
+    const { progreso: progresoEfectivo, optativeCodes } = augmentProgresoWithOptativas(
+        progreso,
+        progresoDetalles,
+    );
+    const normalizedCatalog = normalizeEquivalenciasCatalog(equivalenciasData || {}, {
+        sourcePlan,
+        targetPlan,
+    });
+    const trajectory = resolveEquivalenciasForTrajectory({
+        catalog: normalizedCatalog,
+        sourcePlan,
+        targetPlan,
+        progreso: progresoEfectivo,
+        mode: EQUIVALENCIA_ACCREDITATION_MODE.CONSOLIDATED,
+        optativeCodes,
+    });
+
     const codigosFinales1713 = new Set(
         materias1713
-            .filter((m) => progreso[m.codigo] === 'Aprobado' || progreso[m.codigo] === 'Promocionado')
+            .filter((m) => isAcademicStateSatisfied(progresoEfectivo[m.codigo], 'approved'))
             .map((m) => m.codigo),
     );
 
@@ -160,15 +190,29 @@ export const evaluarTransicionCompleta = ({
     const aprobadas1714 = [];
     /** @type {Materia[]} */
     const pendientes1714 = [];
+    /** @type {EquivalenciaAdvisoryItem[]} */
+    const equivalenciasPorConfirmar = [];
 
     materias1714.forEach((m14) => {
-        const fuentesEquiv = equivalenciasData[m14.codigo];
+        const hasRule = Boolean(normalizedCatalog[m14.codigo]);
         let estaAprobada = false;
 
-        if (fuentesEquiv && fuentesEquiv.length > 0) {
-            estaAprobada = fuentesEquiv.every((cod) => codigosFinales1713.has(cod));
+        if (hasRule) {
+            const acc = trajectory.accreditationsByTarget[m14.codigo];
+            estaAprobada = Boolean(acc?.accredited);
+            if (acc?.status === 'advisory_pending_confirmation') {
+                equivalenciasPorConfirmar.push({
+                    targetCode: m14.codigo,
+                    targetName: m14.nombre,
+                    matchedSourceCodes: acc.matchedSourceCodes,
+                    status: acc.status,
+                    message: acc.statusMessage || DEFAULT_ADVISORY_MESSAGE,
+                    source: acc.source,
+                    materia: m14,
+                });
+            }
         } else {
-            estaAprobada = codigosFinales1713.has(m14.codigo);
+            estaAprobada = isAcademicStateSatisfied(progresoEfectivo[m14.codigo], 'approved');
         }
 
         if (estaAprobada) {
@@ -323,6 +367,8 @@ export const evaluarTransicionCompleta = ({
         diferenciaHoras,
         motivosBache,
         equivalenciasReconocidasCount: aprobadas1714.length,
+        equivalenciasPorConfirmar,
+        advisoryConflicts: trajectory.advisoryConflicts,
     };
 };
 
@@ -330,6 +376,7 @@ export const evaluarTransicionCompleta = ({
  * Calcula la proyección multianual completa (2025 a 2029) y encuentra el año óptimo de transición.
  * @param {{
  *   progreso?: ProgresoMap,
+ *   progresoDetalles?: ProgresoDetallesMap,
  *   materias1713?: Materia[],
  *   materias1714?: Materia[],
  *   equivalenciasData?: EquivalenciasMap,
@@ -341,6 +388,7 @@ export const evaluarTransicionCompleta = ({
  */
 export const calcularProyeccionMultianual = ({
     progreso = {},
+    progresoDetalles = {},
     materias1713 = [],
     materias1714 = [],
     equivalenciasData = {},
@@ -353,6 +401,7 @@ export const calcularProyeccionMultianual = ({
     const proyeccion = aniosDisponibles.map((anio) => {
         const res = evaluarTransicionCompleta({
             progreso,
+            progresoDetalles,
             materias1713,
             materias1714,
             equivalenciasData,
@@ -409,6 +458,7 @@ export const calcularProyeccionMultianual = ({
  * No expone estimaciones de años anteriores.
  * @param {{
  *   progreso?: ProgresoMap,
+ *   progresoDetalles?: ProgresoDetallesMap,
  *   materias1713?: Materia[],
  *   materias1714?: Materia[],
  *   equivalenciasData?: EquivalenciasMap,
@@ -422,6 +472,7 @@ export const calcularProyeccionMultianual = ({
  */
 export const evaluarElegibilidadActual = ({
     progreso = {},
+    progresoDetalles = {},
     materias1713 = [],
     materias1714 = [],
     equivalenciasData = {},
@@ -434,6 +485,7 @@ export const evaluarElegibilidadActual = ({
     const anioEvaluado = Math.min(Math.max(anioActual, 2025), 2029);
     const proyeccion = calcularProyeccionMultianual({
         progreso,
+        progresoDetalles,
         materias1713,
         materias1714,
         equivalenciasData,

@@ -80,6 +80,18 @@ export default function PlanTransitionControl({
                     {transitionAppliedInfo.equivalenciasCount} materias homologadas. Usá{' '}
                     <strong>Anterior</strong> para retroceder al Plan 17.13.
                 </p>
+                {transitionAppliedInfo.advisoryCount > 0 && (
+                    <p className="text-[11px] text-[#92400E] dark:text-[#FCD34D] bg-[#FFFBEB] dark:bg-[#2D2210]/70 border border-[#FDE68A] dark:border-[#5C4318] rounded-lg px-2 py-1 flex items-start gap-1.5 leading-snug">
+                        <Info size={12} className="shrink-0 mt-0.5" aria-hidden="true" />
+                        <span>
+                            {transitionAppliedInfo.advisoryCount}{' '}
+                            {transitionAppliedInfo.advisoryCount === 1
+                                ? 'posible equivalencia por confirmar con UNLu'
+                                : 'posibles equivalencias por confirmar con UNLu'}{' '}
+                            (no acreditada automáticamente).
+                        </span>
+                    </p>
+                )}
             </div>
         );
     }

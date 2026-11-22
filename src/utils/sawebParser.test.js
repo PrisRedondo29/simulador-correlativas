@@ -559,4 +559,100 @@ correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1713:
         expect(parsed1714.progreso['AO-1714']).toBe('Aprobado');
         expect(parsed1714.progresoDetalles['AO-1714']?.notaFinal).toBe(9);
     });
+
+    it('acredita 14031 solo con 11412 + 11417 y mantiene 11289/14034/21279 como advisory en analítico 17.13 importado en 17.14', () => {
+        const plan1714Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.14')?.materias || [];
+
+        const parcialText = `
+correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1713:
+11412 P-TEORIA DE LA COMPUTACION I 8(OCHO) 0593-002 26-11-2024
+11089 P-SISTEMAS INTELIGENTES 9(NUEVE) 0603-054 30-06-2025
+41408 P-MODELOS, SIMUL. Y TEORIA DE LA DECISION 8(OCHO) 0291-050 19-06-2024
+21420 P-TALLER DE EMPRENDIMIENTOS TECNOLOGICOS (OPT.) 9(NUEVE) 0651-010 20-07-2025
+        `;
+
+        const parcialRes = parseSawebTexts(parcialText, plan1714Materias);
+        // Solo 11412 sin 11417 NO acredita 14031
+        expect(parcialRes.progreso['14031']).not.toBe('Aprobado');
+        expect(parcialRes.progreso['14031']).not.toBe('Promocionado');
+        // 11289, 14034 y 21279 quedan en advisoryEquivalencias (UX Opción A) y no en progreso
+        expect(parcialRes.progreso['11289']).not.toBe('Aprobado');
+        expect(parcialRes.progreso['11289']).not.toBe('Promocionado');
+        expect(parcialRes.progreso['14034']).not.toBe('Promocionado');
+        expect(parcialRes.progreso['21279']).not.toBe('Promocionado');
+        expect(parcialRes.advisoryEquivalencias?.map((x) => x.targetCode).sort()).toEqual([
+            '11289',
+            '14034',
+            '21279',
+        ]);
+        expect(parcialRes.advisoryEquivalencias?.[0]?.message).toBe(
+            'Posible equivalencia · confirmar con UNLu',
+        );
+
+        const completoText = `
+${parcialText}
+11417 P-TEORIA DE LA COMPUTACION II 9(NUEVE) 0620-010 10-12-2025
+        `;
+        const completoRes = parseSawebTexts(completoText, plan1714Materias);
+        expect(completoRes.progreso['14031']).toBe('Promocionado');
+    });
+
+    it('previene doble cómputo de optativa 21420 entre 21279 (exclusiva confirmada) y AO-1714 en cualquier orden de catálogo', () => {
+        const plan1714Materias =
+            sistemasPlanes.find((p) => p.plan_numero === '17.14')?.materias || [];
+
+        const threeOptsText = `
+correspondientes a la carrera de LIC.EN SISTEMAS DE INFORMACION, Plan 1713:
+21420 P-TALLER DE EMPRENDIMIENTOS TECNOLOGICOS (OPT.) 9(NUEVE) 0651-010 20-07-2025
+11809 P-COMPILADORES (OPT.) 9(NUEVE) 0628-069 25-06-2026
+11811 R-ROBOTICA APLICADA (OPT.) 8(OCHO) 0640-010 15-12-2026
+        `;
+
+        const confirmedCatalogForward = {
+            21279: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['21420'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'exclusive',
+                priority: 10,
+            },
+            'AO-1714': {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['OP1', 'OP2', 'OP3'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'exclusive',
+                priority: 50,
+            },
+        };
+        const confirmedCatalogReversed = {
+            'AO-1714': confirmedCatalogForward['AO-1714'],
+            21279: confirmedCatalogForward['21279'],
+        };
+
+        for (const equivalenciasCatalog of [confirmedCatalogForward, confirmedCatalogReversed]) {
+            const res = parseSawebTexts(threeOptsText, plan1714Materias, {
+                equivalenciasCatalog,
+            });
+            // 21420 acredita exclusivamente 21279 -> solo quedan 2 optativas libres, por lo que AO-1714 NO acredita
+            expect(res.progreso['21279']).toBe('Promocionado');
+            expect(res.progreso['AO-1714']).not.toBe('Aprobado');
+            expect(res.progreso['AO-1714']).not.toBe('Promocionado');
+        }
+
+        // Con una 4.ª optativa distinta, 21279 consume 21420 y AO-1714 acredita con las otras 3
+        const fourOptsText = `
+${threeOptsText}
+11812 P-BIOINFORMATICA (OPT.) 10(DIEZ) 0650-001 10-03-2027
+        `;
+        const resFour = parseSawebTexts(fourOptsText, plan1714Materias, {
+            equivalenciasCatalog: confirmedCatalogReversed,
+        });
+        expect(resFour.progreso['21279']).toBe('Promocionado');
+        expect(resFour.progreso['AO-1714']).toBe('Aprobado');
+    });
 });

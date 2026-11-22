@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+    augmentProgresoWithOptativas,
     DEFAULT_ADVISORY_MESSAGE,
     EQUIVALENCIA_ACCREDITATION_MODE,
     EQUIVALENCIA_APPLICATION_MODE,
@@ -514,6 +515,47 @@ describe('equivalenciasUtils', () => {
             });
             expect(advisoryProjection.projectedTargets).toEqual(['21420']);
             expect(advisoryProjection.availableOptativeCodes).toEqual([]);
+        });
+
+        it('accepts Promocionado/Promocionada states and flat Record<string, string> progress maps', () => {
+            expect(isAcademicStateSatisfied('Promocionado', 'approved')).toBe(true);
+            expect(isAcademicStateSatisfied('Promocionada', 'approved')).toBe(true);
+
+            const catalog = {
+                14031: {
+                    sourcePlan: '17.13',
+                    targetPlan: '17.14',
+                    condition: { anyOf: [{ allOf: ['11412', '11417'] }] },
+                    validationStatus: 'confirmed',
+                    applicationMode: 'automatic',
+                    usagePolicy: 'shared',
+                },
+            };
+
+            const res = resolveEquivalenciasForTrajectory({
+                catalog,
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                progreso: { 11412: 'Promocionado', 11417: 'Aprobado' },
+            });
+
+            expect(res.accreditedTargets).toEqual(['14031']);
+        });
+
+        it('projects real optative codes via augmentProgresoWithOptativas without mutating input', () => {
+            const baseProgreso = { OP1: 'Aprobado', OP2: 'Regular' };
+            const detalles = {
+                OP1: { codigoOptativa: '21420' },
+                OP2: { codigoOptativa: '11805' },
+                OP3: { codigoOptativa: null },
+            };
+
+            const { progreso, optativeCodes } = augmentProgresoWithOptativas(baseProgreso, detalles);
+
+            expect(baseProgreso).toEqual({ OP1: 'Aprobado', OP2: 'Regular' });
+            expect(progreso['21420']).toBe('Aprobado');
+            expect(progreso['11805']).toBe('Regular');
+            expect(optativeCodes).toEqual(['21420', '11805']);
         });
     });
 });

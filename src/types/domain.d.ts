@@ -306,7 +306,7 @@ export interface IntermediateTitleConfig {
     excludeCodigos?: string[];
 }
 
-export type EquivalenciasMap = Record<string, string[]>;
+export type EquivalenciasMap = EquivalenciasCatalogMap;
 
 export type EquivalenciaValidationStatus = 'confirmed' | 'pending_confirmation';
 
@@ -369,9 +369,38 @@ export interface EquivalenciaRule {
     isLegacyArray?: boolean;
 }
 
-export type EquivalenciaRuleEntry = string[] | Partial<EquivalenciaRule>;
+export interface EquivalenciaRuleInput {
+    targetCode?: string;
+    sourcePlan?: string;
+    targetPlan?: string;
+    requiredAcademicState?: EquivalenciaRequiredState | string;
+    condition?: EquivalenciaCondition;
+    anyOf?: EquivalenciaConditionGroup[];
+    validationStatus?: EquivalenciaValidationStatus | string;
+    applicationMode?: EquivalenciaApplicationMode | string;
+    usagePolicy?: EquivalenciaUsagePolicy | string;
+    priority?: number;
+    advisoryMessage?: string;
+    notas?: string;
+    source?: EquivalenciaSourceMeta;
+    isLegacyArray?: boolean;
+}
+
+export type EquivalenciaRuleEntry = string[] | EquivalenciaRuleInput;
 
 export type EquivalenciasCatalogMap = Record<string, EquivalenciaRuleEntry>;
+
+export type EquivalenciaProgresoEntry = string | { estado?: string | null } | null | undefined;
+
+export interface EquivalenciaAdvisoryItem {
+    targetCode: string;
+    targetName?: string;
+    matchedSourceCodes: string[];
+    status: EquivalenciaAccreditationStatus;
+    message: string;
+    source: EquivalenciaSourceMeta | null;
+    materia?: Materia;
+}
 
 export interface EquivalenciaEvaluationResult {
     targetCode: string;
@@ -648,6 +677,8 @@ export interface ResultadoTransicion {
     diferenciaHoras: number;
     motivosBache: string[];
     equivalenciasReconocidasCount: number;
+    equivalenciasPorConfirmar?: EquivalenciaAdvisoryItem[];
+    advisoryConflicts?: EquivalenciaAdvisoryConflict[];
 }
 
 export interface ElegibilidadTransicion {
@@ -684,6 +715,8 @@ export interface TransitionAppliedInfo {
     anio: number;
     cuatri: string;
     equivalenciasCount: number;
+    advisoryCount?: number;
+    advisoryEquivalencias?: EquivalenciaAdvisoryItem[];
 }
 
 export interface HistorialSemestre {

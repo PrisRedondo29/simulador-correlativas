@@ -151,4 +151,63 @@ describe('projectionUtils - Proyección de cuatrimestres del Simulador', () => {
         expect(res.items.TES).toEqual({ columna: 4, estado: 'Proyectada' });
         expect(Object.values(res.labels)).not.toContain('Postergado');
     });
+
+    it('resuelve columnas de equivalencias enriquecidas AND y OR (ramas históricas) en 17.13 -> 17.14', () => {
+        const historial1713 = [
+            {
+                cuatri: '1',
+                anioActual: 2025,
+                materiasDelSemestre: [{ codigo: '11412', nombre: 'Teoría I', anio: 3, cuatrimestre: 5, correlativas: [] }],
+                progresoSnapshot: { 11412: 'Cursado' },
+                progresoBaseSnapshot: {},
+            },
+            {
+                cuatri: '2',
+                anioActual: 2025,
+                materiasDelSemestre: [
+                    { codigo: '11417', nombre: 'Teoría II', anio: 4, cuatrimestre: 7, correlativas: [] },
+                    { codigo: '10043', nombre: 'Sistemas Inteligentes Histórico', anio: 5, cuatrimestre: 9, correlativas: [] },
+                ],
+                progresoSnapshot: { 11417: 'Cursado', 10043: 'Cursado' },
+                progresoBaseSnapshot: { 11412: 'Cursado' },
+            },
+        ];
+
+        const materias1714 = [
+            { codigo: '14031', nombre: 'Teoría de la Computación', cuatrimestre: '7', correlativas: [] },
+            { codigo: '11289', nombre: 'Inteligencia Artificial', cuatrimestre: '8', correlativas: [] },
+        ];
+
+        const res = calculateProjection({
+            materias: materias1714,
+            historialSemestres: historial1713,
+            progresoBase: { 14031: 'Cursado', 11289: 'Cursado' },
+            cuatriActual: '1',
+            anioActual: 2026,
+            equivalenciasMap: {
+                14031: {
+                    sourcePlan: '17.13',
+                    targetPlan: '17.14',
+                    condition: { anyOf: [{ allOf: ['11412', '11417'] }] },
+                    validationStatus: 'confirmed',
+                    applicationMode: 'automatic',
+                },
+                11289: {
+                    sourcePlan: '17.13',
+                    targetPlan: '17.14',
+                    condition: {
+                        anyOf: [
+                            { allOf: ['11089'] },
+                            { allOf: ['10043'], historical: true },
+                        ],
+                    },
+                    validationStatus: 'pending_confirmation',
+                    applicationMode: 'advisory',
+                },
+            },
+        });
+
+        expect(res.items['14031']).toEqual({ columna: 2, estado: 'Aprobada' });
+        expect(res.items['11289']).toEqual({ columna: 2, estado: 'Aprobada' });
+    });
 });

@@ -4,6 +4,10 @@
         "nombre": "Procesamiento de Imágenes"
     },
     {
+        "codigo": "11805",
+        "nombre": "Clasificadores y Agrupadores"
+    },
+    {
         "codigo": "11806",
         "nombre": "Programación Científica"
     },
@@ -13,7 +17,7 @@
     },
     {
         "codigo": "11808",
-        "nombre": "Artefactor Digitales Interactivos"
+        "nombre": "Artefactos Digitales Interactivos"
     },
     {
         "codigo": "11809",
@@ -26,5 +30,9 @@
     {
         "codigo": "20395",
         "nombre": "Sistemas de Información Geográfica"
+    },
+    {
+        "codigo": "21420",
+        "nombre": "Taller de Emprendimientos Tecnológicos"
     }
 ]

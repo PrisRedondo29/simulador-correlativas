@@ -10,6 +10,7 @@ function HeaderEquivalencias({
     progresoNuevo,
     totalMaterias,
     equivalenciasAprobadas,
+    posiblesEquivalencias = 0,
     comparativaHoras,
 }) {
     const { canSimulateTransition, transitionInfo } = usePlanCapabilities();
@@ -51,6 +52,15 @@ function HeaderEquivalencias({
                     >
                         {equivalenciasAprobadas} / {totalMaterias} otorgadas
                     </Chip>
+                    {posiblesEquivalencias > 0 && (
+                        <Chip
+                            size="sm"
+                            variant="flat"
+                            className="font-semibold text-xs bg-[#FFFBEB] dark:bg-[#2D2210] text-[#92400E] dark:text-[#FCD34D] border border-[#FDE68A] dark:border-[#5C4318]"
+                        >
+                            {posiblesEquivalencias} por confirmar (UNLu)
+                        </Chip>
+                    )}
                     {esMasEficiente && horasDiferencia > 0 && (
                         <Chip
                             size="sm"

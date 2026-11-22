@@ -24,7 +24,7 @@ vi.mock('../../services/analyticsService', () => ({
     trackAlertaDesercion: vi.fn(),
 }));
 
-import useSimuladorEstado from './useSimuladorEstado';
+import useSimuladorEstado, { homologarProgresoSimulado1713A1714 } from './useSimuladorEstado';
 
 const mockPlanMaterias = [
     { codigo: 'M1', nombre: 'Intro', anio: 1, cuatrimestre: 1, correlativas: [] },
@@ -241,5 +241,81 @@ describe('useSimuladorEstado - Navegación de semestres, retroceso y finalizaci�
         expect(result.current.cuatri).toBe('2');
         expect(result.current.materias.map((m) => m.codigo)).toEqual(['11271', '11274', '11275']);
         expect(result.current.transitionAppliedInfo?.equivalenciasCount).toBe(1);
+    });
+
+    it('homologarProgresoSimulado1713A1714 soporta AND/OR, UX Opción A vs projection_with_advisory y exclusividad', () => {
+        const materias1714 = [
+            { codigo: '14031', nombre: 'Teoría de la Computación', anio: 4, cuatrimestre: 7, correlativas: [] },
+            { codigo: '11289', nombre: 'Inteligencia Artificial', anio: 4, cuatrimestre: 8, correlativas: [] },
+            { codigo: '21279', nombre: 'Gestión Innovadora', anio: 3, cuatrimestre: 6, correlativas: [] },
+            { codigo: 'OTHER', nombre: 'Otra Optativa', anio: 4, cuatrimestre: 8, correlativas: [] },
+        ];
+
+        const catalog = {
+            14031: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['11412', '11417'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'shared',
+            },
+            11289: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['11089'] }, { allOf: ['10043'] }] },
+                validationStatus: 'pending_confirmation',
+                applicationMode: 'advisory',
+                usagePolicy: 'shared',
+            },
+            21279: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['21420'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'exclusive',
+                priority: 10,
+            },
+            OTHER: {
+                sourcePlan: '17.13',
+                targetPlan: '17.14',
+                condition: { anyOf: [{ allOf: ['21420'] }] },
+                validationStatus: 'confirmed',
+                applicationMode: 'automatic',
+                usagePolicy: 'exclusive',
+                priority: 50,
+            },
+        };
+
+        const progreso1713 = {
+            11412: 'Cursado',
+            11417: 'Cursado',
+            10043: 'Cursado',
+            21420: 'Cursado',
+        };
+
+        const consolidated = homologarProgresoSimulado1713A1714(
+            progreso1713,
+            materias1714,
+            catalog,
+            { mode: 'consolidated' },
+        );
+        expect(consolidated.progreso1714['14031']).toBe('Cursado');
+        expect(consolidated.progreso1714['11289']).toBe('No Cursado');
+        expect(consolidated.progreso1714['21279']).toBe('Cursado');
+        expect(consolidated.progreso1714.OTHER).toBe('No Cursado');
+        expect(consolidated.equivalenciasCount).toBe(2);
+        expect(consolidated.advisoryEquivalencias).toHaveLength(1);
+        expect(consolidated.advisoryEquivalencias[0].targetCode).toBe('11289');
+
+        const projected = homologarProgresoSimulado1713A1714(
+            progreso1713,
+            materias1714,
+            catalog,
+            { mode: 'projection_with_advisory' },
+        );
+        expect(projected.progreso1714['11289']).toBe('Cursado');
+        expect(projected.equivalenciasCount).toBe(3);
     });
 });

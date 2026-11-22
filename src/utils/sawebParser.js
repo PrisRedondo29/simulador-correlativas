@@ -4,6 +4,12 @@ import {
     ESTADOS_MATERIA,
 } from './Progreso/materiaStateMachine';
 import equivalencias1714 from '../data/equivalencias.json';
+import {
+    DEFAULT_ADVISORY_MESSAGE,
+    EQUIVALENCIA_ACCREDITATION_MODE,
+    normalizeEquivalenciasCatalog,
+    resolveEquivalenciasForTrajectory,
+} from './Plan/equivalenciasUtils';
 
 /** @typedef {import('../types/domain').Materia} Materia */
 /** @typedef {import('../types/domain').EstadoMateria} EstadoMateria */
@@ -12,6 +18,10 @@ import equivalencias1714 from '../data/equivalencias.json';
 /** @typedef {import('../types/domain').ProgresoDetallesMap} ProgresoDetallesMap */
 /** @typedef {import('../types/domain').IntentoFinal} IntentoFinal */
 /** @typedef {import('../types/domain').MateriaDetalle} MateriaDetalle */
+/** @typedef {import('../types/domain').EquivalenciasCatalogMap} EquivalenciasCatalogMap */
+/** @typedef {import('../types/domain').EquivalenciaRule} EquivalenciaRule */
+/** @typedef {import('../types/domain').EquivalenciaAdvisoryItem} EquivalenciaAdvisoryItem */
+/** @typedef {import('../types/domain').EquivalenciaAdvisoryConflict} EquivalenciaAdvisoryConflict */
 
 const ANALITICO_ROW_REGEX =
     /^(\d{4,6})\s+([PRL])-([^\r\n]+?)\s+(\d{1,2})\([A-ZÁÉÍÓÚÑ\s]+\)\s+(\d{3,5}-\d{2,4})\s+(\d{2}-\d{2}-\d{4})\s*$/i;
@@ -603,6 +613,7 @@ function tokenizeSawebInputs(rawInputs) {
  *   recordsByCode: Map<string, { nombre: string }>,
  *   externalRecords: Array<{ codigo: string, nombre: string }>,
  *   evaluatedExternalByCode: Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>,
+ *   excludedOptativeCodes?: Set<string> | null,
  *   progreso: ProgresoMap,
  *   progresoDetalles: ProgresoDetallesMap,
  *   counts: { Promocionado: number, Aprobado: number, Equivalencia: number, Regular: number, Libre: number, Aplazos: number, Omitidas: number },
@@ -618,6 +629,7 @@ function assignOptativaRecordsToSlots({
     recordsByCode,
     externalRecords,
     evaluatedExternalByCode,
+    excludedOptativeCodes = null,
     progreso,
     progresoDetalles,
     counts,
@@ -629,6 +641,7 @@ function assignOptativaRecordsToSlots({
     const optativaExternals = externalRecords
         .filter(
             (ext) =>
+                !excludedOptativeCodes?.has(ext.codigo) &&
                 isOptativaRecord(recordsByCode.get(ext.codigo) || ext) &&
                 evaluatedExternalByCode.has(ext.codigo),
         )
@@ -705,33 +718,84 @@ function assignOptativaRecordsToSlots({
 }
 
 /**
+ * Filtra un catálogo de equivalencias a las reglas cuyo código destino pertenece al plan actual.
+ * @param {EquivalenciasCatalogMap | Record<string, EquivalenciaRule>} catalog
+ * @param {Map<string, Materia>} materiasByCode
+ * @param {string} sourcePlan
+ * @param {string} targetPlan
+ * @returns {Record<string, EquivalenciaRule>}
+ */
+function scopeEquivalenciasCatalogForPlan(catalog, materiasByCode, sourcePlan, targetPlan) {
+    /** @type {Record<string, EquivalenciaRule>} */
+    const scoped = {};
+    const normalized = normalizeEquivalenciasCatalog(catalog || {}, { sourcePlan, targetPlan });
+    for (const [targetCode, rule] of Object.entries(normalized)) {
+        if (materiasByCode.has(targetCode)) {
+            scoped[targetCode] = rule;
+        }
+    }
+    return scoped;
+}
+
+/**
+ * Combina progreso consolidado del plan destino con estados externos evaluados del analítico.
+ * @param {ProgresoMap} progreso
+ * @param {Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>} evaluatedExternalByCode
+ * @returns {Record<string, string>}
+ */
+function buildCombinedProgresoForEquivalencias(progreso, evaluatedExternalByCode) {
+    /** @type {Record<string, string>} */
+    const combined = { ...(progreso || {}) };
+    for (const [cod, evalData] of evaluatedExternalByCode.entries()) {
+        if (!combined[cod] && evalData?.estado) {
+            combined[cod] = evalData.estado;
+        }
+    }
+    return combined;
+}
+
+/**
  * Etapa 3: Motor de homologación entre planes (`17.13 → 17.14`).
- * Transfiere el acta completa (estado, nota, cursada e intentos) solo a la materia troncal
- * primaria en el plan destino y registra los talleres / desdoblamientos como Equivalencia
- * (`esEquivalencia: true`, `notaFinal: null`) para no duplicar notas ni aplazos en el promedio.
+ * Delega la evaluación y acreditación en `resolveEquivalenciasForTrajectory`, transfiriendo
+ * el acta completa solo a la materia troncal primaria y marcando talleres / desdoblamientos
+ * como Equivalencia (`esEquivalencia: true`, `notaFinal: null`).
  *
  * @param {{
  *   materiasByCode: Map<string, Materia>,
  *   externalRecords: Array<{ codigo: string, nombre: string }>,
  *   evaluatedExternalByCode: Map<string, NonNullable<ReturnType<typeof resolveRecordWithStrategy>>>,
  *   virtualSlotToSourceCode?: Map<string, string>,
+ *   scopedCatalog: Record<string, EquivalenciaRule>,
+ *   sourcePlan: string,
+ *   targetPlan: string,
+ *   availableOptativeCodes?: string[],
  *   progreso: ProgresoMap,
  *   progresoDetalles: ProgresoDetallesMap,
  *   counts: { Promocionado: number, Aprobado: number, Equivalencia: number, Regular: number, Libre: number, Aplazos: number, Omitidas: number },
  *   omittedCodes: Array<{ codigo: string, nombre: string }>,
  * }} params
+ * @returns {{
+ *   advisoryEquivalencias: EquivalenciaAdvisoryItem[],
+ *   advisoryConflicts: EquivalenciaAdvisoryConflict[],
+ * }}
  */
 function homologateCrossPlanRecords({
     materiasByCode,
     externalRecords,
     evaluatedExternalByCode,
     virtualSlotToSourceCode,
+    scopedCatalog,
+    sourcePlan,
+    targetPlan,
+    availableOptativeCodes = [],
     progreso,
     progresoDetalles,
     counts,
     omittedCodes,
 }) {
-    if (materiasByCode.size === 0 || externalRecords.length === 0) return;
+    if (materiasByCode.size === 0 || externalRecords.length === 0) {
+        return { advisoryEquivalencias: [], advisoryConflicts: [] };
+    }
 
     const consumedExternalCodes = new Set();
     const primaryActaAssignedFor1713 = new Set();
@@ -767,28 +831,53 @@ function homologateCrossPlanRecords({
         return null;
     };
 
-    const getRulePriority = ([targetCode, reqCodes]) => {
+    const combinedProgreso = buildCombinedProgresoForEquivalencias(
+        progreso,
+        evaluatedExternalByCode,
+    );
+    const resolution = resolveEquivalenciasForTrajectory({
+        catalog: scopedCatalog,
+        sourcePlan,
+        targetPlan,
+        progreso: combinedProgreso,
+        mode: EQUIVALENCIA_ACCREDITATION_MODE.CONSOLIDATED,
+        optativeCodes: availableOptativeCodes,
+        includeHistoricalBranches: true,
+    });
+
+    /**
+     * Prioridad de transferencia de acta primaria (no altera acreditación):
+     * troncales 1:1 -> troncales N:1 -> talleres/desdoblamientos -> orden de cuatrimestre.
+     * @param {string} targetCode
+     * @param {string[]} matchedCodes
+     */
+    const getActaTransferPriority = (targetCode, matchedCodes) => {
         const targetMat = materiasByCode.get(targetCode);
         if (targetMat?.taller) return 2;
-        if (Array.isArray(reqCodes) && reqCodes.length === 1) return 0;
+        if (matchedCodes.length === 1) return 0;
         return 1;
     };
 
-    const sortedRules = Object.entries(equivalencias1714)
-        .filter(
-            ([targetCode, reqCodes]) =>
-                materiasByCode.has(targetCode) && Array.isArray(reqCodes) && reqCodes.length > 0,
-        )
+    const accreditedEntries = resolution.accreditedTargets
+        .map((targetCode) => {
+            const acc = resolution.accreditationsByTarget[targetCode];
+            return {
+                targetCode,
+                matchedCodes: acc?.matchedSourceCodes || [],
+            };
+        })
+        .filter((entry) => entry.matchedCodes.length > 0)
         .sort((a, b) => {
-            const pDiff = getRulePriority(a) - getRulePriority(b);
+            const pDiff =
+                getActaTransferPriority(a.targetCode, a.matchedCodes) -
+                getActaTransferPriority(b.targetCode, b.matchedCodes);
             if (pDiff !== 0) return pDiff;
-            const matA = materiasByCode.get(a[0]);
-            const matB = materiasByCode.get(b[0]);
-            const cDiff = (Number(matA?.cuatrimestre) || 99) - (Number(matB?.cuatrimestre) || 99);
-            return cDiff;
+            const matA = materiasByCode.get(a.targetCode);
+            const matB = materiasByCode.get(b.targetCode);
+            return (Number(matA?.cuatrimestre) || 99) - (Number(matB?.cuatrimestre) || 99);
         });
 
-    for (const [targetCode1714, requiredCodes1713] of sortedRules) {
+    for (const { targetCode: targetCode1714, matchedCodes: requiredCodes1713 } of accreditedEntries) {
         const sourceEntries = requiredCodes1713.map((reqCode) => ({
             reqCode,
             isExternal: evaluatedExternalByCode.has(reqCode),
@@ -933,12 +1022,35 @@ function homologateCrossPlanRecords({
         counts.Equivalencia += 1;
     }
 
+    /** @type {EquivalenciaAdvisoryItem[]} */
+    const advisoryEquivalencias = [];
+    for (const targetCode of resolution.advisoryTargets) {
+        const acc = resolution.accreditationsByTarget[targetCode];
+        if (!acc || acc.status !== 'advisory_pending_confirmation') continue;
+        if (progreso[targetCode]) continue;
+        const targetMateria = materiasByCode.get(targetCode);
+        advisoryEquivalencias.push({
+            targetCode,
+            targetName: targetMateria?.nombre || targetCode,
+            matchedSourceCodes: acc.matchedSourceCodes,
+            status: acc.status,
+            message: acc.statusMessage || DEFAULT_ADVISORY_MESSAGE,
+            source: acc.source,
+            ...(targetMateria ? { materia: targetMateria } : {}),
+        });
+    }
+
     for (const ext of externalRecords) {
         if (!consumedExternalCodes.has(ext.codigo)) {
             counts.Omitidas += 1;
             omittedCodes.push(ext);
         }
     }
+
+    return {
+        advisoryEquivalencias,
+        advisoryConflicts: resolution.advisoryConflicts,
+    };
 }
 
 /**
@@ -946,9 +1058,14 @@ function homologateCrossPlanRecords({
  * tablas de Cursadas y/o Finales) y construye un preview consolidado sobre las materias del plan.
  *
  * @param {string[] | string} rawInputs
- * @param {Materia[]} materiasPlan
+ * @param {Materia[]} [materiasPlan=[]]
+ * @param {{
+ *   equivalenciasCatalog?: EquivalenciasCatalogMap | Record<string, EquivalenciaRule>,
+ *   sourcePlan?: string,
+ *   targetPlan?: string,
+ * }} [options={}]
  */
-export function parseSawebTexts(rawInputs, materiasPlan = []) {
+export function parseSawebTexts(rawInputs, materiasPlan = [], options = {}) {
     const materiasByCode = new Map(
         (materiasPlan || []).map((m) => [String(m.codigo).trim(), m]),
     );
@@ -996,12 +1113,47 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         counts.Aplazos += evalRes.aplazosCount;
     }
 
+    const eqSourcePlan = options.sourcePlan || '17.13';
+    const eqTargetPlan = options.targetPlan || '17.14';
+    const scopedCatalog = scopeEquivalenciasCatalogForPlan(
+        options.equivalenciasCatalog || equivalencias1714,
+        materiasByCode,
+        eqSourcePlan,
+        eqTargetPlan,
+    );
+
+    const optativaCandidateCodes = externalRecords
+        .filter(
+            (ext) =>
+                isOptativaRecord(recordsByCode.get(ext.codigo) || ext) &&
+                evaluatedExternalByCode.has(ext.codigo),
+        )
+        .map((ext) => ext.codigo);
+
+    /** @type {Set<string> | null} */
+    let excludedOptativeCodes = null;
+    if (Object.keys(scopedCatalog).length > 0 && optativaCandidateCodes.length > 0) {
+        const preResolution = resolveEquivalenciasForTrajectory({
+            catalog: scopedCatalog,
+            sourcePlan: eqSourcePlan,
+            targetPlan: eqTargetPlan,
+            progreso: buildCombinedProgresoForEquivalencias(progreso, evaluatedExternalByCode),
+            mode: EQUIVALENCIA_ACCREDITATION_MODE.CONSOLIDATED,
+            optativeCodes: optativaCandidateCodes,
+            includeHistoricalBranches: true,
+        });
+        if (preResolution.exclusivelyConsumedSourceCodes.length > 0) {
+            excludedOptativeCodes = new Set(preResolution.exclusivelyConsumedSourceCodes);
+        }
+    }
+
     const { consumedOptativaCodes, virtualSlotToSourceCode } = assignOptativaRecordsToSlots({
         materiasPlan,
         materiasByCode,
         recordsByCode,
         externalRecords,
         evaluatedExternalByCode,
+        excludedOptativeCodes,
         progreso,
         progresoDetalles,
         counts,
@@ -1010,12 +1162,19 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
     const remainingExternalRecords = externalRecords.filter(
         (ext) => !consumedOptativaCodes.has(ext.codigo),
     );
+    const availableOptativeCandidateCodes = optativaCandidateCodes.filter(
+        (cod) => !excludedOptativeCodes?.has(cod) && !consumedOptativaCodes.has(cod),
+    );
 
-    homologateCrossPlanRecords({
+    const { advisoryEquivalencias, advisoryConflicts } = homologateCrossPlanRecords({
         materiasByCode,
         externalRecords: remainingExternalRecords,
         evaluatedExternalByCode,
         virtualSlotToSourceCode,
+        scopedCatalog,
+        sourcePlan: eqSourcePlan,
+        targetPlan: eqTargetPlan,
+        availableOptativeCodes: availableOptativeCandidateCodes,
         progreso,
         progresoDetalles,
         counts,
@@ -1047,6 +1206,8 @@ export function parseSawebTexts(rawInputs, materiasPlan = []) {
         counts,
         totalMatched,
         omittedCodes,
+        advisoryEquivalencias,
+        advisoryConflicts,
         progreso,
         progresoDetalles,
     };

@@ -7,6 +7,7 @@ import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverla
 import { TOUR_IDS, TUTORIAL_TOURS } from '../config/tutorialTours';
 import { trackSearch } from '../services/analyticsService';
 import { Tabs, Tab } from '@heroui/react';
+import { AlertTriangle } from 'lucide-react';
 
 function Equivalencias() {
     const {
@@ -52,8 +53,26 @@ function Equivalencias() {
                 progresoNuevo={stats.porcentajeNuevo}
                 totalMaterias={stats.totalNuevas}
                 equivalenciasAprobadas={stats.aprobadasNuevas}
+                posiblesEquivalencias={stats.posiblesEquivalencias}
                 comparativaHoras={comparativaHoras}
             />
+
+            {stats.posiblesEquivalencias > 0 && (
+                <div
+                    role="status"
+                    className="flex items-start gap-2.5 rounded-2xl border border-[#FDE68A] dark:border-[#5C4318] bg-[#FFFBEB] dark:bg-[#2D2210]/70 px-4 py-3 text-xs sm:text-sm text-[#92400E] dark:text-[#FCD34D]"
+                >
+                    <AlertTriangle size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+                    <p>
+                        Tenés{' '}
+                        <strong>
+                            {stats.posiblesEquivalencias}{' '}
+                            {stats.posiblesEquivalencias === 1 ? 'posible equivalencia' : 'posibles equivalencias'}
+                        </strong>{' '}
+                        marcada en amarillo (<em>Posible equivalencia · confirmar con UNLu</em>). No se acreditan en tu progreso consolidado hasta confirmación administrativa.
+                    </p>
+                </div>
+            )}
 
             {/* Barra de Búsqueda y Filtros */}
             <div data-tour="equivalencias-filtros" className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-2.5 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] rounded-2xl">

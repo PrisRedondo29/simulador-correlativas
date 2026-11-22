@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Accordion, AccordionItem, Chip } from '@heroui/react';
-import { ArrowRight, Info, Repeat } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Info, Repeat } from 'lucide-react';
 import MateriaCard from '../Equivalencias/MateriaCard';
 
 function ListaMaterias({ sourcePlan, targetPlan, materiasFiltradas, progreso }) {
@@ -97,14 +97,13 @@ function ListaMaterias({ sourcePlan, targetPlan, materiasFiltradas, progreso }) 
 
                                         <div className="grid grid-cols-1 gap-3 sm:gap-4">
                                             {gruposCuatri.map((grupo) => {
-                                                const todasAprobadas = grupo.materiasViejas.length > 0 &&
-                                                    grupo.materiasViejas.every(
-                                                        (m) => progreso[m.codigo] === 'Aprobado' || progreso[m.codigo] === 'Promocionado',
-                                                    );
-
-                                                const estadoNuevo = grupo.esEquivalente
-                                                    ? (todasAprobadas ? 'Aprobado' : 'Disponible')
-                                                    : 'Sin equivalencia';
+                                                const estadoNuevo = !grupo.esEquivalente
+                                                    ? 'Sin equivalencia'
+                                                    : grupo.estaAprobada
+                                                      ? 'Aprobado'
+                                                      : grupo.esPendienteConfirmacion
+                                                        ? 'Posible equivalencia'
+                                                        : 'Disponible';
 
                                                 return (
                                                     <div
@@ -127,7 +126,7 @@ function ListaMaterias({ sourcePlan, targetPlan, materiasFiltradas, progreso }) 
                                                         </div>
 
                                                         <div className="sm:col-span-1 flex justify-center items-center">
-                                                            <ArrowRight className="text-[#64748B] dark:text-[#94A3B8]" size={15} />
+                                                            <ArrowRight className="text-[#64748B] dark:text-[#94A3B8]" size={15} aria-hidden="true" />
                                                         </div>
 
                                                         <div className="sm:col-span-5 min-w-0">
@@ -135,8 +134,30 @@ function ListaMaterias({ sourcePlan, targetPlan, materiasFiltradas, progreso }) 
                                                                 isNewPlan
                                                                 materia={grupo.materiaNueva}
                                                                 estado={estadoNuevo}
+                                                                advisoryMessage={
+                                                                    grupo.esPendienteConfirmacion
+                                                                        ? grupo.advisoryMessage
+                                                                        : null
+                                                                }
                                                             />
                                                         </div>
+
+                                                        {grupo.esPendienteConfirmacion && (
+                                                            <div className="col-span-full sm:col-span-11 flex items-start gap-2 rounded-xl border border-[#FDE68A] dark:border-[#5C4318] bg-[#FFFBEB] dark:bg-[#2D2210]/70 px-3 py-2 text-xs text-[#92400E] dark:text-[#FCD34D]">
+                                                                <AlertTriangle size={14} className="shrink-0 mt-0.5" aria-hidden="true" />
+                                                                <span>
+                                                                    <strong>{grupo.advisoryMessage || 'Posible equivalencia · confirmar con UNLu'}:</strong>{' '}
+                                                                    tu historial satisface la regla orientativa, pero no se acredita automáticamente hasta confirmación administrativa.
+                                                                </span>
+                                                            </div>
+                                                        )}
+
+                                                        {!grupo.esPendienteConfirmacion && grupo.esReglaAdvisory && !grupo.estaAprobada && (
+                                                            <div className="col-span-full sm:col-span-11 flex items-center gap-1.5 px-2 text-[11px] text-[#92400E] dark:text-[#FCD34D]">
+                                                                <Info size={12} className="shrink-0" aria-hidden="true" />
+                                                                <span>Equivalencia sujeta a confirmación administrativa UNLu.</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 );
                                             })}
