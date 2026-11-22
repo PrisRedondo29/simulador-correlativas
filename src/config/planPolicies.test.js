@@ -5,6 +5,7 @@ import {
     getPlanTransitionMeta,
     getPlanEquivalenciasMeta,
     getIntermediateTitleConfig,
+    getPlanDiplomaturasConfig,
     getAcademicNavItems,
 } from './planPolicies';
 import { CAREERS_REGISTRY } from './careersRegistry';
@@ -96,5 +97,18 @@ describe('planPolicies - Capacidades y navegación por plan y carrera', () => {
         expect(canUseFeature('99.01', 'planTransition')).toBe(false);
         expect(canUseFeature('99.01', 'equivalencias')).toBe(false);
         expect(canUseFeature('99.01', 'intermediateTitle')).toBe(false);
+        expect(canUseFeature('99.01', 'diplomaturas')).toBe(false);
+        expect(getPlanDiplomaturasConfig('99.01')).toEqual([]);
+    });
+
+    it('expone diplomaturas declarativas en Plan 17.14 y lista vacía en Plan 17.13 y carreras sin diplomaturas', () => {
+        expect(canUseFeature('17.14', 'diplomaturas')).toBe(true);
+        expect(getPlanDiplomaturasConfig('17.14')).toHaveLength(6);
+
+        expect(canUseFeature('17.13', 'diplomaturas')).toBe(false);
+        expect(getPlanDiplomaturasConfig('17.13')).toEqual([]);
+
+        expect(canUseFeature('25.01', 'diplomaturas', SECOND_CAREER_REGISTRY)).toBe(false);
+        expect(getPlanDiplomaturasConfig('25.01', SECOND_CAREER_REGISTRY)).toEqual([]);
     });
 });

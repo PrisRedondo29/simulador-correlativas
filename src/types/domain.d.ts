@@ -297,6 +297,7 @@ export interface PlanFeatureFlags {
     planTransition?: boolean;
     equivalencias?: boolean;
     intermediateTitle?: boolean;
+    diplomaturas?: boolean;
 }
 
 export interface IntermediateTitleConfig {
@@ -304,6 +305,57 @@ export interface IntermediateTitleConfig {
     maxCuatrimestre?: number;
     codigos?: string[];
     excludeCodigos?: string[];
+}
+
+export interface DiplomaturaColorPalette {
+    bg: [number, number, number];
+    border: [number, number, number];
+    text: [number, number, number];
+    hexBg: string;
+    hexBorder: string;
+    hexText: string;
+}
+
+export interface DiplomaturaOptativaRequerida {
+    codigo?: string | null;
+    nombre: string;
+}
+
+export interface DiplomaturaConfig {
+    id: string;
+    shortCode: string;
+    name: string;
+    shortName: string;
+    resolution: string;
+    horasTotales: number;
+    codigosObligatorios: string[];
+    codigosOptativasSlot?: string[];
+    optativasRequeridas?: DiplomaturaOptativaRequerida[];
+    notaNormativa?: string;
+    color: DiplomaturaColorPalette;
+}
+
+export interface DiplomaturaMateriaTag {
+    diplomatura: DiplomaturaConfig;
+    esOptativa: boolean;
+}
+
+export interface DiplomaturaProgresoResumen {
+    id: string;
+    shortCode: string;
+    shortName: string;
+    name: string;
+    resolution: string;
+    horasTotales: number;
+    completadas: number;
+    totales: number;
+    faltantesCount: number;
+    porcentaje: number;
+    obtenida: boolean;
+    tieneOptativasRequeridas: boolean;
+    tieneOptativaSinCodigo: boolean;
+    notaNormativa?: string;
+    color: DiplomaturaColorPalette;
 }
 
 export type EquivalenciasMap = EquivalenciasCatalogMap;
@@ -506,6 +558,7 @@ export interface PlanConfig {
     estimatedSubjects?: number;
     isDefault?: boolean;
     intermediateTitle?: IntermediateTitleConfig | null;
+    diplomaturas?: DiplomaturaConfig[] | null;
     features?: PlanFeatureFlags;
     equivalencias?: EquivalenciasConfig | null;
     transition?: TransitionConfig | null;

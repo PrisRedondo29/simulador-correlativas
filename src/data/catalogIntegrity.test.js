@@ -3,6 +3,7 @@ import sistemasPlanes from './sistemas.json';
 import equivalenciasRaw from './equivalencias.json';
 import optativasData from './optativasData.json';
 import { CAREERS_REGISTRY } from '../config/careersRegistry';
+import { getPlanDiplomaturasConfig } from '../config/planPolicies';
 import { validarPlanEstudios } from '../utils/Plan/planValidator';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import {
@@ -247,5 +248,57 @@ describe('catalogIntegrity - Auditoría transversal de catálogo y referencias n
         expect(plan1714Config?.equivalencias?.resolution).toContain('Res. HCS 260/24');
         expect(plan1714Config?.equivalencias?.resolution).toContain('Res. HCS 836/24');
         expect(plan1713Config?.transition?.resolution).toContain('Res. HCS 89/2025');
+    });
+
+    it('audita las 6 diplomaturas intracurriculares del Plan 17.14 (Res. HCS 726/24): IDs, siglas, códigos y cargas horarias oficiales', () => {
+        expect(plan1714).toBeDefined();
+        if (!plan1714) return;
+
+        const dipls14 = getPlanDiplomaturasConfig('17.14');
+        const dipls13 = getPlanDiplomaturasConfig('17.13');
+        expect(dipls14).toHaveLength(6);
+        expect(dipls13).toEqual([]);
+
+        const byCode14 = new Map(plan1714.materias.map((m) => [m.codigo, m]));
+        const optativasSet = new Set(optativasData.map((o) => String(o.codigo)));
+        const ids = new Set();
+        const shortCodes = new Set();
+
+        for (const dipl of dipls14) {
+            expect(ids.has(dipl.id)).toBe(false);
+            expect(shortCodes.has(dipl.shortCode)).toBe(false);
+            ids.add(dipl.id);
+            shortCodes.add(dipl.shortCode);
+            expect(dipl.resolution).toBe('Res. HCS 726/24');
+
+            for (const cod of dipl.codigosObligatorios) {
+                expect(byCode14.has(cod)).toBe(true);
+            }
+            for (const slotCod of dipl.codigosOptativasSlot || []) {
+                expect(byCode14.has(slotCod)).toBe(true);
+            }
+            for (const opt of dipl.optativasRequeridas || []) {
+                if (opt.codigo) {
+                    expect(optativasSet.has(opt.codigo)).toBe(true);
+                }
+            }
+        }
+
+        const expectedMandatoryHours = {
+            informatica: 448,
+            'analisis-diseno': 384,
+            'desarrollo-software': 704,
+            'hardware-redes': 544,
+            'ciencia-datos': 576,
+            'teoria-computacion': 96,
+        };
+
+        for (const dipl of dipls14) {
+            const mandatoryMats = dipl.codigosObligatorios.map((c) => byCode14.get(c)).filter(Boolean);
+            expect(sumHorasTotales(mandatoryMats)).toBe(expectedMandatoryHours[dipl.id]);
+        }
+
+        const tdc = dipls14.find((d) => d.id === 'teoria-computacion');
+        expect(tdc?.horasTotales).toBe(224);
     });
 });

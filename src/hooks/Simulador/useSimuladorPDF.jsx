@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { addToast } from '@heroui/react';
 import { getPlanPolicy } from '../../config/planPolicies';
 import tituloIntermedioUtils from '../../utils/Progreso/tituloIntermedioUtils';
+import diplomaturasUtils from '../../utils/Progreso/diplomaturasUtils';
 import { calcularPromedioGeneral } from '../../utils/Progreso/regularidadUtils';
 import {
     ESTADOS_MATERIA,
@@ -16,11 +17,29 @@ const MARGIN_TOP = 14;
 const BOTTOM_LIMIT = 276;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_X * 2; // 182mm
 
-const COL_ESTADO_X = MARGIN_X; // 14..63 (49mm)
-const COL_COD_X = 63; // 63..78 (15mm)
-const COL_MAT_X = 78; // 78..162 (84mm)
-const COL_CARGA_X = 162; // 162..183 (21mm)
-const COL_NOTA_X = 183; // 183..196 (13mm)
+const STANDARD_COLS = {
+    estadoX: MARGIN_X, // 14..63 (49mm)
+    checkboxXs: [15.4, 29.8, 46.2],
+    codX: 63, // 63..78 (15mm)
+    matX: 78, // 78..162 (84mm)
+    matWrapWidth: 80,
+    diplX: null,
+    cargaX: 162, // 162..183 (21mm)
+    notaX: 183, // 183..196 (13mm)
+    notaCenterOffset: 6.5,
+};
+
+const DIPLOMADO_COLS = {
+    estadoX: MARGIN_X, // 14..62 (48mm)
+    checkboxXs: [15.4, 29.6, 45.8],
+    codX: 62, // 62..76 (14mm)
+    matX: 76, // 76..140 (64mm)
+    matWrapWidth: 60.5,
+    diplX: 140, // 140..165 (25mm)
+    cargaX: 165, // 165..184 (19mm)
+    notaX: 184, // 184..196 (12mm)
+    notaCenterOffset: 6.0,
+};
 
 const UNLU_GREEN = /** @type {const} */ ([0, 90, 54]);
 const INK_DARK = /** @type {const} */ ([30, 41, 59]);
@@ -31,6 +50,8 @@ const ROW_BORDER = /** @type {const} */ ([226, 232, 240]);
 const BG_SOFT = /** @type {const} */ ([248, 250, 252]);
 const BG_HEADER = /** @type {const} */ ([241, 245, 249]);
 const BG_GREEN_SOFT = /** @type {const} */ ([236, 253, 245]);
+const BG_INTERMEDIO_ROW_EVEN = /** @type {const} */ ([246, 253, 249]);
+const BG_INTERMEDIO_ROW_ODD = /** @type {const} */ ([251, 254, 252]);
 
 const defaultLoadJsPDF = () => import('jspdf');
 
@@ -63,7 +84,8 @@ function drawCheckbox(pdf, x, y, label, checked = false) {
     pdf.text(label, x + 3.6, y + 2.3);
 }
 
-function drawTableHeader(pdf, y) {
+function drawTableHeader(pdf, y, { showDiplomados = false } = {}) {
+    const cols = showDiplomados ? DIPLOMADO_COLS : STANDARD_COLS;
     const headerH = 6.2;
     pdf.setFillColor(...BG_HEADER);
     pdf.setDrawColor(...BORDER);
@@ -74,13 +96,20 @@ function drawTableHeader(pdf, y) {
     pdf.setFontSize(7.2);
     pdf.setTextColor(...INK_MUTED);
     const textY = y + 4.2;
-    pdf.text('Seguimiento', COL_ESTADO_X + 1.8, textY);
-    pdf.text('Cód.', COL_COD_X + 1.8, textY);
-    pdf.text('Materia', COL_MAT_X + 1.8, textY);
-    pdf.text('Carga', COL_CARGA_X + 1.8, textY);
-    pdf.text('Nota', COL_NOTA_X + 6.5, textY, { align: 'center' });
+    pdf.text('Seguimiento', cols.estadoX + 1.8, textY);
+    pdf.text('Cód.', cols.codX + 1.6, textY);
+    pdf.text('Materia', cols.matX + 1.8, textY);
+    if (showDiplomados && cols.diplX != null) {
+        pdf.text('Diplomado', cols.diplX + 1.6, textY);
+    }
+    pdf.text('Carga', cols.cargaX + 1.6, textY);
+    pdf.text('Nota', cols.notaX + cols.notaCenterOffset, textY, { align: 'center' });
 
-    [COL_COD_X, COL_MAT_X, COL_CARGA_X, COL_NOTA_X].forEach((cx) => {
+    const dividers = showDiplomados && cols.diplX != null
+        ? [cols.codX, cols.matX, cols.diplX, cols.cargaX, cols.notaX]
+        : [cols.codX, cols.matX, cols.cargaX, cols.notaX];
+
+    dividers.forEach((cx) => {
         pdf.line(cx, y, cx, y + headerH);
     });
 
@@ -107,6 +136,54 @@ function stampPageFooters(pdf, labelText) {
     }
 }
 
+/**
+ * Dibuja los pills de colores de diplomaturas en la columna Diplomado usando roundedRect
+ * (sin interferir con rectángulos 2.9x2.9 de las casillas de seguimiento).
+ * @param {any} pdf
+ * @param {number} cellX
+ * @param {number} rowY
+ * @param {number} rowH
+ * @param {Array<import('../../types/domain').DiplomaturaMateriaTag>} tags
+ */
+function drawDiplomaturaPills(pdf, cellX, rowY, rowH, tags) {
+    if (!tags || tags.length === 0) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(6.8);
+        pdf.setTextColor(...INK_LIGHT);
+        pdf.text('-', cellX + 12.5, rowY + rowH / 2 + 1.0, { align: 'center' });
+        return;
+    }
+
+    const pillW = 10.6;
+    const pillH = 3.6;
+    const gapX = 1.1;
+    const gapY = 1.0;
+    const numRows = Math.ceil(tags.length / 2);
+    const blockH = numRows * pillH + Math.max(0, numRows - 1) * gapY;
+    const startY = rowY + Math.max(1.2, (rowH - blockH) / 2);
+    const baseStartX = cellX + (25 - (pillW * 2 + gapX)) / 2;
+
+    tags.forEach((tag, idx) => {
+        const colIdx = idx % 2;
+        const rowIdx = Math.floor(idx / 2);
+        const px = baseStartX + colIdx * (pillW + gapX);
+        const py = startY + rowIdx * (pillH + gapY);
+
+        pdf.setFillColor(...tag.diplomatura.color.bg);
+        pdf.setDrawColor(...tag.diplomatura.color.border);
+        pdf.setLineWidth(0.25);
+        pdf.roundedRect(px, py, pillW, pillH, 0.8, 0.8, 'FD');
+
+        const label = tag.esOptativa
+            ? `${tag.diplomatura.shortCode}*`
+            : tag.diplomatura.shortCode;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5.7);
+        pdf.setTextColor(...tag.diplomatura.color.text);
+        pdf.text(label, px + pillW / 2, py + 2.55, { align: 'center' });
+    });
+}
+
 function renderChecklistRow(
     pdf,
     y,
@@ -119,60 +196,94 @@ function renderChecklistRow(
         checkedAprob = false,
         checkedPromoc = false,
         notaText = '',
+        showDiplomados = false,
+        diplomaturaTags = [],
+        isIntermedioRow = false,
     },
 ) {
+    const cols = showDiplomados ? DIPLOMADO_COLS : STANDARD_COLS;
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7.9);
-    const nameLines = pdf.splitTextToSize(displayName, 80);
-    const rowH = Math.max(7.2, nameLines.length * 3.6 + 3.2);
+    const nameLines = pdf.splitTextToSize(displayName, cols.matWrapWidth);
+    const pillRows = showDiplomados && diplomaturaTags.length > 0
+        ? Math.ceil(diplomaturaTags.length / 2)
+        : 0;
+    const rowH = Math.max(7.2, nameLines.length * 3.6 + 3.2, pillRows * 4.6 + 2.4);
 
     let nextY = y;
     if (nextY + rowH > BOTTOM_LIMIT) {
         pdf.addPage();
-        nextY = drawTableHeader(pdf, MARGIN_TOP);
+        nextY = drawTableHeader(pdf, MARGIN_TOP, { showDiplomados });
     }
 
-    pdf.setFillColor(...(rowIdx % 2 === 1 ? [252, 253, 254] : [255, 255, 255]));
+    const fillColor = isIntermedioRow
+        ? rowIdx % 2 === 1
+            ? BG_INTERMEDIO_ROW_ODD
+            : BG_INTERMEDIO_ROW_EVEN
+        : rowIdx % 2 === 1
+          ? [252, 253, 254]
+          : [255, 255, 255];
+
+    pdf.setFillColor(...fillColor);
     pdf.setDrawColor(...ROW_BORDER);
     pdf.setLineWidth(0.2);
     pdf.rect(MARGIN_X, nextY, CONTENT_WIDTH, rowH, 'FD');
 
-    [COL_COD_X, COL_MAT_X, COL_CARGA_X, COL_NOTA_X].forEach((cx) => {
+    if (isIntermedioRow) {
+        pdf.setFillColor(...UNLU_GREEN);
+        pdf.rect(MARGIN_X, nextY, 1.0, rowH, 'F');
+    }
+
+    const dividers = showDiplomados && cols.diplX != null
+        ? [cols.codX, cols.matX, cols.diplX, cols.cargaX, cols.notaX]
+        : [cols.codX, cols.matX, cols.cargaX, cols.notaX];
+
+    pdf.setDrawColor(...ROW_BORDER);
+    dividers.forEach((cx) => {
         pdf.line(cx, nextY, cx, nextY + rowH);
     });
 
     const boxY = nextY + (rowH - 2.9) / 2;
-    drawCheckbox(pdf, 15.2, boxY, 'Regular', checkedReg);
-    drawCheckbox(pdf, 29.8, boxY, 'Aprobada', checkedAprob);
-    drawCheckbox(pdf, 46.2, boxY, 'Promoc.', checkedPromoc);
+    drawCheckbox(pdf, cols.checkboxXs[0], boxY, 'Regular', checkedReg);
+    drawCheckbox(pdf, cols.checkboxXs[1], boxY, 'Aprobada', checkedAprob);
+    drawCheckbox(pdf, cols.checkboxXs[2], boxY, 'Promoc.', checkedPromoc);
 
     const singleTextY = nextY + rowH / 2 + 1.1;
 
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7.4);
+    pdf.setFontSize(7.3);
     pdf.setTextColor(...INK_MUTED);
-    pdf.text(codigoStr, COL_COD_X + 1.8, singleTextY);
+    pdf.text(codigoStr, cols.codX + 1.6, singleTextY);
 
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7.9);
     pdf.setTextColor(...INK_DARK);
     const firstLineY = nameLines.length === 1 ? singleTextY : nextY + 4.3;
-    pdf.text(nameLines, COL_MAT_X + 1.8, firstLineY);
+    pdf.text(nameLines, cols.matX + 1.8, firstLineY);
+
+    if (showDiplomados && cols.diplX != null) {
+        drawDiplomaturaPills(pdf, cols.diplX, nextY, rowH, diplomaturaTags);
+    }
 
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7.1);
+    pdf.setFontSize(showDiplomados ? 6.9 : 7.1);
     pdf.setTextColor(...INK_MUTED);
-    pdf.text(cargaStr, COL_CARGA_X + 1.8, singleTextY);
+    pdf.text(cargaStr, cols.cargaX + 1.6, singleTextY);
 
     if (notaText) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(7.6);
         pdf.setTextColor(...UNLU_GREEN);
-        pdf.text(notaText, COL_NOTA_X + 6.5, singleTextY, { align: 'center' });
+        pdf.text(notaText, cols.notaX + cols.notaCenterOffset, singleTextY, { align: 'center' });
     } else {
         pdf.setDrawColor(...BORDER);
         pdf.setLineWidth(0.2);
-        pdf.line(COL_NOTA_X + 2.2, nextY + rowH - 2.0, COL_NOTA_X + 10.8, nextY + rowH - 2.0);
+        pdf.line(
+            cols.notaX + 2.0,
+            nextY + rowH - 2.0,
+            cols.notaX + cols.notaCenterOffset * 2 - 2.0,
+            nextY + rowH - 2.0,
+        );
     }
 
     return nextY + rowH;
@@ -674,20 +785,26 @@ export function buildSimuladorPDFDocument({
 }
 
 /**
- * Agrupa las materias de un plan por año y cuatrimestre (plus Talleres) manteniendo orden curricular.
+ * Agrupa las materias de un plan por año y cuatrimestre (integrando talleres con año válido en su
+ * cuatrimestre correspondiente) y detecta el punto exacto donde cierra el Título Intermedio.
  * @param {Array<import('../../types/domain').Materia>} materias
+ * @param {Set<string>} [codigosIntermedio]
  */
-function groupMateriasForPlanSheet(materias = []) {
+function groupMateriasForPlanSheet(materias = [], codigosIntermedio = new Set()) {
     /** @type {Array<{ title: string, items: Array<import('../../types/domain').Materia> }>} */
-    const sections = [];
+    const rawSections = [];
 
-    const nonTalleres = (materias || []).filter((m) => !m.taller);
-    const anios = [...new Set(nonTalleres.map((m) => Number(m.anio)))]
-        .filter((n) => !Number.isNaN(n))
-        .sort((a, b) => a - b);
+    const hasValidYear = (m) => {
+        if (m.anio == null || String(m.anio).trim() === '') return false;
+        const n = Number(m.anio);
+        return !Number.isNaN(n) && n > 0;
+    };
+
+    const materiasCronologicas = (materias || []).filter((m) => !m.taller || hasValidYear(m));
+    const anios = [...new Set(materiasCronologicas.map((m) => Number(m.anio)))].sort((a, b) => a - b);
 
     anios.forEach((anio) => {
-        const matsAnio = nonTalleres.filter((m) => Number(m.anio) === anio);
+        const matsAnio = materiasCronologicas.filter((m) => Number(m.anio) === anio);
         const cuatris = [...new Set(matsAnio.map((m) => Number(m.cuatrimestre) || 1))].sort(
             (a, b) => a - b,
         );
@@ -697,29 +814,250 @@ function groupMateriasForPlanSheet(materias = []) {
             if (items.length === 0) return;
             const cLabel =
                 anio >= 6 || cNum > 10 ? 'Tramo de cierre' : `${cNum}° Cuatrimestre`;
-            sections.push({
+            rawSections.push({
                 title: `${anio}° Año · ${cLabel}`,
                 items,
             });
         });
     });
 
-    const talleres = (materias || []).filter((m) => m.taller === true);
-    if (talleres.length > 0) {
-        sections.push({
+    const talleresSinAnio = (materias || []).filter((m) => m.taller === true && !hasValidYear(m));
+    if (talleresSinAnio.length > 0) {
+        rawSections.push({
             title: 'Talleres y actividades complementarias',
-            items: talleres,
+            items: talleresSinAnio,
         });
     }
 
+    if (!codigosIntermedio || codigosIntermedio.size === 0) {
+        return rawSections.map((section) => ({
+            ...section,
+            tramo: /** @type {'general'} */ ('general'),
+            showIntermediateMilestoneAfter: false,
+        }));
+    }
+
+    let lastIntermedioSectionIdx = -1;
+    rawSections.forEach((section, idx) => {
+        if (section.items.some((m) => codigosIntermedio.has(String(m.codigo)))) {
+            lastIntermedioSectionIdx = idx;
+        }
+    });
+
+    /** @type {Array<{ title: string, items: Array<import('../../types/domain').Materia>, tramo: 'intermedio' | 'licenciatura' | 'general', showIntermediateMilestoneAfter: boolean }>} */
+    const sections = [];
+
+    rawSections.forEach((section, idx) => {
+        if (idx < lastIntermedioSectionIdx) {
+            sections.push({
+                ...section,
+                tramo: 'intermedio',
+                showIntermediateMilestoneAfter: false,
+            });
+            return;
+        }
+
+        if (idx === lastIntermedioSectionIdx) {
+            const itemsIntermedio = section.items.filter((m) =>
+                codigosIntermedio.has(String(m.codigo)),
+            );
+            const itemsResto = section.items.filter(
+                (m) => !codigosIntermedio.has(String(m.codigo)),
+            );
+
+            if (itemsResto.length > 0 && itemsIntermedio.length > 0) {
+                sections.push({
+                    title: section.title,
+                    items: itemsIntermedio,
+                    tramo: 'intermedio',
+                    showIntermediateMilestoneAfter: true,
+                });
+                sections.push({
+                    title: `${section.title} · Ciclo de Licenciatura`,
+                    items: itemsResto,
+                    tramo: 'licenciatura',
+                    showIntermediateMilestoneAfter: false,
+                });
+            } else {
+                sections.push({
+                    ...section,
+                    tramo: 'intermedio',
+                    showIntermediateMilestoneAfter: true,
+                });
+            }
+            return;
+        }
+
+        sections.push({
+            ...section,
+            tramo: 'licenciatura',
+            showIntermediateMilestoneAfter: false,
+        });
+    });
+
     return sections;
+}
+
+/**
+ * Dibuja la leyenda visual de diplomaturas intracurriculares en la cabecera de la planilla.
+ * @param {any} pdf
+ * @param {number} y
+ * @param {Array<import('../../types/domain').DiplomaturaProgresoResumen>} diplomaturasResumen
+ * @param {boolean} includeProgress
+ */
+function drawDiplomaturasLegend(pdf, y, diplomaturasResumen, includeProgress) {
+    if (!diplomaturasResumen || diplomaturasResumen.length === 0) return y;
+
+    const cols = 2;
+    const numRows = Math.ceil(diplomaturasResumen.length / cols);
+    const headerH = 6.0;
+    const rowH = 5.4;
+    const footerH = 5.0;
+    const legendH = headerH + numRows * rowH + footerH + 1.8;
+
+    if (y + legendH > BOTTOM_LIMIT) {
+        pdf.addPage();
+        y = MARGIN_TOP;
+    }
+
+    pdf.setFillColor(...BG_SOFT);
+    pdf.setDrawColor(...BORDER);
+    pdf.setLineWidth(0.25);
+    pdf.roundedRect(MARGIN_X, y, CONTENT_WIDTH, legendH, 1.5, 1.5, 'FD');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.5);
+    pdf.setTextColor(...INK_DARK);
+    pdf.text(
+        'Diplomaturas Intracurriculares (Res. HCS 726/24 · certificaciones parciales)',
+        MARGIN_X + 3,
+        y + 4.3,
+    );
+
+    const colW = (CONTENT_WIDTH - 6) / 2;
+    diplomaturasResumen.forEach((dipl, idx) => {
+        const colIdx = idx % 2;
+        const rowIdx = Math.floor(idx / 2);
+        const cx = MARGIN_X + 3 + colIdx * colW;
+        const cy = y + headerH + rowIdx * rowH;
+
+        const pillW = 10.6;
+        const pillH = 3.6;
+        pdf.setFillColor(...dipl.color.bg);
+        pdf.setDrawColor(...dipl.color.border);
+        pdf.setLineWidth(0.25);
+        pdf.roundedRect(cx, cy + 0.5, pillW, pillH, 0.8, 0.8, 'FD');
+
+        const badgeCode = dipl.tieneOptativasRequeridas ? `${dipl.shortCode}*` : dipl.shortCode;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(5.7);
+        pdf.setTextColor(...dipl.color.text);
+        pdf.text(badgeCode, cx + pillW / 2, cy + 3.0, { align: 'center' });
+
+        const statusLabel = includeProgress
+            ? dipl.obtenida
+                ? `${dipl.shortName} · ${dipl.completadas}/${dipl.totales} (Obtenida)`
+                : `${dipl.shortName} · ${dipl.completadas}/${dipl.totales}`
+            : `${dipl.shortName} (${dipl.totales} act. · ${dipl.horasTotales}h)`;
+
+        pdf.setFont('helvetica', includeProgress && dipl.obtenida ? 'bold' : 'normal');
+        pdf.setFontSize(6.9);
+        pdf.setTextColor(...(includeProgress && dipl.obtenida ? UNLU_GREEN : INK_DARK));
+        pdf.text(statusLabel, cx + pillW + 2.0, cy + 3.2);
+    });
+
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(6.3);
+    pdf.setTextColor(...INK_LIGHT);
+    pdf.text(
+        '* Certificación parcial intracurricular (no título independiente). TDC* requiere 14031 + Compiladores (11809) y Computabilidad y Complejidad.',
+        MARGIN_X + 3,
+        y + headerH + numRows * rowH + 3.4,
+    );
+
+    return y + legendH + 3.6;
+}
+
+/**
+ * Dibuja el banner destacado de hito donde se obtiene el Título Intermedio.
+ * @param {any} pdf
+ * @param {number} y
+ * @param {{
+ *   tituloIntermedioNombre: string,
+ *   totales: number,
+ *   horasIntermedio: number,
+ *   includeProgress: boolean,
+ *   intermedioProgress: import('../../types/domain').ProgresoIntermedioResumen | null,
+ * }} params
+ */
+function drawIntermediateTitleMilestoneBanner(
+    pdf,
+    y,
+    {
+        tituloIntermedioNombre,
+        totales,
+        horasIntermedio,
+        includeProgress,
+        intermedioProgress,
+    },
+) {
+    if (!tituloIntermedioNombre || totales <= 0) return y;
+
+    const bannerH = 12.2;
+    if (y + bannerH + 2 > BOTTOM_LIMIT) {
+        pdf.addPage();
+        y = MARGIN_TOP;
+    }
+
+    const completadas = intermedioProgress?.completadas ?? 0;
+    const totalReq = intermedioProgress?.totales ?? totales;
+    const faltantes = Math.max(0, totalReq - completadas);
+    const porcentaje = intermedioProgress?.porcentaje ?? 0;
+    const obtenida = includeProgress && completadas >= totalReq;
+
+    pdf.setFillColor(...BG_GREEN_SOFT);
+    pdf.setDrawColor(...UNLU_GREEN);
+    pdf.setLineWidth(0.4);
+    pdf.roundedRect(MARGIN_X, y, CONTENT_WIDTH, bannerH, 1.5, 1.5, 'FD');
+
+    pdf.setFillColor(...UNLU_GREEN);
+    pdf.rect(MARGIN_X, y, 2.0, bannerH, 'F');
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(...UNLU_GREEN);
+    pdf.text(`HITO · ${tituloIntermedioNombre}`, MARGIN_X + 4.0, y + 4.8);
+
+    const statusBadge = includeProgress
+        ? obtenida
+            ? `OBTENIDO (${completadas}/${totalReq} · 100%)`
+            : `Faltan ${faltantes} de ${totalReq} (${completadas}/${totalReq} · ${porcentaje}%)`
+        : `${totalReq} ${totalReq === 1 ? 'actividad' : 'actividades'} · ${horasIntermedio} hs`;
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7.9);
+    pdf.setTextColor(...(obtenida || !includeProgress ? UNLU_GREEN : INK_DARK));
+    pdf.text(statusBadge, PAGE_WIDTH - MARGIN_X - 3.0, y + 4.8, { align: 'right' });
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.0);
+    pdf.setTextColor(...INK_DARK);
+    const detailText = includeProgress
+        ? obtenida
+            ? 'Completaste todas las actividades del tramo anterior requeridas para este título intermedio.'
+            : `Se obtiene al aprobar todas las actividades del tramo anterior (${horasIntermedio} hs reloj). A continuación inicia el Ciclo de Licenciatura.`
+        : `Se obtiene al completar y aprobar las ${totalReq} actividades del tramo anterior (${horasIntermedio} hs reloj). A continuación inicia el Ciclo de Licenciatura.`;
+
+    pdf.text(detailText, MARGIN_X + 4.0, y + 9.4);
+
+    return y + bannerH + 3.8;
 }
 
 /**
  * Construye la planilla vectorial A4 del plan de estudios completo:
  * - `includeProgress: false`: planilla en blanco ordenada por año y cuatrimestre para imprimir.
  * - `includeProgress: true`: pre-rellena las casillas (`Regular`, `Aprobada`, `Promoc.`) y notas
- *   desde Mis Materias / Analítico SAWeb junto con promedio y progreso del título intermedio.
+ *   desde Mis Materias / Analítico SAWeb junto con promedio, hito de título intermedio y diplomaturas.
  *
  * @param {{
  *   jsPDF: typeof import('jspdf').jsPDF,
@@ -747,6 +1085,20 @@ export function buildPlanillaPlanPDFDocument({
     const tituloIntermedioNombre = tituloIntermedioUtils.getTituloIntermedioNombre(plan);
     const materiasIntermedio = tituloIntermedioUtils.getMateriasIntermedio(plan, materias);
     const codigosIntermedio = new Set(materiasIntermedio.map((m) => String(m.codigo)));
+    const horasIntermedio = materiasIntermedio.reduce(
+        (acc, m) => acc + (Number(m.horas_totales) || 0),
+        0,
+    );
+
+    const diplomaturasResumen = diplomaturasUtils.calcularProgresoDiplomaturas(
+        plan,
+        includeProgress ? progreso : {},
+        includeProgress ? progresoDetalles : {},
+    );
+    const showDiplomados = diplomaturasResumen.length > 0;
+    const diplomaturasPorMateria = showDiplomados
+        ? diplomaturasUtils.getDiplomaturasPorMateria(plan)
+        : {};
 
     const totalCount =
         kpis?.totalMaterias ??
@@ -767,9 +1119,10 @@ export function buildPlanillaPlanPDFDocument({
     const resumenPromedio = includeProgress
         ? calcularPromedioGeneral(progresoDetalles, progreso)
         : null;
-    const intermedioProgress = includeProgress
-        ? tituloIntermedioUtils.calcularProgresoIntermedio(materiasIntermedio, progreso)
-        : null;
+    const intermedioProgress =
+        includeProgress && materiasIntermedio.length > 0
+            ? tituloIntermedioUtils.calcularProgresoIntermedio(materiasIntermedio, progreso)
+            : null;
 
     const totalHorasPlan = materias.reduce(
         (acc, m) => acc + (Number(m.horas_totales) || 0),
@@ -808,7 +1161,14 @@ export function buildPlanillaPlanPDFDocument({
     pdf.text(`${carreraLabel} · Plan ${plan || '-'}`, MARGIN_X, y);
 
     y += 3.2;
-    const boxH = includeProgress ? 17.0 : 12.5;
+    const showTramoRefLine = !showDiplomados && Boolean(tituloIntermedioNombre);
+    const boxH = includeProgress
+        ? showTramoRefLine
+            ? 21.0
+            : 17.0
+        : showTramoRefLine
+          ? 16.5
+          : 12.5;
     pdf.setFillColor(...BG_SOFT);
     pdf.setDrawColor(...BORDER);
     pdf.setLineWidth(0.25);
@@ -852,12 +1212,29 @@ export function buildPlanillaPlanPDFDocument({
         pdf.setFontSize(7);
         pdf.setTextColor(...INK_LIGHT);
         pdf.text('(Las casillas marcadas reflejan tu progreso cargado)', MARGIN_X + 82, y + 14.3);
+
+        if (showTramoRefLine) {
+            pdf.setFillColor(...UNLU_GREEN);
+            pdf.rect(MARGIN_X + 3, y + 16.5, 2.0, 2.8, 'F');
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(6.9);
+            pdf.setTextColor(...INK_MUTED);
+            pdf.text(`Tramo ${tituloIntermedioNombre}`, MARGIN_X + 6.5, y + 18.8);
+
+            pdf.setFillColor(...INK_MUTED);
+            pdf.rect(MARGIN_X + 68, y + 16.5, 2.0, 2.8, 'F');
+            pdf.text(
+                'Ciclo de Licenciatura (el hito verde indica dónde se obtiene el título)',
+                MARGIN_X + 71.5,
+                y + 18.8,
+            );
+        }
     } else {
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(8.2);
         pdf.setTextColor(...INK_DARK);
         const interNote = tituloIntermedioNombre
-            ? ` · Incluye marcas de ${tituloIntermedioNombre}`
+            ? ` · Incluye hito de ${tituloIntermedioNombre}`
             : '';
         pdf.text(
             `${materias.length} materias · ${totalHorasPlan} hs totales del plan${interNote}`,
@@ -872,11 +1249,32 @@ export function buildPlanillaPlanPDFDocument({
         drawCheckbox(pdf, MARGIN_X + 31, y + 7.4, 'Regular');
         drawCheckbox(pdf, MARGIN_X + 49, y + 7.4, 'Aprobada');
         drawCheckbox(pdf, MARGIN_X + 69, y + 7.4, 'Promocionada');
+
+        if (showTramoRefLine) {
+            pdf.setFillColor(...UNLU_GREEN);
+            pdf.rect(MARGIN_X + 3, y + 12.1, 2.0, 2.8, 'F');
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(6.9);
+            pdf.setTextColor(...INK_MUTED);
+            pdf.text(`Tramo ${tituloIntermedioNombre}`, MARGIN_X + 6.5, y + 14.4);
+
+            pdf.setFillColor(...INK_MUTED);
+            pdf.rect(MARGIN_X + 68, y + 12.1, 2.0, 2.8, 'F');
+            pdf.text(
+                'Ciclo de Licenciatura (el hito verde indica dónde se obtiene el título)',
+                MARGIN_X + 71.5,
+                y + 14.4,
+            );
+        }
     }
 
-    y += boxH + 4;
+    y += boxH + 3.6;
 
-    const sections = groupMateriasForPlanSheet(materias);
+    if (showDiplomados) {
+        y = drawDiplomaturasLegend(pdf, y, diplomaturasResumen, includeProgress);
+    }
+
+    const sections = groupMateriasForPlanSheet(materias, codigosIntermedio);
     sections.forEach((section) => {
         if (y + 21 > BOTTOM_LIMIT) {
             pdf.addPage();
@@ -889,7 +1287,7 @@ export function buildPlanillaPlanPDFDocument({
         pdf.setLineWidth(0.25);
         pdf.rect(MARGIN_X, y, CONTENT_WIDTH, bannerH, 'FD');
 
-        pdf.setFillColor(...UNLU_GREEN);
+        pdf.setFillColor(...(section.tramo === 'licenciatura' ? INK_MUTED : UNLU_GREEN));
         pdf.rect(MARGIN_X, y, 1.4, bannerH, 'F');
 
         pdf.setFont('helvetica', 'bold');
@@ -908,7 +1306,7 @@ export function buildPlanillaPlanPDFDocument({
         );
 
         y += bannerH;
-        y = drawTableHeader(pdf, y);
+        y = drawTableHeader(pdf, y, { showDiplomados });
 
         section.items.forEach((materia, rowIdx) => {
             const det = includeProgress ? progresoDetalles?.[materia.codigo] : null;
@@ -943,6 +1341,9 @@ export function buildPlanillaPlanPDFDocument({
                     : String(materia.nombre || '');
 
             const suffixParts = [];
+            if (materia.taller === true) {
+                suffixParts.push('[Taller]');
+            }
             if (codigosIntermedio.has(String(materia.codigo))) {
                 suffixParts.push('[Intermedio]');
             }
@@ -957,9 +1358,11 @@ export function buildPlanillaPlanPDFDocument({
             const hsSem = Number(materia.horas_semanales) || 0;
             const hsTot = Number(materia.horas_totales) || 0;
             const cargaStr =
-                [hsSem > 0 ? `${hsSem}h/s` : null, hsTot > 0 ? `${hsTot}h` : null]
-                    .filter(Boolean)
-                    .join(' · ') || '-';
+                hsSem === 0 && hsTot === 0 && materia.taller
+                    ? 'Acred.'
+                    : [hsSem > 0 ? `${hsSem}h/s` : null, hsTot > 0 ? `${hsTot}h` : null]
+                          .filter(Boolean)
+                          .join(' · ') || '-';
 
             y = renderChecklistRow(pdf, y, rowIdx, {
                 codigoStr,
@@ -969,10 +1372,25 @@ export function buildPlanillaPlanPDFDocument({
                 checkedAprob,
                 checkedPromoc,
                 notaText,
+                showDiplomados,
+                diplomaturaTags: showDiplomados
+                    ? diplomaturasPorMateria[String(materia.codigo)] || []
+                    : [],
+                isIntermedioRow: codigosIntermedio.has(String(materia.codigo)),
             });
         });
 
-        y += 4.2;
+        y += section.showIntermediateMilestoneAfter ? 2.6 : 4.2;
+
+        if (section.showIntermediateMilestoneAfter && tituloIntermedioNombre) {
+            y = drawIntermediateTitleMilestoneBanner(pdf, y, {
+                tituloIntermedioNombre,
+                totales: materiasIntermedio.length,
+                horasIntermedio,
+                includeProgress,
+                intermedioProgress,
+            });
+        }
     });
 
     stampPageFooters(

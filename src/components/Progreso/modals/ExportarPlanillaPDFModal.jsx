@@ -14,6 +14,8 @@ import {
 import { Check, FileDown, FileText, Sparkles } from "lucide-react";
 import { downloadPlanillaPlanPDF } from "../../../hooks/Simulador/useSimuladorPDF";
 import { calcularPromedioGeneral } from "../../../utils/Progreso/regularidadUtils";
+import tituloIntermedioUtils from "../../../utils/Progreso/tituloIntermedioUtils";
+import diplomaturasUtils from "../../../utils/Progreso/diplomaturasUtils";
 
 function ChecklistPreview({
   plan,
@@ -31,6 +33,40 @@ function ChecklistPreview({
     () => (includeProgress ? calcularPromedioGeneral(progresoDetalles, progreso) : null),
     [includeProgress, progresoDetalles, progreso],
   );
+  const tituloIntermedioNombre = useMemo(
+    () => tituloIntermedioUtils.getTituloIntermedioNombre(plan),
+    [plan],
+  );
+  const materiasIntermedio = useMemo(
+    () => tituloIntermedioUtils.getMateriasIntermedio(plan, materias),
+    [plan, materias],
+  );
+  const codigosIntermedio = useMemo(
+    () => new Set(materiasIntermedio.map((m) => String(m.codigo))),
+    [materiasIntermedio],
+  );
+  const intermedioProgress = useMemo(
+    () =>
+      includeProgress && materiasIntermedio.length > 0
+        ? tituloIntermedioUtils.calcularProgresoIntermedio(materiasIntermedio, progreso)
+        : null,
+    [includeProgress, materiasIntermedio, progreso],
+  );
+  const diplomaturasResumen = useMemo(
+    () =>
+      diplomaturasUtils.calcularProgresoDiplomaturas(
+        plan,
+        includeProgress ? progreso : {},
+        includeProgress ? progresoDetalles : {},
+      ),
+    [plan, includeProgress, progreso, progresoDetalles],
+  );
+  const diplomaturasPorMateria = useMemo(
+    () => diplomaturasUtils.getDiplomaturasPorMateria(plan),
+    [plan],
+  );
+  const hasDiplomaturas = diplomaturasResumen.length > 0;
+
   const totalCount = kpis?.totalMaterias ?? kpis?.totalCount ?? materias.length;
   const aprobadasCount =
     kpis?.aprobadasCount ??
@@ -45,7 +81,7 @@ function ChecklistPreview({
   return (
     <div className="rounded-xl border border-[#CBD5E1] dark:border-[#2A3540] bg-white dark:bg-[#0F1419] p-3.5 space-y-3 shadow-2xs">
       <div className="border-t-2 border-[#005A36] pt-2.5 flex flex-wrap items-start justify-between gap-2">
-        <div>
+        <div className="space-y-0.5">
           <p className="text-xs font-bold text-[#1E293B] dark:text-[#F1F5F9]">
             {includeProgress
               ? `Planilla de Avance Académico · Plan ${plan || "-"}`
@@ -60,18 +96,56 @@ function ChecklistPreview({
                 }`
               : `${materias.length} materias organizadas por año y cuatrimestre para imprimir`}
           </p>
+          {tituloIntermedioNombre && materiasIntermedio.length > 0 && (
+            <p className="text-[10px] font-medium text-[#005A36] dark:text-[#6EE7B7]">
+              {tituloIntermedioNombre}:{" "}
+              {intermedioProgress
+                ? `${intermedioProgress.completadas}/${intermedioProgress.totales} (${intermedioProgress.porcentaje}%)`
+                : `${materiasIntermedio.length} actividades`}
+            </p>
+          )}
         </div>
         <Chip size="sm" variant="flat" color={includeProgress ? "success" : "default"} className="text-[10px]">
           {includeProgress ? "Pre-rellenada" : "En blanco"}
         </Chip>
       </div>
 
+      {hasDiplomaturas && (
+        <div className="rounded-lg border border-[#E2E8F0] dark:border-[#24303C] bg-[#F8FAFC] dark:bg-[#11171D] p-2 space-y-1.5">
+          <p className="text-[10px] font-semibold text-[#475569] dark:text-[#CBD5E1]">
+            Diplomaturas Intracurriculares (Res. HCS 726/24)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {diplomaturasResumen.map((d) => (
+              <span
+                key={d.id}
+                style={{
+                  backgroundColor: d.color.hexBg,
+                  borderColor: d.color.hexBorder,
+                  color: d.color.hexText,
+                }}
+                className="inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold"
+              >
+                <span>{d.tieneOptativasRequeridas ? `${d.shortCode}*` : d.shortCode}</span>
+                <span className="font-normal opacity-90">{d.shortName}</span>
+                {includeProgress && (
+                  <span className="font-bold">
+                    · {d.completadas}/{d.totales}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Muestra esquemática de tabla */}
       <div className="rounded-lg border border-[#E2E8F0] dark:border-[#24303C] overflow-hidden text-[11px]">
         <div className="grid grid-cols-12 bg-[#F1F5F9] dark:bg-[#1E2730] px-2.5 py-1.5 font-semibold text-[#475569] dark:text-[#CBD5E1] border-b border-[#E2E8F0] dark:border-[#24303C]">
-          <span className="col-span-5">Seguimiento</span>
+          <span className={hasDiplomaturas ? "col-span-4" : "col-span-5"}>Seguimiento</span>
           <span className="col-span-2">Cód.</span>
-          <span className="col-span-4">Materia</span>
+          <span className={hasDiplomaturas ? "col-span-3" : "col-span-4"}>Materia</span>
+          {hasDiplomaturas && <span className="col-span-2">Dipl.</span>}
           <span className="col-span-1 text-center">Nota</span>
         </div>
         <div className="divide-y divide-[#E2E8F0] dark:divide-[#24303C]">
@@ -91,13 +165,23 @@ function ChecklistPreview({
                   ? (det?.notaFinal ?? (det?.esEquivalencia ? "Eq." : ""))
                   : ""
               : "";
+            const isIntermedio = codigosIntermedio.has(String(m.codigo));
+            const diplTags = hasDiplomaturas
+              ? diplomaturasPorMateria[String(m.codigo)] || []
+              : [];
 
             return (
               <div
                 key={m.codigo}
-                className="grid grid-cols-12 items-center px-2.5 py-1.5 gap-1 text-[#334155] dark:text-[#E2E8F0]"
+                className={`grid grid-cols-12 items-center px-2.5 py-1.5 gap-1 text-[#334155] dark:text-[#E2E8F0] ${
+                  isIntermedio
+                    ? "border-l-2 border-l-[#005A36] bg-[#ECFDF5]/40 dark:bg-[#102A20]/25"
+                    : ""
+                }`}
               >
-                <div className="col-span-5 flex items-center gap-1.5 flex-wrap">
+                <div
+                  className={`${hasDiplomaturas ? "col-span-4" : "col-span-5"} flex items-center gap-1.5 flex-wrap`}
+                >
                   {[
                     { label: "Reg.", checked: checkedReg },
                     { label: "Apr.", checked: checkedApr },
@@ -123,7 +207,33 @@ function ChecklistPreview({
                 <span className="col-span-2 font-mono text-[10px] text-[#64748B] dark:text-[#94A3B8]">
                   {m.mostrarCodigo === false ? "---" : m.codigo}
                 </span>
-                <span className="col-span-4 truncate">{m.nombre}</span>
+                <span className={`${hasDiplomaturas ? "col-span-3" : "col-span-4"} truncate`}>
+                  {m.nombre}
+                  {m.taller ? " [Taller]" : ""}
+                </span>
+                {hasDiplomaturas && (
+                  <div className="col-span-2 flex flex-wrap gap-0.5">
+                    {diplTags.length > 0 ? (
+                      diplTags.map((tag) => (
+                        <span
+                          key={tag.diplomatura.id}
+                          style={{
+                            backgroundColor: tag.diplomatura.color.hexBg,
+                            borderColor: tag.diplomatura.color.hexBorder,
+                            color: tag.diplomatura.color.hexText,
+                          }}
+                          className="inline-block rounded border px-1 py-0 text-[9px] font-bold leading-tight"
+                        >
+                          {tag.esOptativa
+                            ? `${tag.diplomatura.shortCode}*`
+                            : tag.diplomatura.shortCode}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-[#94A3B8]">-</span>
+                    )}
+                  </div>
+                )}
                 <span className="col-span-1 text-center font-semibold text-[#005A36] dark:text-[#6EE7B7] tabular-nums">
                   {nota !== "" ? nota : "___"}
                 </span>
@@ -133,8 +243,23 @@ function ChecklistPreview({
         </div>
       </div>
 
+      {tituloIntermedioNombre && materiasIntermedio.length > 0 && (
+        <div className="rounded-lg border border-[#005A36]/40 bg-[#ECFDF5] dark:bg-[#102A20] px-2.5 py-1.5 flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#005A36] dark:text-[#6EE7B7]">
+          <span className="font-bold">Hito en el PDF: {tituloIntermedioNombre}</span>
+          <span className="font-semibold">
+            {intermedioProgress
+              ? intermedioProgress.completadas >= intermedioProgress.totales
+                ? "Obtenido"
+                : `Faltan ${intermedioProgress.totales - intermedioProgress.completadas} de ${intermedioProgress.totales}`
+              : `${materiasIntermedio.length} actividades`}
+          </span>
+        </div>
+      )}
+
       <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8] italic">
-        Vista previa ilustrativa · El PDF A4 incluye todas las materias del plan agrupadas por año y cuatrimestre.
+        Vista previa ilustrativa · El PDF A4 incluye todas las materias agrupadas por cuatrimestre
+        {tituloIntermedioNombre ? ", el hito del título intermedio" : ""}
+        {hasDiplomaturas ? " y la columna Diplomado con colores." : "."}
       </p>
     </div>
   );

@@ -537,4 +537,160 @@ describe('useSimuladorPDF - Planilla vectorial imprimible con jsPDF', () => {
             ).toBe(true);
         }
     });
+
+    it('Plan 17.13: ubica el hito Título Intermedio entre 7° y 8° cuatrimestre (faltantes, OBTENIDO y en blanco) sin columna Diplomado', () => {
+        const materias13 = sistemasPlanes.find((p) => p.plan_numero === '17.13')?.materias || [];
+        const intermedio13 = materias13.filter((m) => Number(m.cuatrimestre) <= 7 && !m.tesis);
+        expect(intermedio13).toHaveLength(28);
+
+        // 1) Progreso parcial (20/28)
+        const spyParcial = createSpyJsPDFClass();
+        const prog20 = Object.fromEntries(
+            intermedio13.slice(0, 20).map((m) => [m.codigo, 'Promocionado']),
+        );
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spyParcial.MockJsPDF),
+            materias: materias13,
+            plan: '17.13',
+            progreso: prog20,
+            includeProgress: true,
+        });
+
+        expect(spyParcial.textCalls).not.toContain('Diplomado');
+        const idxC7 = spyParcial.textCalls.findIndex((t) => t.includes('4° Año · 7° Cuatrimestre'));
+        const idxHito = spyParcial.textCalls.findIndex((t) =>
+            t.includes('HITO · Título Intermedio (Analista)'),
+        );
+        const idxC8 = spyParcial.textCalls.findIndex((t) => t.includes('4° Año · 8° Cuatrimestre'));
+        expect(idxC7).toBeGreaterThan(-1);
+        expect(idxHito).toBeGreaterThan(idxC7);
+        expect(idxC8).toBeGreaterThan(idxHito);
+        expect(spyParcial.textCalls.some((t) => t.includes('Faltan 8 de 28 (20/28 · 71%)'))).toBe(
+            true,
+        );
+
+        // 2) Título intermedio completo (28/28)
+        const spyCompleto = createSpyJsPDFClass();
+        const prog28 = Object.fromEntries(intermedio13.map((m) => [m.codigo, 'Aprobado']));
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spyCompleto.MockJsPDF),
+            materias: materias13,
+            plan: '17.13',
+            progreso: prog28,
+            includeProgress: true,
+        });
+        expect(spyCompleto.textCalls.some((t) => t.includes('OBTENIDO (28/28 · 100%)'))).toBe(
+            true,
+        );
+
+        // 3) Planilla en blanco
+        const spyBlank = createSpyJsPDFClass();
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spyBlank.MockJsPDF),
+            materias: materias13,
+            plan: '17.13',
+            includeProgress: false,
+        });
+        expect(spyBlank.textCalls.some((t) => t.includes('28 actividades ·'))).toBe(true);
+        expect(spyBlank.textCalls).not.toContain('Diplomado');
+    });
+
+    it('Plan 17.14: integra talleres en 1° Año, corta 3° Año · 6° Cuatrimestre con hito APU, muestra leyenda/columna Diplomado y compila PDF real < 200 KB', () => {
+        const materias14 = sistemasPlanes.find((p) => p.plan_numero === '17.14')?.materias || [];
+        expect(materias14).toHaveLength(43);
+
+        const spy = createSpyJsPDFClass();
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spy.MockJsPDF),
+            materias: materias14,
+            plan: '17.14',
+            progreso: {
+                '19054': 'Aprobado',
+                '11271': 'Promocionado',
+                '14031': 'Aprobado',
+                'AO-1714': 'Promocionado',
+            },
+            progresoDetalles: {
+                '11271': { notaFinal: 9 },
+                'AO-1714': { notaFinal: 8, nombreOptativa: 'Compiladores', codigoOptativa: '11809' },
+            },
+            includeProgress: true,
+        });
+
+        expect(
+            spy.textCalls.some((t) => t.includes('Talleres y actividades complementarias')),
+        ).toBe(false);
+        expect(
+            spy.textCalls.some((t) => t.includes('Diplomaturas Intracurriculares (Res. HCS 726/24')),
+        ).toBe(true);
+        expect(spy.textCalls).toContain('Diplomado');
+        expect(spy.textCalls).toContain('INF');
+        expect(spy.textCalls).toContain('DSW');
+        expect(spy.textCalls).toContain('TDC*');
+        expect(spy.textCalls).toContain('Acred.');
+        expect(
+            spy.textCalls.some((t) =>
+                t.includes('Competencias Básicas en Informática [Taller] [Intermedio]'),
+            ),
+        ).toBe(true);
+
+        const idx1C = spy.textCalls.findIndex((t) => t.includes('1° Año · 1° Cuatrimestre'));
+        const idxTaller19054 = spy.textCalls.findIndex((t) =>
+            t.includes('Competencias Básicas en Informática'),
+        );
+        const idx2C = spy.textCalls.findIndex((t) => t.includes('1° Año · 2° Cuatrimestre'));
+        expect(idx1C).toBeGreaterThan(-1);
+        expect(idxTaller19054).toBeGreaterThan(idx1C);
+        expect(idx2C).toBeGreaterThan(idxTaller19054);
+
+        const idx6C = spy.textCalls.findIndex((t) => t === '3° Año · 6° Cuatrimestre');
+        const idxGsi = spy.textCalls.findIndex((t) =>
+            t.includes('Gestión de Soluciones Innovadoras [Intermedio]'),
+        );
+        const idxHito = spy.textCalls.findIndex((t) =>
+            t.includes('HITO · Analista Programador/a Universitario/a'),
+        );
+        const idx6CLic = spy.textCalls.findIndex((t) =>
+            t.includes('3° Año · 6° Cuatrimestre · Ciclo de Licenciatura'),
+        );
+        const idxBddDist = spy.textCalls.findIndex((t) =>
+            t.includes('Bases de Datos Distribuidas'),
+        );
+
+        expect(idx6C).toBeGreaterThan(-1);
+        expect(idxGsi).toBeGreaterThan(idx6C);
+        expect(idxHito).toBeGreaterThan(idxGsi);
+        expect(idx6CLic).toBeGreaterThan(idxHito);
+        expect(idxBddDist).toBeGreaterThan(idx6CLic);
+        expect(spy.textCalls.some((t) => t.includes('Bases de Datos Distribuidas [Intermedio]'))).toBe(
+            false,
+        );
+        expect(spy.textCalls.some((t) => t.includes('Faltan 22 de 24 (2/24 · 8%)'))).toBe(true);
+
+        // Generación real con jsPDF
+        const realPdf = buildPlanillaPlanPDFDocument({
+            jsPDF,
+            materias: materias14,
+            plan: '17.14',
+            includeProgress: false,
+        });
+        expect(realPdf.getNumberOfPages()).toBeGreaterThanOrEqual(2);
+        const bytes = realPdf.output('arraybuffer').byteLength;
+        expect(bytes).toBeGreaterThan(3000);
+        expect(bytes).toBeLessThan(200 * 1024);
+    });
+
+    it('Plan sin título intermedio ni diplomaturas: omite hito, columna Diplomado y leyenda', () => {
+        const spy = createSpyJsPDFClass();
+        buildPlanillaPlanPDFDocument({
+            jsPDF: /** @type {any} */ (spy.MockJsPDF),
+            materias: MOCK_MATERIAS,
+            plan: '99.01',
+            includeProgress: false,
+        });
+
+        expect(spy.textCalls).not.toContain('Diplomado');
+        expect(spy.textCalls.some((t) => t.includes('HITO ·'))).toBe(false);
+        expect(spy.textCalls.some((t) => t.includes('Diplomaturas Intracurriculares'))).toBe(false);
+    });
 });

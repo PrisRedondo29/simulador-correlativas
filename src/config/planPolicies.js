@@ -22,6 +22,7 @@ import {
 /** @typedef {import('../types/domain').TransitionConfig} TransitionConfig */
 /** @typedef {import('../types/domain').EquivalenciasConfig} EquivalenciasConfig */
 /** @typedef {import('../types/domain').IntermediateTitleConfig} IntermediateTitleConfig */
+/** @typedef {import('../types/domain').DiplomaturaConfig} DiplomaturaConfig */
 /** @typedef {import('../types/domain').AcademicNavItem} AcademicNavItem */
 
 export { DEFAULT_PLAN };
@@ -49,10 +50,12 @@ function buildUnselectedFallback(registry = CAREERS_REGISTRY) {
         planPrefix: defaultCareer?.planPrefix || null,
         estimatedSubjects: defaultPlan?.estimatedSubjects || 36,
         intermediateTitle: defaultPlan?.intermediateTitle || null,
+        diplomaturas: defaultPlan?.diplomaturas || [],
         features: {
             planTransition: false,
             equivalencias: Boolean(defaultPlan?.features?.equivalencias),
             intermediateTitle: Boolean(defaultPlan?.features?.intermediateTitle),
+            diplomaturas: Boolean(defaultPlan?.features?.diplomaturas),
         },
         equivalencias: defaultPlan?.equivalencias || null,
         transition: null,
@@ -88,10 +91,12 @@ export function getPlanPolicy(plan, registry = CAREERS_REGISTRY) {
         planPrefix: career?.planPrefix || null,
         estimatedSubjects: 36,
         intermediateTitle: null,
+        diplomaturas: [],
         features: {
             planTransition: false,
             equivalencias: false,
             intermediateTitle: false,
+            diplomaturas: false,
         },
         equivalencias: null,
         transition: null,
@@ -137,6 +142,20 @@ export function getPlanEquivalenciasMeta(plan, registry = CAREERS_REGISTRY) {
 export function getIntermediateTitleConfig(plan, registry = CAREERS_REGISTRY) {
     const policy = getPlanPolicy(plan, registry);
     return policy.features?.intermediateTitle ? (policy.intermediateTitle ?? null) : null;
+}
+
+/**
+ * Devuelve la configuración declarativa de Diplomaturas Intracurriculares para un plan.
+ * @param {string | null | undefined} plan
+ * @param {CareerConfig[]} [registry]
+ * @returns {DiplomaturaConfig[]}
+ */
+export function getPlanDiplomaturasConfig(plan, registry = CAREERS_REGISTRY) {
+    const policy = getPlanPolicy(plan, registry);
+    if (!policy.features?.diplomaturas || !Array.isArray(policy.diplomaturas)) {
+        return [];
+    }
+    return policy.diplomaturas;
 }
 
 /**

@@ -142,4 +142,49 @@ describe('ExportarPlanillaPDFModal - Planilla en blanco o con progreso', () => {
             expect.objectContaining({ plan: '17.13', includeProgress: false }),
         );
     });
+
+    it('en Plan 17.14 muestra leyenda de diplomaturas, badges de color, etiqueta [Taller] e hito Analista Programador/a Universitario/a', () => {
+        render(
+            <ExportarPlanillaPDFModal
+                isOpen={true}
+                onOpenChange={vi.fn()}
+                plan="17.14"
+                materias={[
+                    { codigo: '19054', nombre: 'Competencias Básicas en Informática', anio: 1, cuatrimestre: 1, taller: true },
+                    { codigo: '11271', nombre: 'Introducción a la Programación', anio: 1, cuatrimestre: 1 },
+                    { codigo: '11278', nombre: 'Bases de Datos Distribuidas', anio: 3, cuatrimestre: 6 },
+                ]}
+                progreso={{ '19054': 'Aprobado', '11271': 'Promocionado' }}
+                progresoDetalles={{ '11271': { notaFinal: 8 } }}
+                kpis={{ aprobadasCount: 2, totalCount: 3, porcentaje: 67 }}
+            />,
+        );
+
+        expect(screen.getByText(/Diplomaturas Intracurriculares \(Res\. HCS 726\/24\)/i)).toBeTruthy();
+        expect(screen.getByText('Dipl.')).toBeTruthy();
+        expect(screen.getAllByText('INF').length).toBeGreaterThanOrEqual(2);
+        expect(screen.getAllByText('DSW').length).toBeGreaterThanOrEqual(2);
+        expect(screen.getByText(/Competencias Básicas en Informática \[Taller\]/i)).toBeTruthy();
+        expect(screen.getByText(/Hito en el PDF: Analista Programador\/a Universitario\/a/i)).toBeTruthy();
+        expect(screen.getByText('Obtenido')).toBeTruthy();
+    });
+
+    it('en Plan 17.13 muestra hito de Título Intermedio sin columna ni leyenda de diplomaturas', () => {
+        render(
+            <ExportarPlanillaPDFModal
+                isOpen={true}
+                onOpenChange={vi.fn()}
+                plan="17.13"
+                materias={MOCK_MATERIAS}
+                progreso={{ '11071': 'Promocionado', '11072': 'Disponible' }}
+                progresoDetalles={{ '11071': { notaFinal: 9 } }}
+                kpis={{ aprobadasCount: 1, totalCount: 2, porcentaje: 50 }}
+            />,
+        );
+
+        expect(screen.queryByText(/Diplomaturas Intracurriculares/i)).toBeNull();
+        expect(screen.queryByText('Dipl.')).toBeNull();
+        expect(screen.getByText(/Hito en el PDF: Título Intermedio \(Analista\)/i)).toBeTruthy();
+        expect(screen.getByText('Faltan 1 de 2')).toBeTruthy();
+    });
 });
