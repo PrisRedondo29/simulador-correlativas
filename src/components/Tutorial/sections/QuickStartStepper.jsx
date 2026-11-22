@@ -6,10 +6,24 @@ const steps = [
     {
         number: 'Paso 01',
         icon: 'fa-graduation-cap',
-        title: 'Marcá tus materias',
-        description: 'Registrá qué materias aprobaste, regularizaste o estás cursando. El sistema calcula tus promedios y vencimientos.',
-        path: '/mis-materias',
-        cta: 'Ir a Mis Materias',
+        title: 'Cargá tus materias',
+        description: 'Importá tu Analítico PDF de SAWeb en segundos o registrá manualmente las materias que aprobaste, regularizaste o estás cursando. El sistema calcula promedios y vencimientos.',
+        actions: [
+            {
+                label: 'Cargá tu analítico',
+                hint: '100% confiable y rápido',
+                icon: 'fa-file-arrow-up',
+                path: '/mis-materias',
+                state: { openSawebImport: true },
+                variant: 'primary',
+            },
+            {
+                label: 'Cargá tu avance manual',
+                hint: 'A tu tiempo',
+                path: '/mis-materias',
+                variant: 'secondary',
+            },
+        ],
     },
     {
         number: 'Paso 02',
@@ -67,14 +81,58 @@ export default function QuickStartStepper() {
                             </p>
                         </div>
 
-                        <Button
-                            size="sm"
-                            onPress={() => navigate(step.path)}
-                            className="font-semibold text-xs w-full h-9 rounded-xl bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white"
-                            endContent={<i className="fa-solid fa-arrow-right text-[10px]" />}
-                        >
-                            {step.cta}
-                        </Button>
+                        {step.actions ? (
+                            <div className="flex flex-col gap-2">
+                                {step.actions.map((action) => (
+                                    <Button
+                                        key={action.label}
+                                        size="sm"
+                                        variant={action.variant === 'secondary' ? 'bordered' : 'solid'}
+                                        onPress={() =>
+                                            navigate(
+                                                action.path,
+                                                action.state ? { state: action.state } : undefined,
+                                            )
+                                        }
+                                        className={
+                                            action.variant === 'secondary'
+                                                ? 'w-full h-auto py-2 px-3 rounded-xl border-[#005A36]/40 dark:border-[#6EE7B7]/40 text-[#005A36] dark:text-[#6EE7B7] hover:bg-[#ECFDF5]/60 dark:hover:bg-[#102A20]/50 justify-between'
+                                                : 'w-full h-auto py-2 px-3 rounded-xl bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white justify-between'
+                                        }
+                                        endContent={<i className="fa-solid fa-arrow-right text-[10px] shrink-0" aria-hidden="true" />}
+                                    >
+                                        <span className="flex flex-col items-start text-left flex-1 min-w-0">
+                                            <span className="text-xs font-semibold leading-tight flex items-center gap-1.5">
+                                                {action.icon && (
+                                                    <i className={`fa-solid ${action.icon} text-[11px] shrink-0`} aria-hidden="true" />
+                                                )}
+                                                <span>{action.label}</span>
+                                            </span>
+                                            {action.hint && (
+                                                <span
+                                                    className={`text-[10px] font-normal leading-tight ${
+                                                        action.variant === 'secondary'
+                                                            ? 'opacity-80'
+                                                            : 'opacity-90'
+                                                    }`}
+                                                >
+                                                    {action.hint}
+                                                </span>
+                                            )}
+                                        </span>
+                                    </Button>
+                                ))}
+                            </div>
+                        ) : (
+                            <Button
+                                size="sm"
+                                onPress={() => navigate(step.path)}
+                                className="font-semibold text-xs w-full h-9 rounded-xl bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white"
+                                endContent={<i className="fa-solid fa-arrow-right text-[10px]" />}
+                            >
+                                {step.cta}
+                            </Button>
+                        )}
                     </div>
                 ))}
             </div>

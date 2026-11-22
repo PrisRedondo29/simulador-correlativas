@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useCallback, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Spinner, useDisclosure } from "@heroui/react";
 import { useActivePlan, usePlanCapabilities } from "../context/PlanContext";
 import usePlanData from "../hooks/usePlanData";
@@ -22,6 +22,7 @@ import { TOUR_IDS, TUTORIAL_TOURS } from "../config/tutorialTours";
  */
 export default function Progreso() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { plan, setPlan } = useActivePlan();
   const { policy } = usePlanCapabilities();
 
@@ -44,6 +45,19 @@ export default function Progreso() {
     setProgresoDetalles,
     initialSoloIncompletas: Boolean(location.state?.soloIncompletas),
   });
+
+  const { onSawebImportOpen } = dashboard;
+
+  useEffect(() => {
+    if (!plan || cargandoPlan || !location.state?.openSawebImport) return;
+    onSawebImportOpen();
+    const nextState = { ...location.state };
+    delete nextState.openSawebImport;
+    navigate(location.pathname, {
+      replace: true,
+      state: Object.keys(nextState).length > 0 ? nextState : null,
+    });
+  }, [plan, cargandoPlan, location.pathname, location.state, navigate, onSawebImportOpen]);
 
   const {
     isOpen: isExportPdfOpen,
