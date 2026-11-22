@@ -29,8 +29,8 @@ function LeyendaEstados({ materias = [] }) {
         >
             <AccordionItem
                 key="referencias"
-                aria-label="Referencias de estados y Reglamento General de Estudios (RGE)"
-                title="Referencias de estados y Reglamento General de Estudios (RGE)"
+                aria-label="Referencias de estados y Régimen General de Estudios (RGE)"
+                title="Referencias de estados y Régimen General de Estudios (RGE)"
                 subtitle={`Carga horaria total del plan: ${horasTotales} hs`}
                 startContent={
                     <div className="w-8 h-8 rounded-lg bg-[#F1F5F9] dark:bg-[#1E2730] text-[#005A36] dark:text-[#86EFAC] flex items-center justify-center">
@@ -67,16 +67,16 @@ function LeyendaEstados({ materias = [] }) {
                         <div className="flex items-center justify-between flex-wrap gap-2">
                             <span className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9] flex items-center gap-2">
                                 <i className="fa-solid fa-building-columns text-[#005A36] dark:text-[#6EE7B7]" aria-hidden="true" />
-                                Reglamento General de Estudios (RGE) · UNLu
+                                Régimen General de Estudios (RGE) · UNLu
                             </span>
                             <a
-                                href="https://www.unlu.edu.ar/estudiantes.html"
+                                href="https://www.unlu.edu.ar/regimen.html"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-[#005A36] dark:text-[#6EE7B7] hover:underline flex items-center gap-1 font-medium"
                             >
                                 <i className="fa-solid fa-arrow-up-right-from-square" aria-hidden="true" />
-                                Normativa estudiantil UNLu
+                                Régimen General de Estudios (UNLu)
                             </a>
                         </div>
 
