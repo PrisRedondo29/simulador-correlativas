@@ -308,6 +308,148 @@ export interface IntermediateTitleConfig {
 
 export type EquivalenciasMap = Record<string, string[]>;
 
+export type EquivalenciaValidationStatus = 'confirmed' | 'pending_confirmation';
+
+export type EquivalenciaApplicationMode = 'automatic' | 'advisory';
+
+export type EquivalenciaRequiredState = 'approved' | 'regular';
+
+export type EquivalenciaUsagePolicy = 'exclusive' | 'shared';
+
+export type EquivalenciaAccreditationMode = 'consolidated' | 'projection_with_advisory';
+
+export type EquivalenciaAccreditationStatus =
+    | 'accredited'
+    | 'advisory_pending_confirmation'
+    | 'advisory_projected'
+    | 'not_satisfied'
+    | 'conflict_source_consumed';
+
+export type EquivalenciaEvaluationReason =
+    | 'satisfied'
+    | 'source_plan_mismatch'
+    | 'target_plan_mismatch'
+    | 'no_branches_for_plan'
+    | 'source_code_consumed'
+    | 'missing_requirements';
+
+export interface EquivalenciaSourceMeta {
+    resolution?: string;
+    annex?: string;
+    section?: string;
+    note?: string;
+}
+
+export interface EquivalenciaConditionGroup {
+    allOf: string[];
+    sourcePlan?: string;
+    historical?: boolean;
+    label?: string;
+    note?: string;
+}
+
+export interface EquivalenciaCondition {
+    anyOf: EquivalenciaConditionGroup[];
+}
+
+export interface EquivalenciaRule {
+    targetCode: string;
+    sourcePlan: string;
+    targetPlan: string;
+    requiredAcademicState: EquivalenciaRequiredState;
+    condition: EquivalenciaCondition;
+    anyOf?: EquivalenciaConditionGroup[];
+    validationStatus: EquivalenciaValidationStatus;
+    applicationMode: EquivalenciaApplicationMode;
+    usagePolicy?: EquivalenciaUsagePolicy;
+    priority?: number;
+    advisoryMessage?: string;
+    notas?: string;
+    source?: EquivalenciaSourceMeta;
+    isLegacyArray?: boolean;
+}
+
+export type EquivalenciaRuleEntry = string[] | Partial<EquivalenciaRule>;
+
+export type EquivalenciasCatalogMap = Record<string, EquivalenciaRuleEntry>;
+
+export interface EquivalenciaEvaluationResult {
+    targetCode: string;
+    sourcePlan: string;
+    targetPlan: string;
+    requiredAcademicState: EquivalenciaRequiredState;
+    satisfied: boolean;
+    reason: EquivalenciaEvaluationReason;
+    matchedGroup: EquivalenciaConditionGroup | null;
+    matchedSourceCodes: string[];
+    evaluatedSourceCodes: string[];
+    blockedByConsumedCodes: string[];
+    missingByGroup: Array<{
+        group: EquivalenciaConditionGroup;
+        missingCodes: string[];
+        consumedCodes: string[];
+    }>;
+    validationStatus: EquivalenciaValidationStatus;
+    applicationMode: EquivalenciaApplicationMode;
+    usagePolicy: EquivalenciaUsagePolicy;
+    priority: number;
+    isAdvisory: boolean;
+    advisoryMessage: string | null;
+    notas: string | null;
+    source: EquivalenciaSourceMeta | null;
+    rule: EquivalenciaRule;
+}
+
+export interface EquivalenciaAccreditationResult {
+    targetCode: string;
+    sourcePlan: string;
+    targetPlan: string;
+    mode: EquivalenciaAccreditationMode;
+    satisfied: boolean;
+    accredited: boolean;
+    isAdvisory: boolean;
+    isProjected: boolean;
+    status: EquivalenciaAccreditationStatus;
+    statusMessage: string | null;
+    matchedGroup: EquivalenciaConditionGroup | null;
+    matchedSourceCodes: string[];
+    consumedSourceCodes: string[];
+    validationStatus: EquivalenciaValidationStatus;
+    applicationMode: EquivalenciaApplicationMode;
+    usagePolicy: EquivalenciaUsagePolicy;
+    source: EquivalenciaSourceMeta | null;
+    evaluation: EquivalenciaEvaluationResult;
+}
+
+export interface EquivalenciaSourceAllocation {
+    sourceCode: string;
+    targetCode: string;
+    usagePolicy: EquivalenciaUsagePolicy;
+    accreditationStatus: EquivalenciaAccreditationStatus;
+}
+
+export interface EquivalenciaAdvisoryConflict {
+    targetCode: string;
+    blockedByTargetCode: string;
+    conflictingSourceCodes: string[];
+    message: string;
+}
+
+export interface EquivalenciasTrajectoryResult {
+    sourcePlan: string;
+    targetPlan: string;
+    mode: EquivalenciaAccreditationMode;
+    evaluationsByTarget: Record<string, EquivalenciaEvaluationResult>;
+    accreditationsByTarget: Record<string, EquivalenciaAccreditationResult>;
+    accreditedTargets: string[];
+    advisoryTargets: string[];
+    projectedTargets: string[];
+    exclusivelyConsumedSourceCodes: string[];
+    sourceAllocations: Record<string, EquivalenciaSourceAllocation[]>;
+    availableOptativeCodes: string[];
+    advisoryConflicts: EquivalenciaAdvisoryConflict[];
+}
+
 export interface EquivalenciasConfig {
     sourcePlan: string;
     targetPlan: string;
