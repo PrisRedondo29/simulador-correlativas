@@ -5,16 +5,8 @@ import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-li
 import { MemoryRouter } from 'react-router-dom';
 import storageRepository from '../services/storageRepository';
 
-const mockSetSimulacionLocal = vi.fn();
-vi.mock('../context/AuthContext', () => ({
-    useAuth: () => ({
-        setSimulacionLocal: mockSetSimulacionLocal,
-    }),
-}));
-
 vi.mock('../services/analyticsService', () => ({
     trackCambioVista: vi.fn(),
-    trackGuardarSimulacion: vi.fn(),
     trackDescargaPDF: vi.fn(),
 }));
 
@@ -186,7 +178,7 @@ function renderSimulador() {
     );
 }
 
-describe('Simulador - Persistencia de Guardar simulación y Descargar PDF tras finalizar', () => {
+describe('Simulador - Descargar PDF e Historial tras finalizar (sin guardado en UI)', () => {
     beforeEach(() => {
         localStorage.clear();
         vi.clearAllMocks();
@@ -200,16 +192,18 @@ describe('Simulador - Persistencia de Guardar simulación y Descargar PDF tras f
         cleanup();
     });
 
-    it('mantiene accesibles Guardar simulación y Descargar PDF tras Ver historial -> Cerrar -> Ver (N)', async () => {
+    it('mantiene accesible Descargar PDF tras Ver historial -> Cerrar -> Ver (N) y oculta Guardar simulación', async () => {
         renderSimulador();
 
         await screen.findByText('¡Simulación Finalizada!');
+        expect(screen.queryByRole('button', { name: 'Guardar simulación' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Cargar simulación guardada' })).toBeNull();
 
         fireEvent.click(screen.getByRole('button', { name: 'Ver historial' }));
 
         const firstHistoryDialog = await screen.findByRole('dialog');
         expect(within(firstHistoryDialog).getByText('Historial Académico')).toBeTruthy();
-        expect(within(firstHistoryDialog).getByRole('button', { name: 'Guardar simulación' })).toBeTruthy();
+        expect(within(firstHistoryDialog).queryByRole('button', { name: 'Guardar simulación' })).toBeNull();
         expect(within(firstHistoryDialog).getByRole('button', { name: 'Descargar PDF' })).toBeTruthy();
 
         fireEvent.click(within(firstHistoryDialog).getByRole('button', { name: 'Cerrar' }));
@@ -222,43 +216,23 @@ describe('Simulador - Persistencia de Guardar simulación y Descargar PDF tras f
 
         const reopenedDialog = await screen.findByRole('dialog');
         expect(within(reopenedDialog).getByText('Historial Académico')).toBeTruthy();
-        expect(within(reopenedDialog).getByRole('button', { name: 'Guardar simulación' })).toBeTruthy();
         expect(within(reopenedDialog).getByRole('button', { name: 'Descargar PDF' })).toBeTruthy();
     });
 
-    it('permite guardar desde el historial reabierto o abrir confirmación si ya existe una simulación guardada', async () => {
+    it('permite descargar PDF desde el modal de finalización y desde el modal de Historial Académico', async () => {
         renderSimulador();
 
-        await screen.findByText('¡Simulación Finalizada!');
-        fireEvent.click(screen.getByRole('button', { name: 'Ver historial' }));
+        const finishDialog = await screen.findByRole('dialog');
+        expect(within(finishDialog).getByText('¡Simulación Finalizada!')).toBeTruthy();
+        fireEvent.click(within(finishDialog).getByRole('button', { name: 'Descargar PDF' }));
+        expect(mockHandleDownloadPDF).toHaveBeenCalledTimes(1);
 
-        const dialog = await screen.findByRole('dialog');
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar simulación' }));
-
-        expect(mockSetSimulacionLocal).toHaveBeenCalledWith(
-            '17.13',
-            expect.objectContaining({
-                historialSemestres: HISTORIAL_MOCK,
-                simulacionTerminada: true,
-            }),
-        );
-
-        storageRepository.setSimulacion('17.13', { existing: true });
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Guardar simulación' }));
-
-        await screen.findByText('Sobrescribir Simulación');
-    });
-
-    it('permite descargar PDF desde el modal de Historial Académico cerrando el diálogo', async () => {
-        renderSimulador();
-
-        await screen.findByText('¡Simulación Finalizada!');
-        fireEvent.click(screen.getByRole('button', { name: 'Ver historial' }));
+        fireEvent.click(within(finishDialog).getByRole('button', { name: 'Ver historial' }));
 
         const dialog = await screen.findByRole('dialog');
         fireEvent.click(within(dialog).getByRole('button', { name: 'Descargar PDF' }));
 
-        expect(mockHandleDownloadPDF).toHaveBeenCalledTimes(1);
+        expect(mockHandleDownloadPDF).toHaveBeenCalledTimes(2);
         await waitFor(() => {
             expect(screen.queryByText('Historial Académico')).toBeNull();
         });

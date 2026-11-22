@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button, ButtonGroup } from '@heroui/react';
-import { CalendarRange, CloudDownload, FileDown, GitBranch, History, SlidersHorizontal } from 'lucide-react';
+import { CalendarRange, CloudDownload, FileDown, GitBranch, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PlanTransitionControl from './PlanTransitionControl';
 
@@ -15,7 +15,6 @@ function HeaderSimulador({
     onChangeInteractionMode,
     onOpenConfig,
     onImportarProgreso,
-    onCargarSimulacion = null,
     onDownloadPDF = null,
     descargandoPDF = false,
     hasHistorial = false,
@@ -108,17 +107,6 @@ function HeaderSimulador({
                                 startContent={<CloudDownload size={14} />}
                             >
                                 Importar desde Mis Materias
-                            </Button>
-                        )}
-                        {onCargarSimulacion && (
-                            <Button
-                                size="sm"
-                                variant="flat"
-                                onPress={onCargarSimulacion}
-                                className="font-semibold rounded-xl text-xs h-9 bg-white dark:bg-[#161D24] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38]"
-                                startContent={<History size={14} />}
-                            >
-                                Cargar guardada
                             </Button>
                         )}
                         {hasHistorial && onDownloadPDF && (

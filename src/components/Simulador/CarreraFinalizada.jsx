@@ -1,28 +1,11 @@
 import React from 'react';
-import { Card, CardBody, Button, addToast } from '@heroui/react';
-import storageRepository from '../../services/storageRepository';
+import { Card, CardBody, Button } from '@heroui/react';
 
 /**
  * Pantalla de carrera finalizada: muestra el año de egreso estimado
- * y permite guardar o descargar el PDF del historial.
+ * y permite descargar el PDF del historial.
  */
-function CarreraFinalizada({ anioActual, plan, historialSemestres, progresoSimulado, progresoBase, cuatri, simulacionTerminada, onGuardarOpen, onGuardarSimulacion, handleDownloadPDF, descargandoPDF }) {
-    const handleGuardar = () => {
-        if (onGuardarSimulacion) {
-            onGuardarSimulacion();
-            return;
-        }
-        const existe = storageRepository.getSimulacion(plan, null);
-        if (existe) {
-            onGuardarOpen();
-        } else {
-            storageRepository.setSimulacion(plan, {
-                historialSemestres, progresoSimulado, progresoBase, anioActual, cuatri, simulacionTerminada,
-            });
-            addToast({ title: 'Éxito', description: 'Simulación guardada', color: 'success' });
-        }
-    };
-
+function CarreraFinalizada({ anioActual, plan, handleDownloadPDF, descargandoPDF }) {
     return (
         <div className="flex flex-col gap-5 w-full mt-2">
             <Card shadow="none" className="bg-[#005A36] dark:bg-[#11221B] text-white border border-[#00472B] dark:border-[#24382F] rounded-2xl w-full">
@@ -41,18 +24,9 @@ function CarreraFinalizada({ anioActual, plan, historialSemestres, progresoSimul
                 <Button
                     size="md"
                     className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] font-semibold rounded-xl text-white w-full sm:w-auto px-6"
-                    onPress={handleGuardar}
-                    startContent={<i className="fa-solid fa-floppy-disk" />}
-                >
-                    Guardar simulación
-                </Button>
-                <Button
-                    variant="flat"
-                    size="md"
-                    className="font-semibold rounded-xl w-full sm:w-auto px-6 bg-white dark:bg-[#161D24] border border-[#E2E8F0] dark:border-[#2A3540] text-[#1E293B] dark:text-[#F1F5F9]"
                     onPress={handleDownloadPDF}
                     isLoading={descargandoPDF}
-                    startContent={!descargandoPDF && <i className="fa-solid fa-file-pdf text-[#005A36] dark:text-[#6EE7B7]" />}
+                    startContent={!descargandoPDF && <i className="fa-solid fa-file-pdf" />}
                 >
                     {descargandoPDF ? 'Generando PDF...' : 'Descargar en PDF'}
                 </Button>

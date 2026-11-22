@@ -53,7 +53,6 @@ function SimuladorSidePanel({
     selectedRelations,
     onSelectCodigo,
     onImportarProgreso,
-    onCargarSimulacion = null,
     onOpenConfig,
     onOpenTutorial,
     onClose,
@@ -188,11 +187,11 @@ function SimuladorSidePanel({
                                     <Button
                                         size="sm"
                                         onPress={onOpenFinishModal}
-                                        title="Abrir opciones para guardar simulación o descargar PDF"
+                                        title="Ver resumen de egreso y descargar PDF"
                                         startContent={<GraduationCap size={14} />}
                                         className="font-semibold rounded-xl h-9 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
                                     >
-                                        Guardar / PDF
+                                        Resumen / PDF
                                     </Button>
                                 ) : (
                                     <Button
@@ -427,19 +426,6 @@ function SimuladorSidePanel({
                         startContent={<CloudDownload size={14} />}
                     >
                         Importar desde Mis Materias
-                    </Button>
-                )}
-
-                {onCargarSimulacion && (
-                    <Button
-                        size="sm"
-                        variant="flat"
-                        onPress={onCargarSimulacion}
-                        title="Restaurar tu última simulación guardada"
-                        className="w-full font-semibold rounded-xl text-xs h-9 bg-white dark:bg-[#161D24] text-[#005A36] dark:text-[#6EE7B7] border border-[#A7F3D0] dark:border-[#1E4D38]"
-                        startContent={<History size={14} />}
-                    >
-                        Cargar simulación guardada
                     </Button>
                 )}
 

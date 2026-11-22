@@ -31,6 +31,16 @@ function ChecklistPreview({
     () => (includeProgress ? calcularPromedioGeneral(progresoDetalles, progreso) : null),
     [includeProgress, progresoDetalles, progreso],
   );
+  const totalCount = kpis?.totalMaterias ?? kpis?.totalCount ?? materias.length;
+  const aprobadasCount =
+    kpis?.aprobadasCount ??
+    materias.filter(
+      (m) => progreso?.[m.codigo] === "Aprobado" || progreso?.[m.codigo] === "Promocionado",
+    ).length;
+  const porcentaje =
+    kpis?.porcentajeGeneral ??
+    kpis?.porcentaje ??
+    (totalCount > 0 ? Math.round((aprobadasCount / totalCount) * 100) : 0);
 
   return (
     <div className="rounded-xl border border-[#CBD5E1] dark:border-[#2A3540] bg-white dark:bg-[#0F1419] p-3.5 space-y-3 shadow-2xs">
@@ -43,11 +53,9 @@ function ChecklistPreview({
           </p>
           <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
             {includeProgress
-              ? `Avance: ${kpis?.aprobadasCount ?? 0}/${kpis?.totalCount ?? materias.length} (${
-                  kpis?.porcentaje ?? 0
-                }%)${
+              ? `Avance: ${aprobadasCount}/${totalCount} (${porcentaje}%)${
                   promedio?.promedioSinAplazos != null
-                    ? ` · Promedio s/aplazos: ${promedio.promedioSinAplazos}`
+                    ? ` · Promedio s/aplazos: ${Number(promedio.promedioSinAplazos).toFixed(2)}`
                     : ""
                 }`
               : `${materias.length} materias organizadas por año y cuatrimestre para imprimir`}

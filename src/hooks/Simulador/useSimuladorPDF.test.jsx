@@ -155,16 +155,15 @@ describe('useSimuladorPDF - Planilla vectorial imprimible con jsPDF', () => {
         );
         expect(spy.textCalls.some((t) => t.includes('Disponibles sin cursar (1)'))).toBe(true);
 
-        // Casillas vacías de seguimiento (leyenda + fila = >= 2 veces cada etiqueta)
+        // Casillas de seguimiento (leyenda + fila importada: al menos 6 rects totales y 1 marcada por defecto)
         expect(spy.textCalls.filter((t) => t === 'Regular').length).toBeGreaterThanOrEqual(2);
         expect(spy.textCalls.filter((t) => t === 'Aprobada').length).toBeGreaterThanOrEqual(2);
         expect(spy.textCalls.filter((t) => t === 'Promoc.').length).toBeGreaterThanOrEqual(1);
 
-        // Casillas vectoriales cuadradas de 2.9x2.9mm dibujadas en modo 'S'
-        const checkboxes = spy.rectCalls.filter(
-            ([, , w, h, style]) => w === 2.9 && h === 2.9 && style === 'S',
-        );
-        expect(checkboxes.length).toBeGreaterThanOrEqual(6);
+        const totalCheckboxes = spy.rectCalls.filter(([, , w, h]) => w === 2.9 && h === 2.9);
+        const checkedBoxes = totalCheckboxes.filter(([, , , , style]) => style === 'FD');
+        expect(totalCheckboxes.length).toBeGreaterThanOrEqual(6);
+        expect(checkedBoxes.length).toBeGreaterThanOrEqual(1);
     });
 
     it('pagina automáticamente cuando hay muchos cuatrimestres y numera todas las páginas con jsPDF real', () => {
@@ -374,5 +373,133 @@ describe('useSimuladorPDF - Planilla vectorial imprimible con jsPDF', () => {
 
         expect(spy.textCalls.some((t) => t.includes('(Proyectado - camino más corto)'))).toBe(true);
         expect(spy.textCalls.some((t) => t.includes('Tesina de Grado'))).toBe(true);
+    });
+
+    it('proyecta cuatrimestres faltantes hasta Tesina en transición 17.13 -> 17.14 sin saturar completedCodes con códigos de 17.13', () => {
+        const materias1714 = [
+            { codigo: '11271', nombre: 'Intro Prog', anio: 1, cuatrimestre: 1, correlativas: [] },
+            { codigo: '11278', nombre: 'BDD Distribuidas', anio: 3, cuatrimestre: 6, correlativas: ['11271'] },
+            { codigo: 'TES', nombre: 'Tesina de Grado', anio: 5, cuatrimestre: 11, correlativas: ['11278'], tesis: true },
+        ];
+
+        // Historial previo en 17.13 con 4 códigos viejos (> materias1714.length = 3)
+        const historialHibrido = [
+            {
+                cuatri: '1',
+                anioActual: 2025,
+                esImportado: true,
+                planSemestre: '17.13',
+                materiasDelSemestre: [
+                    { codigo: '11071', nombre: 'Intro Prog 1713' },
+                    { codigo: '11072', nombre: 'Álgebra 1713' },
+                    { codigo: '11073', nombre: 'Discreta 1713' },
+                    { codigo: '11074', nombre: 'Prog I 1713' },
+                ],
+                progresoSnapshot: {
+                    '11071': 'Cursado',
+                    '11072': 'Cursado',
+                    '11073': 'Cursado',
+                    '11074': 'Cursado',
+                },
+                progresoBaseSnapshot: {},
+            },
+        ];
+
+        const completos = buildCompleteSimulationSemesters({
+            historialSemestres: historialHibrido,
+            materias: materias1714,
+            progresoBase: { '11271': 'Cursado', '11278': 'No Cursado', TES: 'No Cursado' },
+            progresoSimulado: { '11271': 'Cursado', '11278': 'No Cursado', TES: 'No Cursado' },
+            anioActual: 2026,
+            cuatri: '2',
+            plan: '17.14',
+        });
+
+        expect(completos).toHaveLength(3);
+        expect(completos[1].materiasDelSemestre.map((m) => m.codigo)).toEqual(['11278']);
+        expect(completos[1].esProyectado).toBe(true);
+        expect(completos[2].materiasDelSemestre.map((m) => m.codigo)).toEqual(['TES']);
+    });
+
+    it('marca casillas y notas en cuatrimestres importados usando progresoReal y deja vacíos los simulados', () => {
+        const plan1713 = sistemasPlanes.find((p) => p.plan_numero === '17.13')?.materias || [];
+        const promoMat = plan1713[0];
+        const aprobRegMat = plan1713[1];
+        const optMat = plan1713.find((m) => m.codigo === 'OP1') || plan1713[2];
+        const futMat = plan1713[3];
+        const spy = createSpyJsPDFClass();
+
+        buildSimuladorPDFDocument({
+            jsPDF: /** @type {any} */ (spy.MockJsPDF),
+            historialSemestres: [
+                {
+                    cuatri: '1',
+                    anioActual: 2024,
+                    esImportado: true,
+                    planSemestre: '17.13',
+                    materiasDelSemestre: [promoMat, aprobRegMat, optMat],
+                    progresoSnapshot: {
+                        [promoMat.codigo]: 'Cursado',
+                        [aprobRegMat.codigo]: 'Cursado',
+                        [optMat.codigo]: 'Cursado',
+                    },
+                    progresoBaseSnapshot: {},
+                },
+                {
+                    cuatri: '2',
+                    anioActual: 2026,
+                    esImportado: false,
+                    planSemestre: '17.13',
+                    materiasDelSemestre: [futMat],
+                    progresoSnapshot: {
+                        [promoMat.codigo]: 'Cursado',
+                        [aprobRegMat.codigo]: 'Cursado',
+                        [optMat.codigo]: 'Cursado',
+                        [futMat.codigo]: 'Cursado',
+                    },
+                    progresoBaseSnapshot: {
+                        [promoMat.codigo]: 'Cursado',
+                        [aprobRegMat.codigo]: 'Cursado',
+                        [optMat.codigo]: 'Cursado',
+                    },
+                },
+            ],
+            plan: '17.13',
+            materias: [promoMat, aprobRegMat, optMat, futMat],
+            progresoSimulado: {
+                [promoMat.codigo]: 'Cursado',
+                [aprobRegMat.codigo]: 'Cursado',
+                [optMat.codigo]: 'Cursado',
+                [futMat.codigo]: 'Cursado',
+            },
+            progresoBase: {
+                [promoMat.codigo]: 'Cursado',
+                [aprobRegMat.codigo]: 'Cursado',
+                [optMat.codigo]: 'Cursado',
+                [futMat.codigo]: 'Cursado',
+            },
+            progresoReal: {
+                [promoMat.codigo]: 'Promocionado',
+                [aprobRegMat.codigo]: 'Aprobado',
+                [optMat.codigo]: 'Promocionado',
+            },
+            progresoDetallesReal: {
+                [promoMat.codigo]: { notaFinal: 8, notaRegularizacion: 8 },
+                [aprobRegMat.codigo]: { notaFinal: 6, rendidaLibre: false, esEquivalencia: false },
+                [optMat.codigo]: { notaFinal: 9, nombreOptativa: 'COMPILADORES', codigoOptativa: '11809' },
+            },
+        });
+
+        expect(spy.textCalls).toContain('8');
+        expect(spy.textCalls).toContain('6');
+        expect(spy.textCalls).toContain('9');
+        expect(spy.textCalls.some((t) => t.includes('COMPILADORES (Acta 11809)'))).toBe(true);
+
+        // 4 filas * 3 casillas + 3 casillas de cabecera = 15 casillas 2.9x2.9 totales
+        const boxes = spy.rectCalls.filter(([, , w, h]) => w === 2.9 && h === 2.9);
+        const filled = boxes.filter(([, , , , style]) => style === 'FD');
+        // promoMat (Promoc = 1) + aprobRegMat (Regular + Aprobada = 2) + optMat (Promoc = 1) = 4 marcadas; futMat = 0 marcadas
+        expect(boxes).toHaveLength(15);
+        expect(filled).toHaveLength(4);
     });
 });

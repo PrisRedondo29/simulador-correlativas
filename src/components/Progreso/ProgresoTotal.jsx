@@ -269,11 +269,16 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
 
             <div className="w-full">
               <p className="text-xl sm:text-2xl font-semibold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums">
-                {kpis.promedios.promedioSinAplazos ?? "—"}
+                {kpis.promedios.promedioSinAplazos != null
+                  ? Number(kpis.promedios.promedioSinAplazos).toFixed(2)
+                  : "—"}
               </p>
               <div className="flex items-center justify-between gap-1 mt-0.5 text-xs text-[#64748B] dark:text-[#94A3B8]">
                 <span className="tabular-nums truncate">
-                  Con aplazos: {kpis.promedios.promedioConAplazos ?? "—"}
+                  Con aplazos:{" "}
+                  {kpis.promedios.promedioConAplazos != null
+                    ? Number(kpis.promedios.promedioConAplazos).toFixed(2)
+                    : "—"}
                 </span>
                 <ChevronRight className="w-3.5 h-3.5 shrink-0" />
               </div>
@@ -297,7 +302,9 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
                       Promedio sin aplazos
                     </p>
                     <p className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums mt-1">
-                      {kpis.promedios.promedioSinAplazos ?? "—"}
+                      {kpis.promedios.promedioSinAplazos != null
+                        ? Number(kpis.promedios.promedioSinAplazos).toFixed(2)
+                        : "—"}
                     </p>
                   </div>
                   <div className="p-3.5 rounded-lg bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#24303C]">
@@ -305,7 +312,9 @@ export default function ProgresoTotal({ carrera, plan, kpis }) {
                       Promedio con aplazos
                     </p>
                     <p className="text-2xl font-bold text-[#1E293B] dark:text-[#F1F5F9] tabular-nums mt-1">
-                      {kpis.promedios.promedioConAplazos ?? "—"}
+                      {kpis.promedios.promedioConAplazos != null
+                        ? Number(kpis.promedios.promedioConAplazos).toFixed(2)
+                        : "—"}
                     </p>
                   </div>
                 </div>

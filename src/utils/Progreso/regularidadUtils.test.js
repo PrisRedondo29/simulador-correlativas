@@ -121,8 +121,8 @@ describe('regularidadUtils - Reglas académicas UNLu', () => {
             const res = calcularPromedioGeneral(progresoDetalles, progreso);
             // Sin aplazos: (8 + 10) / 2 = 9
             expect(res.promedioSinAplazos).toBe(9);
-            // Con aplazos: (2 + 8 + 10) / 3 = 6.67
-            expect(res.promedioConAplazos).toBe(6.67);
+            // Con aplazos: (2 + 8 + 10) / 3 = 6.6666... -> truncado a 6.66
+            expect(res.promedioConAplazos).toBe(6.66);
             expect(res.materiasContadas).toBe(2);
         });
 

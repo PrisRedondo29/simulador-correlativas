@@ -1,12 +1,11 @@
 import React from 'react';
-import { Button, Modal, ModalBody, ModalContent, addToast } from '@heroui/react';
-import { FileDown, GraduationCap, History, Map, Save } from 'lucide-react';
-import storageRepository from '../../../services/storageRepository';
+import { Button, Modal, ModalBody, ModalContent } from '@heroui/react';
+import { FileDown, GraduationCap, History, Map } from 'lucide-react';
 
 /**
  * Modal de finalización del Simulador para escritorio.
  * Mantiene el grafo completo visible detrás y ofrece acciones claras de cierre
- * (guardar simulación, exportar PDF, inspeccionar historial o volver al mapa).
+ * (exportar PDF, inspeccionar historial o volver al mapa).
  */
 function SimulacionFinalizadaModal({
     isOpen,
@@ -16,35 +15,10 @@ function SimulacionFinalizadaModal({
     cuatri,
     plan,
     historialSemestres,
-    progresoSimulado,
-    progresoBase,
-    simulacionTerminada,
-    onGuardarOpen,
-    onGuardarSimulacion,
     handleDownloadPDF,
     descargandoPDF,
     onOpenHistory,
 }) {
-    const handleGuardar = () => {
-        if (onGuardarSimulacion) {
-            onGuardarSimulacion();
-            return;
-        }
-        const existe = storageRepository.getSimulacion(plan, null);
-        if (existe) {
-            onGuardarOpen();
-        } else {
-            storageRepository.setSimulacion(plan, {
-                historialSemestres,
-                progresoSimulado,
-                progresoBase,
-                anioActual,
-                cuatri,
-                simulacionTerminada,
-            });
-            addToast({ title: 'Éxito', description: 'Simulación guardada', color: 'success' });
-        }
-    };
 
     return (
         <Modal
@@ -104,37 +78,26 @@ function SimulacionFinalizadaModal({
                     <div className="space-y-2.5">
                         <Button
                             size="md"
-                            onPress={handleGuardar}
-                            startContent={<Save size={16} />}
+                            onPress={handleDownloadPDF}
+                            isLoading={descargandoPDF}
+                            startContent={!descargandoPDF && <FileDown size={16} />}
                             className="w-full font-semibold rounded-xl bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
                         >
-                            Guardar simulación
+                            {descargandoPDF ? 'Generando...' : 'Descargar PDF'}
                         </Button>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <Button
-                                size="sm"
-                                variant="flat"
-                                onPress={handleDownloadPDF}
-                                isLoading={descargandoPDF}
-                                startContent={!descargandoPDF && <FileDown size={15} className="text-[#005A36] dark:text-[#6EE7B7]" />}
-                                className="font-semibold rounded-xl h-10 bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-[#1E293B] dark:text-[#F1F5F9]"
-                            >
-                                {descargandoPDF ? 'Generando...' : 'Descargar PDF'}
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant="flat"
-                                onPress={() => {
-                                    onClose?.();
-                                    onOpenHistory?.();
-                                }}
-                                startContent={<History size={15} className="text-[#005A36] dark:text-[#6EE7B7]" />}
-                                className="font-semibold rounded-xl h-10 bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-[#1E293B] dark:text-[#F1F5F9]"
-                            >
-                                Ver historial
-                            </Button>
-                        </div>
+                        <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={() => {
+                                onClose?.();
+                                onOpenHistory?.();
+                            }}
+                            startContent={<History size={15} className="text-[#005A36] dark:text-[#6EE7B7]" />}
+                            className="w-full font-semibold rounded-xl h-10 bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-[#1E293B] dark:text-[#F1F5F9]"
+                        >
+                            Ver historial
+                        </Button>
 
                         <Button
                             size="sm"

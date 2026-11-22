@@ -421,7 +421,7 @@ ACTIVIDADES ACADEMICAS RECONOCIDAS POR EQUIVALENCIA O EXIMIDAS
         const promedio = calcularPromedioGeneral(result.progresoDetalles, result.progreso);
         expect(promedio.materiasContadas).toBe(7);
         expect(promedio.promedioSinAplazos).toBe(6.57); // (7+7+4+4+8+7+9)/7
-        expect(promedio.promedioConAplazos).toBe(4.29); // (46 + 14)/14
+        expect(promedio.promedioConAplazos).toBe(4.28); // (46 + 14)/14 = 4.2857... -> 4.28
 
         // Ninguna de las 11 materias importadas debe quedar marcada como Incompleta
         for (const materia of plan1714Materias) {
@@ -516,7 +516,7 @@ Promedio (incluyendo aplazos): 6,60 (SEIS CON SESENTA CENTESIMOS)
         expect(promedio.materiasContadas).toBe(33);
         expect(promedio.totalNotas).toBe(240);
         expect(promedio.promedioSinAplazos).toBe(7.27); // 240 / 33
-        expect(promedio.promedioConAplazos).toBe(6.61); // 251 / 38 = 6.6052...
+        expect(promedio.promedioConAplazos).toBe(6.6); // 251 / 38 = 6.6052... -> truncado a 6.60
     });
 
     it('ordena múltiples optativas (OPT.) cronológicamente en OP1, OP2 y OP3 y homologa AO-1714 al reunir 3 en Plan 17.14', () => {

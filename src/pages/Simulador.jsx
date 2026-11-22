@@ -6,7 +6,6 @@ import HeaderSimulador from '../components/Simulador/HeaderSimulador';
 import HistorialAcademico from '../components/Simulador/HistorialAcademico';
 import CarreraFinalizada from '../components/Simulador/CarreraFinalizada';
 import ConfiguracionSimulador from '../components/Simulador/modals/ConfiguracionSimulador';
-import GuardarSimulacion from '../components/Simulador/modals/GuardarSimulacion';
 import ConfirmarImportarModal from '../components/Simulador/modals/ConfirmarImportarModal';
 import SimuladorModeModal from '../components/Simulador/modals/SimuladorModeModal';
 import SimulacionFinalizadaModal from '../components/Simulador/modals/SimulacionFinalizadaModal';
@@ -21,14 +20,13 @@ import useSimuladorEstado from '../hooks/Simulador/useSimuladorEstado';
 import useSimuladorMaterias from '../hooks/Simulador/useSimuladorMaterias';
 import useSimuladorPDF from '../hooks/Simulador/useSimuladorPDF';
 import usePlanData from '../hooks/usePlanData';
-import { CloudDownload, Columns2, FileDown, GraduationCap, Layers, Maximize2, Minimize2, PanelRightOpen, Pin, Save, X } from 'lucide-react';
+import { CloudDownload, Columns2, FileDown, GraduationCap, Layers, Maximize2, Minimize2, PanelRightOpen, Pin, X } from 'lucide-react';
 import { calculateProjection } from '../utils/Simulador/projectionUtils';
 import tituloIntermedioUtils from '../utils/Progreso/tituloIntermedioUtils';
 import importUtils from '../utils/Simulador/importUtils';
 import { evaluarElegibilidadActual, OFERTA_RESOLUCION_89_2025 } from '../utils/Transicion/transicionUtils';
-import { useAuth } from '../context/AuthContext';
-import { trackCambioVista, trackGuardarSimulacion } from '../services/analyticsService';
-import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
+import { trackCambioVista } from '../services/analyticsService';
+import storageRepository from '../services/storageRepository';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 
 function Simulador({ plan: initialPlan }) {
@@ -114,14 +112,12 @@ function Simulador({ plan: initialPlan }) {
         return () => document.removeEventListener('fullscreenchange', handleFSChange);
     }, []);
 
-    const { setSimulacionLocal } = useAuth();
     const {
         progreso: progresoReal,
         progresoDetalles: progresoDetallesReal,
     } = usePlanData(plan);
 
     const { isOpen: isConfigOpen, onClose: onConfigClose, onOpenChange: onConfigOpenChange, onOpen: onConfigOpen } = useDisclosure();
-    const { isOpen: isGuardarOpen, onClose: onGuardarClose, onOpenChange: onGuardarOpenChange, onOpen: onGuardarOpen } = useDisclosure();
     const { isOpen: isConfirmImportOpen, onOpenChange: onConfirmImportOpenChange, onOpen: onConfirmImportOpen } = useDisclosure();
     const { isOpen: isHistoryOpen, onOpen: onHistoryOpen, onClose: onHistoryClose, onOpenChange: onHistoryOpenChange } = useDisclosure();
 
@@ -145,7 +141,6 @@ function Simulador({ plan: initialPlan }) {
         handleSiguiente,
         importarHistorialReconstruido,
         syncPlanTransition,
-        cargarSimulacionGuardada,
     } = useSimuladorEstado({
         plan,
         anioInicio,
@@ -301,44 +296,6 @@ function Simulador({ plan: initialPlan }) {
         return `Oferta 17.13 en ${anioLookup}: ${oferta.descripcion}.`;
     }, [activePlan, planTransition?.enabled, anioActual, materiasCursables]);
 
-    const [savedSimRevision, setSavedSimRevision] = useState(0);
-
-    React.useEffect(() => {
-        return subscribeStorageChanges(() => setSavedSimRevision((prev) => prev + 1));
-    }, []);
-
-    const savedSimulation = React.useMemo(() => {
-        void savedSimRevision;
-        if (!activePlan) return null;
-        return (
-            storageRepository.getSimulacion(activePlan, null) ||
-            (plan && plan !== activePlan ? storageRepository.getSimulacion(plan, null) : null) ||
-            null
-        );
-    }, [activePlan, plan, savedSimRevision]);
-
-    const handleCargarSimulacionGuardada = React.useCallback(() => {
-        if (!savedSimulation) return;
-        cargarSimulacionGuardada?.(savedSimulation);
-        if (savedSimulation.transitionAppliedInfo) {
-            setCustomPlanTransition({
-                enabled: true,
-                targetPlan: savedSimulation.transitionAppliedInfo.toPlan || '17.14',
-                anio: Number(savedSimulation.transitionAppliedInfo.anio) || 2027,
-                cuatri: String(savedSimulation.transitionAppliedInfo.cuatri || '1'),
-            });
-        }
-        try {
-            addToast({
-                title: 'Simulación restaurada',
-                description: 'Se cargó tu última simulación guardada.',
-                color: 'success',
-            });
-        } catch {
-            /* Toast opcional */
-        }
-    }, [savedSimulation, cargarSimulacionGuardada]);
-
     const projection = React.useMemo(() => {
         if (!materias.length || !progresoBase) return null;
         return calculateProjection({
@@ -403,6 +360,8 @@ function Simulador({ plan: initialPlan }) {
         materias,
         progresoSimulado,
         progresoBase,
+        progresoReal,
+        progresoDetallesReal,
         anioActual,
         cuatri,
         setDescargandoPDF,
@@ -416,33 +375,6 @@ function Simulador({ plan: initialPlan }) {
     };
 
     const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
-
-    const handleGuardarSimulacion = () => {
-        const existe = storageRepository.getSimulacion(activePlan, null);
-        if (existe) {
-            onHistoryClose();
-            setIsFinishModalOpen(false);
-            onGuardarOpen();
-            return;
-        }
-        setSimulacionLocal(activePlan, {
-            historialSemestres,
-            progresoSimulado,
-            progresoBase,
-            anioActual,
-            cuatri,
-            simulacionTerminada,
-            activePlan,
-            transitionAppliedInfo,
-        });
-        setSavedSimRevision((prev) => prev + 1);
-        trackGuardarSimulacion({ plan: activePlan, semestresCompletados: historialSemestres.length });
-        try {
-            addToast({ title: 'Éxito', description: 'Simulación guardada', color: 'success' });
-        } catch {
-            /* Toast opcional */
-        }
-    };
 
     const handleDownloadPDFFromHistory = () => {
         onHistoryClose();
@@ -633,18 +565,6 @@ function Simulador({ plan: initialPlan }) {
                 }}
                 initialPlan={initialPlan}
             />
-            <GuardarSimulacion
-                isOpen={isGuardarOpen}
-                onOpenChange={onGuardarOpenChange}
-                onClose={onGuardarClose}
-                plan={activePlan}
-                historialSemestres={historialSemestres}
-                progresoSimulado={progresoSimulado}
-                progresoBase={progresoBase}
-                anioActual={anioActual}
-                cuatri={cuatri}
-                simulacionTerminada={simulacionTerminada}
-            />
             <ConfirmarImportarModal
                 isOpen={isConfirmImportOpen}
                 onOpenChange={onConfirmImportOpenChange}
@@ -665,11 +585,6 @@ function Simulador({ plan: initialPlan }) {
                 cuatri={cuatri}
                 plan={activePlan}
                 historialSemestres={historialSemestres}
-                progresoSimulado={progresoSimulado}
-                progresoBase={progresoBase}
-                simulacionTerminada={simulacionTerminada}
-                onGuardarOpen={onGuardarOpen}
-                onGuardarSimulacion={handleGuardarSimulacion}
                 handleDownloadPDF={handleDownloadPDF}
                 descargandoPDF={descargandoPDF}
                 onOpenHistory={() => {
@@ -709,19 +624,10 @@ function Simulador({ plan: initialPlan }) {
                                 <ModalFooter className="border-t border-[#E2E8F0] dark:border-[#24303C] flex flex-wrap items-center justify-end gap-2">
                                     <Button
                                         size="sm"
-                                        onPress={handleGuardarSimulacion}
-                                        startContent={<Save size={15} />}
-                                        className="font-semibold rounded-xl h-9 px-4 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
-                                    >
-                                        Guardar simulación
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="flat"
                                         onPress={handleDownloadPDFFromHistory}
                                         isLoading={descargandoPDF}
-                                        startContent={!descargandoPDF && <FileDown size={15} className="text-[#005A36] dark:text-[#6EE7B7]" />}
-                                        className="font-semibold rounded-xl h-9 px-4 bg-[#F1F5F9] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] text-[#1E293B] dark:text-[#F1F5F9]"
+                                        startContent={!descargandoPDF && <FileDown size={15} />}
+                                        className="font-semibold rounded-xl h-9 px-4 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white"
                                     >
                                         {descargandoPDF ? 'Generando...' : 'Descargar PDF'}
                                     </Button>
@@ -840,7 +746,7 @@ function Simulador({ plan: initialPlan }) {
                                                         startContent={<GraduationCap size={14} />}
                                                         className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold h-8 sm:h-9 rounded-xl"
                                                     >
-                                                        Guardar / PDF
+                                                        Resumen / PDF
                                                     </Button>
                                                 )}
                                                 {!isSidePanelOpen && !isFullScreen && (
@@ -892,7 +798,6 @@ function Simulador({ plan: initialPlan }) {
                                     selectedRelations={selectedRelations}
                                     onSelectCodigo={setSelectedCodigo}
                                     onImportarProgreso={handleImportarProgreso}
-                                    onCargarSimulacion={savedSimulation ? handleCargarSimulacionGuardada : null}
                                     onOpenConfig={onConfigOpen}
                                     onOpenTutorial={() => setTourOpenKey((k) => k + 1)}
                                     onClose={() => setIsSidePanelOpen(false)}
@@ -985,7 +890,6 @@ function Simulador({ plan: initialPlan }) {
                         onChangeInteractionMode={handleChangeInteractionMode}
                         onOpenConfig={onConfigOpen}
                         onImportarProgreso={handleImportarProgreso}
-                        onCargarSimulacion={savedSimulation ? handleCargarSimulacionGuardada : null}
                         onDownloadPDF={handleDownloadPDF}
                         descargandoPDF={descargandoPDF}
                         hasHistorial={historialSemestres.length > 0}
@@ -1018,13 +922,6 @@ function Simulador({ plan: initialPlan }) {
                                     <CarreraFinalizada
                                         anioActual={anioActual}
                                         plan={activePlan}
-                                        historialSemestres={historialSemestres}
-                                        progresoSimulado={progresoSimulado}
-                                        progresoBase={progresoBase}
-                                        cuatri={cuatri}
-                                        simulacionTerminada={simulacionTerminada}
-                                        onGuardarOpen={onGuardarOpen}
-                                        onGuardarSimulacion={handleGuardarSimulacion}
                                         handleDownloadPDF={handleDownloadPDF}
                                         descargandoPDF={descargandoPDF}
                                     />

@@ -224,8 +224,9 @@ export function calcularPromedioGeneral(progresoDetalles, progreso) {
         }
     });
 
-    const promedioSinAplazos = cantAprobados > 0 ? Math.round((sumaAprobados / cantAprobados) * 100) / 100 : null;
-    const promedioConAplazos = cantTodos > 0 ? Math.round((sumaTodos / cantTodos) * 100) / 100 : null;
+    const truncarCentesimos = (valor) => Math.trunc((valor + 1e-9) * 100) / 100;
+    const promedioSinAplazos = cantAprobados > 0 ? truncarCentesimos(sumaAprobados / cantAprobados) : null;
+    const promedioConAplazos = cantTodos > 0 ? truncarCentesimos(sumaTodos / cantTodos) : null;
 
     return {
         promedio: promedioSinAplazos,

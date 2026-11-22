@@ -111,7 +111,7 @@ function SimuladorFloatingHud({
                                     startContent={<GraduationCap size={14} />}
                                     className="font-semibold rounded-lg h-8 px-2.5 bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] dark:hover:bg-[#246B4E] text-white text-xs"
                                 >
-                                    Guardar / PDF
+                                    Resumen / PDF
                                 </Button>
                             </>
                         ) : (

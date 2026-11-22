@@ -204,6 +204,7 @@ export function buildCompleteSimulationSemesters({
     const result = [...(historialSemestres || [])];
     if (!materias || materias.length === 0) return result;
 
+    const materiasSet = new Set(materias.map((m) => m.codigo));
     /** @type {Set<string>} */
     const completedCodes = new Set();
 
@@ -215,7 +216,7 @@ export function buildCompleteSimulationSemesters({
 
     result.forEach((sem) => {
         (sem.materiasDelSemestre || []).forEach((m) => {
-            if (sem.progresoSnapshot?.[m.codigo] === 'Cursado') {
+            if (materiasSet.has(m.codigo) && sem.progresoSnapshot?.[m.codigo] === 'Cursado') {
                 completedCodes.add(m.codigo);
             }
         });
@@ -318,6 +319,8 @@ export function buildCompleteSimulationSemesters({
  *   materias?: Array<import('../../types/domain').Materia>,
  *   progresoSimulado?: import('../../types/domain').ProgresoSimuladorMap | null,
  *   progresoBase?: import('../../types/domain').ProgresoSimuladorMap | null,
+ *   progresoReal?: import('../../types/domain').ProgresoMap | null,
+ *   progresoDetallesReal?: import('../../types/domain').ProgresoDetallesMap | null,
  *   anioActual?: number | string,
  *   cuatri?: string | number,
  *   fechaEmision?: Date,
@@ -330,6 +333,8 @@ export function buildSimuladorPDFDocument({
     materias = [],
     progresoSimulado = null,
     progresoBase = null,
+    progresoReal = null,
+    progresoDetallesReal = null,
     anioActual = new Date().getFullYear(),
     cuatri = '1',
     fechaEmision = new Date(),
@@ -537,10 +542,54 @@ export function buildSimuladorPDFDocument({
             y += emptyH;
         } else {
             cursadas.forEach((materia, rowIdx) => {
-                const isIntermedioMat = codigosIntermedio.has(String(materia.codigo));
-                const displayName = isIntermedioMat
-                    ? `${materia.nombre} [Intermedio]`
-                    : String(materia.nombre || '');
+                const semPlan = item.planSemestre || plan;
+                const isIntermedioMat =
+                    semPlan === plan
+                        ? codigosIntermedio.has(String(materia.codigo))
+                        : tituloIntermedioUtils.getMateriasIntermedio(semPlan, [materia]).length >
+                          0;
+
+                const detReal = item.esImportado ? progresoDetallesReal?.[materia.codigo] : null;
+                const estadoReal = item.esImportado ? progresoReal?.[materia.codigo] : null;
+
+                let checkedReg = false;
+                let checkedAprob = false;
+                let checkedPromoc = false;
+                let notaText = '';
+
+                if (item.esImportado) {
+                    if (estadoReal) {
+                        checkedPromoc = estadoReal === 'Promocionado';
+                        checkedAprob = estadoReal === 'Aprobado';
+                        checkedReg =
+                            estadoReal === 'Regular' ||
+                            (estadoReal === 'Aprobado' &&
+                                !detReal?.rendidaLibre &&
+                                !detReal?.esEquivalencia);
+
+                        if (estadoReal === 'Promocionado') {
+                            const n = detReal?.notaFinal ?? detReal?.notaRegularizacion;
+                            notaText = n != null ? String(n) : 'Prom.';
+                        } else if (estadoReal === 'Aprobado') {
+                            if (detReal?.notaFinal != null) {
+                                notaText = String(detReal.notaFinal);
+                            } else if (detReal?.esEquivalencia) {
+                                notaText = 'Equiv.';
+                            }
+                        }
+                    } else {
+                        checkedAprob = true;
+                    }
+                }
+
+                const baseName =
+                    item.esImportado && detReal?.nombreOptativa
+                        ? `${materia.nombre}: ${detReal.nombreOptativa}${
+                              detReal.codigoOptativa ? ` (Acta ${detReal.codigoOptativa})` : ''
+                          }`
+                        : String(materia.nombre || '');
+
+                const displayName = isIntermedioMat ? `${baseName} [Intermedio]` : baseName;
                 const codigoStr =
                     materia.mostrarCodigo === false ? '---' : String(materia.codigo || '');
                 const hsSem = Number(materia.horas_semanales) || 0;
@@ -554,6 +603,10 @@ export function buildSimuladorPDFDocument({
                     codigoStr,
                     displayName,
                     cargaStr,
+                    checkedReg,
+                    checkedAprob,
+                    checkedPromoc,
+                    notaText,
                 });
             });
         }
@@ -669,7 +722,7 @@ function groupMateriasForPlanSheet(materias = []) {
  *   plan: string | null | undefined,
  *   progreso?: import('../../types/domain').ProgresoMap,
  *   progresoDetalles?: import('../../types/domain').ProgresoDetallesMap,
- *   kpis?: { aprobadasCount?: number, totalCount?: number, porcentaje?: number } | null,
+ *   kpis?: { aprobadasCount?: number, totalMaterias?: number, totalCount?: number, porcentajeGeneral?: number, porcentaje?: number } | null,
  *   includeProgress?: boolean,
  *   fechaEmision?: Date,
  * }} params
@@ -691,18 +744,18 @@ export function buildPlanillaPlanPDFDocument({
     const codigosIntermedio = new Set(materiasIntermedio.map((m) => String(m.codigo)));
 
     const totalCount =
+        kpis?.totalMaterias ??
         kpis?.totalCount ??
-        materias.filter((m) => !m.tesis && m.codigo !== 'N/A').length;
+        materias.length;
     const aprobadasCount =
         kpis?.aprobadasCount ??
         materias.filter(
             (m) =>
-                !m.tesis &&
-                m.codigo !== 'N/A' &&
-                (progreso?.[m.codigo] === 'Aprobado' ||
-                    progreso?.[m.codigo] === 'Promocionado'),
+                progreso?.[m.codigo] === 'Aprobado' ||
+                progreso?.[m.codigo] === 'Promocionado',
         ).length;
     const porcentaje =
+        kpis?.porcentajeGeneral ??
         kpis?.porcentaje ??
         (totalCount > 0 ? Math.round((aprobadasCount / totalCount) * 100) : 0);
 
@@ -762,11 +815,11 @@ export function buildPlanillaPlanPDFDocument({
         pdf.setTextColor(...INK_DARK);
         const promSin =
             resumenPromedio?.promedioSinAplazos != null
-                ? resumenPromedio.promedioSinAplazos
+                ? Number(resumenPromedio.promedioSinAplazos).toFixed(2)
                 : '-';
         const promCon =
             resumenPromedio?.promedioConAplazos != null
-                ? resumenPromedio.promedioConAplazos
+                ? Number(resumenPromedio.promedioConAplazos).toFixed(2)
                 : '-';
         pdf.text(
             `Avance: ${aprobadasCount}/${totalCount} (${porcentaje}%) · Promedio s/aplazos: ${promSin} · c/aplazos: ${promCon}`,
@@ -929,7 +982,7 @@ export function buildPlanillaPlanPDFDocument({
  *   plan: string | null | undefined,
  *   progreso?: import('../../types/domain').ProgresoMap,
  *   progresoDetalles?: import('../../types/domain').ProgresoDetallesMap,
- *   kpis?: { aprobadasCount?: number, totalCount?: number, porcentaje?: number } | null,
+ *   kpis?: { aprobadasCount?: number, totalMaterias?: number, totalCount?: number, porcentajeGeneral?: number, porcentaje?: number } | null,
  *   includeProgress?: boolean,
  *   loadJsPDF?: () => Promise<{ jsPDF: typeof import('jspdf').jsPDF }>,
  * }} params
@@ -996,6 +1049,8 @@ export async function downloadPlanillaPlanPDF({
  *   materias?: Array<import('../../types/domain').Materia>,
  *   progresoSimulado?: import('../../types/domain').ProgresoSimuladorMap | null,
  *   progresoBase?: import('../../types/domain').ProgresoSimuladorMap | null,
+ *   progresoReal?: import('../../types/domain').ProgresoMap | null,
+ *   progresoDetallesReal?: import('../../types/domain').ProgresoDetallesMap | null,
  *   anioActual?: number | string,
  *   cuatri?: string | number,
  *   setDescargandoPDF?: (loading: boolean) => void,
@@ -1008,6 +1063,8 @@ const useSimuladorPDF = ({
     materias = [],
     progresoSimulado = null,
     progresoBase = null,
+    progresoReal = null,
+    progresoDetallesReal = null,
     anioActual = new Date().getFullYear(),
     cuatri = '1',
     setDescargandoPDF,
@@ -1025,6 +1082,8 @@ const useSimuladorPDF = ({
                 materias,
                 progresoSimulado,
                 progresoBase,
+                progresoReal,
+                progresoDetallesReal,
                 anioActual,
                 cuatri,
             });
@@ -1060,6 +1119,8 @@ const useSimuladorPDF = ({
         materias,
         progresoSimulado,
         progresoBase,
+        progresoReal,
+        progresoDetallesReal,
         anioActual,
         cuatri,
         setDescargandoPDF,
