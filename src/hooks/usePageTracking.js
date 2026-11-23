@@ -12,28 +12,20 @@ const INTERACTION_THROTTLE_MS = 2000;
 
 export function usePageTracking() {
     const location = useLocation();
-    const trackerRef = useRef(null);
-
-    if (!trackerRef.current) {
-        trackerRef.current = createActiveTimeTracker({
-            onFlush: ({ route, feature, activeSeconds }) => {
-                trackActiveFeatureTime({ route, feature, activeSeconds });
-            },
-            initialVisible:
-                typeof document === 'undefined' ? true : document.visibilityState !== 'hidden',
-        });
-    }
-
-    useEffect(() => {
-        const seo = applyRouteSeo(location.pathname);
-        trackPageView({ path: location.pathname, title: seo.title });
-        trackerRef.current?.startRoute(location.pathname);
-    }, [location.pathname]);
+    const trackerRef = useRef(
+        /** @type {ReturnType<typeof createActiveTimeTracker> | null} */ (null),
+    );
 
     useEffect(() => {
         if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
-        const tracker = trackerRef.current;
-        if (!tracker) return undefined;
+        const tracker = createActiveTimeTracker({
+            onFlush: ({ route, feature, activeSeconds }) => {
+                trackActiveFeatureTime({ route, feature, activeSeconds });
+            },
+            initialVisible: document.visibilityState !== 'hidden',
+        });
+        trackerRef.current = tracker;
+        tracker.startRoute(window.location?.pathname || '/');
 
         let lastRecordedInteraction = 0;
         const handleInteraction = () => {
@@ -63,6 +55,13 @@ export function usePageTracking() {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
             window.removeEventListener('pagehide', handlePageHide);
             tracker.flush();
+            trackerRef.current = null;
         };
     }, []);
+
+    useEffect(() => {
+        const seo = applyRouteSeo(location.pathname);
+        trackPageView({ path: location.pathname, title: seo.title });
+        trackerRef.current?.startRoute(location.pathname);
+    }, [location.pathname]);
 }

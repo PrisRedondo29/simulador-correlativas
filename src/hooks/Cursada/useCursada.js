@@ -77,7 +77,7 @@ export default function useCursada(planProp) {
             trackAgendaAction({ action: 'create_eval', plan: activePlan });
             return nuevoEvento;
         },
-        [persistCursada],
+        [activePlan, persistCursada],
     );
 
     const deleteEvento = useCallback(
@@ -137,7 +137,7 @@ export default function useCursada(planProp) {
             trackAgendaAction({ action: 'create_block', plan: activePlan });
             return nuevoHorario;
         },
-        [persistCursada],
+        [activePlan, persistCursada],
     );
 
     const deleteHorario = useCallback(
@@ -167,7 +167,7 @@ export default function useCursada(planProp) {
             trackAgendaAction({ action: 'log_entry', plan: activePlan });
             return nuevaEntrada;
         },
-        [persistCursada],
+        [activePlan, persistCursada],
     );
 
     const updateBitacora = useCallback(
