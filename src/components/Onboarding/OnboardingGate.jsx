@@ -18,7 +18,7 @@ import {
 import {
     trackImportarSaweb,
     trackOnboardingComplete,
-    trackProgresoInicial,
+    trackOnboardingStarted,
     trackSeleccionCarrera,
 } from '../../services/analyticsService';
 import LoginModal from '../Auth/LoginModal';
@@ -93,6 +93,16 @@ export default function OnboardingGate({ children }) {
     const [loadError, setLoadError] = useState(null);
     const [devSimulateNewcomer, setDevSimulateNewcomer] = useState(false);
     const awaitingCloudLoginRef = useRef(false);
+
+    const onboardingTrackedRef = useRef(false);
+
+    useEffect(() => {
+        if (onboardingTrackedRef.current) return;
+        if (onboardingVersion < CURRENT_ONBOARDING_VERSION && !hasExistingData) {
+            onboardingTrackedRef.current = true;
+            trackOnboardingStarted({ version: CURRENT_ONBOARDING_VERSION });
+        }
+    }, [onboardingVersion, hasExistingData]);
 
     useEffect(() => {
         if (initialDraft?.selectedPlan && onboardingVersion < CURRENT_ONBOARDING_VERSION) {
@@ -259,11 +269,6 @@ export default function OnboardingGate({ children }) {
             origen_plan: 'welcome_modal',
             carrera: policy?.carrera,
         });
-        trackProgresoInicial({
-            plan: selectedPlan,
-            aprobadas: counts.aprobadas,
-            total: materias.length,
-        });
         trackOnboardingComplete({
             plan: selectedPlan,
             method: 'manual',
@@ -349,20 +354,13 @@ export default function OnboardingGate({ children }) {
             origen_plan: 'saweb_import_onboarding',
             carrera: policy?.carrera,
         });
-        trackProgresoInicial({
-            plan: targetPlan,
-            aprobadas:
-                (parsedResult.counts?.Promocionado || 0) +
-                (parsedResult.counts?.Aprobado || 0) +
-                (parsedResult.counts?.Equivalencia || 0),
-            total: Object.keys(nextProgreso).length,
-        });
         trackImportarSaweb({
             plan: targetPlan,
             detectedPlan: parsedResult.detectedPlan,
             totalImported: parsedResult.totalMatched || 0,
             usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
             usedCursadas: Boolean(parsedResult.sourcesDetected?.cursadas),
+            origin: 'onboarding',
         });
         trackOnboardingComplete({
             plan: targetPlan,

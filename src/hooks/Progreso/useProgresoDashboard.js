@@ -9,7 +9,7 @@ import {
     calcularEstadoBaseMateria,
     previsualizarCascadaCambioEstado,
 } from '../../utils/Progreso/materiaStateMachine';
-import { trackSearch, trackCambioVista, trackImportarSaweb } from '../../services/analyticsService';
+import { trackCambioVista, trackImportarSaweb } from '../../services/analyticsService';
 import storageRepository, { STORAGE_KEYS } from '../../services/storageRepository';
 import { mergeSawebImportWithExisting } from '../../utils/sawebParser';
 
@@ -197,18 +197,6 @@ export default function useProgresoDashboard({
             return true;
         });
     }, [materias, busqueda, estadoFiltro, soloIncompletas, progreso, progresoDetalles]);
-
-    useEffect(() => {
-        if (!busqueda) return;
-        const timer = setTimeout(() => {
-            trackSearch({
-                term: busqueda,
-                resultsCount: filteredMaterias.length,
-                search_origen: 'progreso',
-            });
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [busqueda, filteredMaterias.length]);
 
     const clearFilters = useCallback(() => {
         setBusqueda('');
@@ -482,6 +470,7 @@ export default function useProgresoDashboard({
             totalImported: parsedResult.totalMatched,
             usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
             usedCursadas: Boolean(parsedResult.sourcesDetected?.cursadas),
+            origin: 'mis_materias',
         });
 
         addToast({

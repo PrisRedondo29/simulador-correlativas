@@ -231,7 +231,10 @@ describe('useSimuladorPDF - Planilla vectorial imprimible con jsPDF', () => {
         expect(loadJsPDF).toHaveBeenCalledTimes(1);
         expect(setDescargandoPDF).toHaveBeenCalledWith(true);
         expect(setDescargandoPDF).toHaveBeenLastCalledWith(false);
-        expect(mockTrackDescargaPDF).toHaveBeenCalledWith({ plan: '17.14' });
+        expect(mockTrackDescargaPDF).toHaveBeenCalledWith({
+            plan: '17.14',
+            pdfType: 'simulacion',
+        });
     });
 
     it('genera la planilla del plan en blanco y pre-rellenada con progreso, notas y optativas', () => {

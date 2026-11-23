@@ -1,4 +1,5 @@
 import { useState, useCallback, useSyncExternalStore } from 'react';
+import { trackPwaStatusChanged } from '../services/analyticsService';
 
 function detectStandalone() {
     if (typeof window === 'undefined') return false;
@@ -47,6 +48,7 @@ function handleBeforeInstallPrompt(event) {
 function handleAppInstalled() {
     storeSnapshot = { deferredPrompt: null, installed: true };
     notifySubscribers();
+    trackPwaStatusChanged({ state: 'installed' });
 }
 
 function markInstalled() {

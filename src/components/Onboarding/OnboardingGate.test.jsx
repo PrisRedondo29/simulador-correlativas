@@ -34,7 +34,7 @@ vi.mock('../../services/planService', () => ({
 
 vi.mock('../../services/analyticsService', () => ({
     trackSeleccionCarrera: vi.fn(),
-    trackProgresoInicial: vi.fn(),
+    trackOnboardingStarted: vi.fn(),
     trackImportarSaweb: vi.fn(),
     trackOnboardingComplete: vi.fn(),
 }));

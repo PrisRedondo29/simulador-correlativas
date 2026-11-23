@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import usePlanData from '../usePlanData';
 import storageRepository, { subscribeStorageChanges } from '../../services/storageRepository';
 import { DEFAULT_PLAN } from '../../config/planPolicies';
+import { trackAgendaAction } from '../../services/analyticsService';
 import {
     normalizarCursadaData,
     generarIdCursada,
@@ -73,6 +74,7 @@ export default function useCursada(planProp) {
                 ...prev,
                 eventos: ordenarEventos([...prev.eventos, nuevoEvento]),
             }));
+            trackAgendaAction({ action: 'create_eval', plan: activePlan });
             return nuevoEvento;
         },
         [persistCursada],
@@ -84,8 +86,9 @@ export default function useCursada(planProp) {
                 ...prev,
                 eventos: prev.eventos.filter((e) => e.id !== eventoId),
             }));
+            trackAgendaAction({ action: 'delete_eval', plan: activePlan });
         },
-        [persistCursada],
+        [activePlan, persistCursada],
     );
 
     const updateEvento = useCallback(
@@ -131,6 +134,7 @@ export default function useCursada(planProp) {
                 ...prev,
                 horarios: ordenarHorarios([...prev.horarios, nuevoHorario]),
             }));
+            trackAgendaAction({ action: 'create_block', plan: activePlan });
             return nuevoHorario;
         },
         [persistCursada],
@@ -160,6 +164,7 @@ export default function useCursada(planProp) {
                 ...prev,
                 bitacora: [nuevaEntrada, ...prev.bitacora],
             }));
+            trackAgendaAction({ action: 'log_entry', plan: activePlan });
             return nuevaEntrada;
         },
         [persistCursada],

@@ -1449,7 +1449,7 @@ export async function downloadPlanillaPlanPDF({
         } catch {
             /* Toast opcional */
         }
-        trackDescargaPDF({ plan });
+        trackDescargaPDF({ plan, pdfType: 'planilla_progreso', includeProgress });
         return true;
     } catch (err) {
         logError(err, { route: '/mis-materias', context: { plan, includeProgress } });
@@ -1524,7 +1524,7 @@ const useSimuladorPDF = ({
             } catch {
                 /* Toast opcional */
             }
-            trackDescargaPDF({ plan });
+            trackDescargaPDF({ plan, pdfType: 'simulacion' });
         } catch (err) {
             logError(err, { route: '/simulador', context: { plan } });
             try {

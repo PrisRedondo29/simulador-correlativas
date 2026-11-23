@@ -13,6 +13,7 @@ import { logError } from '../services/logService';
 import {
     syncAnalyticsAuthUser,
     trackAccountDeleted,
+    trackCloudSyncResult,
     trackLogin,
     trackLogout,
 } from '../services/analyticsService';
@@ -500,6 +501,7 @@ export function AuthProvider({ children }) {
                     progreso: localBundle.progreso,
                 }));
 
+                trackCloudSyncResult({ result: 'synced', origin: 'manual' });
                 return result;
             }
 
@@ -520,6 +522,7 @@ export function AuthProvider({ children }) {
                         currentUid: activeUser.uid,
                     },
                 });
+                trackCloudSyncResult({ result: 'conflict', origin: 'manual' });
                 return result;
             }
 
@@ -530,6 +533,7 @@ export function AuthProvider({ children }) {
                     result.message ||
                     'No se pudo guardar en la nube. Tus datos locales siguen intactos.',
             });
+            trackCloudSyncResult({ result: 'error', origin: 'manual' });
             return result;
         },
         [],
@@ -702,6 +706,11 @@ export function AuthProvider({ children }) {
                     uid: activeUser.uid,
                     syncedAt: nowIso,
                 });
+                trackCloudSyncResult({
+                    result: 'conflict_resolved',
+                    resolution: 'use_remote',
+                    origin: 'manual',
+                });
                 return { ok: true, backedUp: applyRes.backedUp };
             }
 
@@ -715,6 +724,11 @@ export function AuthProvider({ children }) {
                 localHash,
                 baseRevision,
                 currentUid: activeUser.uid,
+            });
+            trackCloudSyncResult({
+                result: 'conflict_resolved',
+                resolution: 'keep_local',
+                origin: 'manual',
             });
 
             if (choice === 'upload_local' || choice === 'upload') {

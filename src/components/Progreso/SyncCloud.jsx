@@ -2,13 +2,10 @@ import React, { useState } from 'react';
 import { Button, Popover, PopoverContent, PopoverTrigger, Spinner, addToast } from '@heroui/react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../context/AuthContext';
-import { trackProgresoInicial } from '../../services/analyticsService';
-import planService from '../../services/planService';
-import storageRepository from '../../services/storageRepository';
 import { SYNC_STATUS } from '../../utils/Sync/syncStateMachine';
 
 export default function SyncCloud({ plan }) {
-    const { user, userData, syncState, saveToCloud, loadFromCloud } = useAuth();
+    const { user, syncState, saveToCloud, loadFromCloud } = useAuth();
     const [loadingAction, setLoadingAction] = useState(null);
 
     if (!user) return null;
@@ -21,7 +18,6 @@ export default function SyncCloud({ plan }) {
         if (!user || !plan) return;
         setLoadingAction('Guardando...');
         try {
-            const esPrimerGuardado = !userData?.progreso || !userData?.progreso[plan];
             const res = await saveToCloud();
 
             if (res.status === 'synced') {
@@ -32,21 +28,6 @@ export default function SyncCloud({ plan }) {
                         : 'Tu progreso, notas y Mi Agenda se guardaron en la nube.',
                     color: res.hasConcurrentLocalEdits ? 'warning' : 'success',
                 });
-
-                if (esPrimerGuardado) {
-                    const progresoLocal = storageRepository.getProgreso(plan, {});
-                    const planData = await planService.getPlanByNumber(plan);
-                    const materiasPlan = planData?.materias || [];
-                    const aprobadas = Object.values(progresoLocal).filter(
-                        (s) => s === 'Aprobado' || s === 'Promocionado',
-                    ).length;
-
-                    trackProgresoInicial({
-                        plan,
-                        aprobadas,
-                        total: materiasPlan.length,
-                    });
-                }
             } else if (res.status === 'error' && res.message) {
                 addToast({
                     title: res.code === 'sync/offline' ? 'Sin conexión' : 'Error',

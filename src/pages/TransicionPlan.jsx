@@ -29,6 +29,7 @@ import {
     obtenerResumenPaso1,
     evaluarElegibilidadActual,
 } from '../utils/Transicion/transicionUtils';
+import { trackPlanTransitionEvaluated } from '../services/analyticsService';
 
 function TransicionPlan() {
     const navigate = useNavigate();
@@ -281,7 +282,12 @@ function TransicionPlan() {
 
                                 <div className="shrink-0 w-full md:w-auto flex flex-col sm:flex-row gap-2">
                                     <Button
-                                        onPress={() =>
+                                        onPress={() => {
+                                            trackPlanTransitionEvaluated({
+                                                planSource: sourcePlan,
+                                                planTarget: targetPlan || '17.14',
+                                                action: 'open_simulator',
+                                            });
                                             navigate('/simulador', {
                                                 state: {
                                                     plan: sourcePlan,
@@ -293,8 +299,8 @@ function TransicionPlan() {
                                                     },
                                                     autoImportFromTransition: true,
                                                 },
-                                            })
-                                        }
+                                            });
+                                        }}
                                         className="w-full md:w-auto bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold text-xs px-4 h-10 rounded-xl"
                                         endContent={<ArrowRight size={14} />}
                                     >

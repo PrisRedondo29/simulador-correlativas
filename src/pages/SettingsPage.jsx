@@ -363,7 +363,11 @@ export default function SettingsPage({ plan, setPlan }) {
                                                     const nextPlan = item.defaultPlan || item.plans?.[0]?.planNumero;
                                                     if (nextPlan) {
                                                         setPlan(nextPlan);
-                                                        trackSeleccionCarrera({ plan: nextPlan, origen_plan: 'settings_career' });
+                                                        trackSeleccionCarrera({
+                                                            plan: nextPlan,
+                                                            origen_plan: 'settings_career',
+                                                            carrera: item.name,
+                                                        });
                                                     }
                                                 }}
                                                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors inline-flex items-center gap-1.5 ${
@@ -407,7 +411,11 @@ export default function SettingsPage({ plan, setPlan }) {
                             onSelectionChange={(key) => {
                                 const nextKey = String(key);
                                 setPlan(nextKey);
-                                trackSeleccionCarrera({ plan: nextKey, origen_plan: 'settings' });
+                                trackSeleccionCarrera({
+                                    plan: nextKey,
+                                    origen_plan: 'settings',
+                                    carrera: activeCareer?.name || '',
+                                });
                             }}
                             classNames={{
                                 base: 'w-full',

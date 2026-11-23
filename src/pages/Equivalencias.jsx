@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useEquivalencias } from '../hooks/useEquivalencias';
 import HeaderEquivalencias from '../components/Equivalencias/HeaderEquivalencias';
 import ListaMaterias from '../components/Equivalencias/ListaMaterias';
 import SearchMateria from '../components/Equivalencias/SearchMateria';
 import InteractiveTourOverlay from '../components/Tutorial/InteractiveTourOverlay';
 import { TOUR_IDS, TUTORIAL_TOURS } from '../config/tutorialTours';
-import { trackSearch } from '../services/analyticsService';
+import { trackEquivalenciasChecked } from '../services/analyticsService';
 import { Tabs, Tab } from '@heroui/react';
 import { AlertTriangle } from 'lucide-react';
 
@@ -24,18 +24,15 @@ function Equivalencias() {
         comparativaHoras,
         stats,
     } = useEquivalencias();
+    const lastTrackedPairRef = useRef(null);
 
     useEffect(() => {
-        if (!busqueda) return;
-        const timer = setTimeout(() => {
-            trackSearch({
-                term: busqueda,
-                resultsCount: materiasFiltradas.length,
-                search_origen: 'equivalencias',
-            });
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [busqueda, materiasFiltradas.length]);
+        if (!planViejo || !planNuevo || !sourcePlan || !targetPlan) return;
+        const pairKey = `${sourcePlan}->${targetPlan}`;
+        if (lastTrackedPairRef.current === pairKey) return;
+        lastTrackedPairRef.current = pairKey;
+        trackEquivalenciasChecked({ planSource: sourcePlan, planTarget: targetPlan });
+    }, [planViejo, planNuevo, sourcePlan, targetPlan]);
 
     if (!planViejo || !planNuevo) return null;
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button } from '@heroui/react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { useAuth } from '../../context/AuthContext';
+import { trackPwaStatusChanged } from '../../services/analyticsService';
 import {
     evaluatePwaUpdateReadiness,
     isUserActivelyEditing,
@@ -100,6 +101,7 @@ export default function PwaUpdatePrompt() {
         if (!readiness.canApplyNow || isApplying) return;
         setIsApplying(true);
         try {
+            trackPwaStatusChanged({ state: 'update_applied' });
             await updateServiceWorker(true);
         } finally {
             setIsApplying(false);

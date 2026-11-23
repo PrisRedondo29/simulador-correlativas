@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   addToast,
@@ -35,7 +35,7 @@ import PlanSelectionModal from "../components/Progreso/modals/PlanSelectionModal
 import ImportarSawebModal from "../components/Progreso/modals/ImportarSawebModal";
 import storageRepository from "../services/storageRepository";
 import { mergeSawebImportWithExisting } from "../utils/sawebParser";
-import { trackImportarSaweb } from "../services/analyticsService";
+import { trackImportarSaweb, trackStatsViewed } from "../services/analyticsService";
 
 const MODALIDAD_STYLES = {
   Promoción:
@@ -947,6 +947,16 @@ export default function Estadisticas() {
     setProgresoDetalles,
     cargandoPlan,
   } = usePlanData(plan);
+  const statsTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (cargandoPlan || !materias?.length || statsTrackedRef.current) return;
+    statsTrackedRef.current = true;
+    const hasGrades = Object.values(progresoDetalles || {}).some(
+      (d) => d?.notaFinal != null || d?.notaRegularizacion != null,
+    );
+    trackStatsViewed({ plan, hasGrades });
+  }, [cargandoPlan, materias, plan, progresoDetalles]);
 
   const {
     isOpen: isSawebOpen,
@@ -1020,6 +1030,7 @@ export default function Estadisticas() {
       totalImported: parsedResult.totalMatched,
       usedAnalitico: Boolean(parsedResult.sourcesDetected?.analitico),
       usedCursadas: Boolean(parsedResult.sourcesDetected?.cursadas),
+      origin: "estadisticas",
     });
 
     addToast({
