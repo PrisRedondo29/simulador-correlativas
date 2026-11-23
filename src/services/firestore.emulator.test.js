@@ -48,11 +48,12 @@ function makeRealFirestoreDeps(firestoreDb, email = 'estudiante@unlu.edu.ar') {
 
 describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacciones SDK reales', () => {
     beforeAll(async () => {
+        const [emuHost, emuPort] = (process.env.FIRESTORE_EMULATOR_HOST || '127.0.0.1:8088').split(':');
         testEnv = await initializeTestEnvironment({
             projectId: PROJECT_ID,
             firestore: {
-                host: '127.0.0.1',
-                port: 8080,
+                host: emuHost,
+                port: Number(emuPort),
                 rules: fs.readFileSync(RULES_PATH, 'utf8'),
             },
         });
