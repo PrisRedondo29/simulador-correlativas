@@ -206,41 +206,6 @@ describe('useSimuladorEstado - Navegación de semestres, retroceso y finalizaci�
         expect(result.current.cuatri).toBe('2');
         expect(result.current.transitionAppliedInfo).toBeNull();
         expect(result.current.materias.map((m) => m.codigo)).toEqual(['11071', '11074']);
-
-        // Restaurar una simulación guardada previamente (incluyendo transición a 17.14)
-        act(() => {
-            result.current.cargarSimulacionGuardada({
-                activePlan: '17.14',
-                anioActual: 2027,
-                cuatri: '2',
-                simulacionTerminada: false,
-                progresoSimulado: { 11271: 'Cursado', 11274: 'Cursado', 11275: 'No Cursado' },
-                progresoBase: { 11271: 'Cursado', 11274: 'Cursado', 11275: 'No Cursado' },
-                transitionAppliedInfo: {
-                    fromPlan: '17.13',
-                    toPlan: '17.14',
-                    anio: 2027,
-                    cuatri: '1',
-                    equivalenciasCount: 1,
-                },
-                historialSemestres: [
-                    {
-                        anioActual: 2026,
-                        cuatri: '2',
-                        materiasDelSemestre: [materias1713[0]],
-                        progresoSnapshot: { 11071: 'Cursado' },
-                        progresoBaseSnapshot: {},
-                        planSemestre: '17.13',
-                    },
-                ],
-            });
-        });
-
-        expect(result.current.activePlan).toBe('17.14');
-        expect(result.current.anioActual).toBe(2027);
-        expect(result.current.cuatri).toBe('2');
-        expect(result.current.materias.map((m) => m.codigo)).toEqual(['11271', '11274', '11275']);
-        expect(result.current.transitionAppliedInfo?.equivalenciasCount).toBe(1);
     });
 
     it('homologarProgresoSimulado1713A1714 soporta AND/OR, UX Opción A vs projection_with_advisory y exclusividad', () => {

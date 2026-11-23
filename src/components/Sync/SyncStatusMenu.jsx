@@ -136,7 +136,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                     : 'Cambios locales sin subir',
                 statusDetail: isOffline
                     ? 'Podés seguir editando normalmente. Cuando vuelva internet, guardá en la nube.'
-                    : 'Tenés progreso, cursada o simulaciones nuevas en este dispositivo listas para respaldar.',
+                    : 'Tenés progreso, notas o ítems de Mi Agenda en este dispositivo listos para respaldar.',
             };
         }
 
@@ -152,7 +152,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                 : 'text-[#475569] dark:text-[#CBD5E1] hover:text-[#1E293B] dark:hover:text-white hover:bg-[#F1F5F9] dark:hover:bg-[#1E2730]',
             statusTitle: 'Tus datos están sincronizados',
             statusDetail:
-                'Tus materias, notas, Mi Agenda y simulaciones coinciden con tu última copia en la nube.',
+                'Tus materias, notas y Mi Agenda coinciden con tu última copia en la nube.',
         };
     };
 
@@ -167,7 +167,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
                 title: res.hasConcurrentLocalEdits ? 'Subido (con cambios nuevos)' : 'Guardado en la nube',
                 description: res.hasConcurrentLocalEdits
                     ? 'Se guardó tu versión anterior, pero detectamos ediciones nuevas pendientes.'
-                    : 'Tus materias, Mi Agenda y simulaciones quedaron respaldados.',
+                    : 'Tus materias, notas y Mi Agenda quedaron respaldados.',
                 color: res.hasConcurrentLocalEdits ? 'warning' : 'success',
             });
             if (!res.hasConcurrentLocalEdits) setIsOpen(false);
@@ -231,7 +231,7 @@ export default function SyncStatusMenu({ plan, variant = 'light-bar', onSignInPr
         exportBackupJson(plan);
         addToast({
             title: 'Respaldo descargado',
-            description: 'Se exportó el archivo JSON con todos tus planes, cursada y simulaciones.',
+            description: 'Se exportó el archivo JSON con todos tus planes, notas y Mi Agenda.',
             color: 'success',
         });
     };

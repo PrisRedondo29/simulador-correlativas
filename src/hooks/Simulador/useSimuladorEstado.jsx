@@ -583,38 +583,6 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
         }
     };
 
-    const cargarSimulacionGuardada = useCallback(
-        (savedData) => {
-            if (!savedData || !Array.isArray(savedData.historialSemestres)) return;
-
-            const savedActivePlan = savedData.activePlan || plan;
-            if (
-                savedActivePlan === '17.14' &&
-                plan === '17.13' &&
-                targetPlanData.materiasTarget.length > 0
-            ) {
-                setActivePlan('17.14');
-                setMaterias(targetPlanData.materiasTarget);
-                setTransitionAppliedInfo(savedData.transitionAppliedInfo || null);
-            } else {
-                if (sourceMaterias.length > 0) {
-                    setMaterias(sourceMaterias);
-                }
-                setActivePlan(plan);
-                setTransitionAppliedInfo(null);
-            }
-
-            setPreImportedTransitionSnapshot(null);
-            setHistorialSemestres(savedData.historialSemestres);
-            setProgresoSimulado(savedData.progresoSimulado || {});
-            setProgresoBase(savedData.progresoBase || savedData.progresoSimulado || {});
-            setAnioActual(Number(savedData.anioActual) || new Date().getFullYear());
-            setCuatri(String(savedData.cuatri || '1'));
-            setSimulacionTerminada(Boolean(savedData.simulacionTerminada));
-        },
-        [plan, sourceMaterias, targetPlanData.materiasTarget],
-    );
-
     return {
         materias,
         sourceMaterias,
@@ -640,7 +608,6 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
         handleSiguiente,
         importarHistorialReconstruido,
         syncPlanTransition,
-        cargarSimulacionGuardada,
     };
 };
 

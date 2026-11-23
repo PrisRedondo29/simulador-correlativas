@@ -29,7 +29,7 @@ export default function SyncCloud({ plan }) {
                     title: res.hasConcurrentLocalEdits ? 'Guardado (hay cambios nuevos)' : '¡Éxito!',
                     description: res.hasConcurrentLocalEdits
                         ? 'Se guardó tu progreso previo; quedan ediciones recientes pendientes.'
-                        : 'Tu progreso, cursada y simulaciones se guardaron en la nube.',
+                        : 'Tu progreso, notas y Mi Agenda se guardaron en la nube.',
                     color: res.hasConcurrentLocalEdits ? 'warning' : 'success',
                 });
 
@@ -116,7 +116,7 @@ export default function SyncCloud({ plan }) {
                             Sincronización Segura Unificada
                         </div>
                         <div className="text-xs text-[#64748B] dark:text-[#94A3B8] mt-1">
-                            Guardar respalda todos tus planes, notas, Mi Agenda y simulaciones en una sola operación verificada por versión.
+                            Guardar respalda todos tus planes, notas y Mi Agenda en una sola operación verificada por versión.
                         </div>
                     </div>
                 </PopoverContent>

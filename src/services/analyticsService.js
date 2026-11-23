@@ -131,13 +131,6 @@ export const trackCambioMateria = ({ plan, codigoMateria, estadoNuevo, origenMat
     });
 
 /**
- * Trackea cuando el usuario guarda su simulación.
- * @param {{ plan: string, semestresCompletados: number }} params
- */
-export const trackGuardarSimulacion = ({ plan, semestresCompletados }) =>
-    track('guardar_simulacion', { plan, semestres: semestresCompletados });
-
-/**
  * Trackea cuando el usuario avanza al siguiente semestre en el simulador.
  * @param {{ plan: string, anio: number, cuatri: string }} params
  */

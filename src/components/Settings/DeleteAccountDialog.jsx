@@ -115,7 +115,7 @@ function DeleteAccountDialogContent({
                         htmlFor="delete-account-clear-local"
                         className="text-[#334155] dark:text-[#CBD5E1] cursor-pointer leading-snug"
                     >
-                        También borrar mi progreso, notas, simulaciones y Mi Agenda guardados localmente en este navegador
+                        También borrar mi progreso, notas y Mi Agenda guardados localmente en este navegador
                     </label>
                 </div>
 

@@ -70,10 +70,12 @@ function SummaryCard({ title, subtitle, icon, summary, tone = 'neutral' }) {
                         <span className="text-[#64748B] dark:text-[#94A3B8]">Mi Agenda (ítems)</span>
                         <span className="font-semibold tabular-nums">{cursadaCount}</span>
                     </li>
-                    <li className="flex justify-between gap-2">
-                        <span className="text-[#64748B] dark:text-[#94A3B8]">Simulaciones</span>
-                        <span className="font-semibold tabular-nums">{summary.simulaciones}</span>
-                    </li>
+                    {summary.simulaciones > 0 && (
+                        <li className="flex justify-between gap-2">
+                            <span className="text-[#64748B] dark:text-[#94A3B8]">Simulaciones históricas</span>
+                            <span className="font-semibold tabular-nums">{summary.simulaciones}</span>
+                        </li>
+                    )}
                 </ul>
             )}
         </div>

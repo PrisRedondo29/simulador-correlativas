@@ -116,7 +116,7 @@ export default function SettingsPage({ plan, setPlan }) {
         exportBackupJson(activePlan);
         addToast({
             title: 'Respaldo exportado',
-            description: 'Se descargó un archivo JSON con todos tus planes, notas, cursada y simulaciones.',
+            description: 'Se descargó un archivo JSON con todos tus planes, notas y Mi Agenda.',
             color: 'success',
         });
     };
@@ -518,7 +518,7 @@ export default function SettingsPage({ plan, setPlan }) {
                     <Divider className="my-2 mx-5 w-auto bg-[#F1F5F9] dark:bg-[#2A3540]" />
                     <CardBody className="px-5 pb-5 pt-2 flex flex-col justify-between gap-3">
                         <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                            Exportá o importá un respaldo portable en JSON con todos tus planes, notas, regularidades, Mi Agenda y simulaciones.
+                            Exportá o importá un respaldo portable en JSON con todos tus planes, notas, regularidades y Mi Agenda.
                         </p>
 
                         <label htmlFor="import-backup-json" className="sr-only">
