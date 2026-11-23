@@ -725,4 +725,36 @@ describe('AuthContext + SyncModal - Integración React completa (Etapa 6A.2)', (
         expect(authBox.current.pendingAccountDeletion).toBeNull();
         expect(authBox.current.isAuthenticated).toBe(false);
     });
+
+    it('tras recargar con eliminación parcial pendiente no reconcilia ni recrea perfil y permite reintentar deleteAccount', async () => {
+        storageRepository.setPendingAccountDeletion({
+            uid: 'uid-reload-partial',
+            email: 'reload@unlu.edu.ar',
+            stage: 'firestore_deleted_auth_pending',
+            clearLocalData: false,
+            firestoreDeletedAt: '2026-11-23T15:00:00.000Z',
+            lastErrorCode: 'auth/requires-recent-login',
+            lastErrorMessage: 'Reintentar',
+        });
+
+        const authBox = renderWithAuth();
+        await act(async () => {
+            await authObserverCallback({ uid: 'uid-reload-partial', email: 'reload@unlu.edu.ar' });
+        });
+
+        expect(mockFetchCloudBundle).not.toHaveBeenCalled();
+        expect(authBox.current.pendingAccountDeletion?.uid).toBe('uid-reload-partial');
+
+        mockReauthenticateWithGoogle.mockResolvedValueOnce({ user: { uid: 'uid-reload-partial' } });
+        mockDeleteCurrentAuthUser.mockResolvedValueOnce(undefined);
+
+        let res;
+        await act(async () => {
+            res = await authBox.current.deleteAccount();
+        });
+
+        expect(res).toMatchObject({ ok: true, status: 'completed', firestoreDeleted: true, authDeleted: true });
+        expect(mockDeleteUserCloudData).not.toHaveBeenCalled();
+        expect(storageRepository.getPendingAccountDeletion()).toBeNull();
+    });
 });

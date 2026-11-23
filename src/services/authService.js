@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { mapFirebaseError } from '../utils/errorCodes';
+import storageRepository from './storageRepository';
 
 const provider = new GoogleAuthProvider();
 
@@ -73,11 +74,20 @@ export const loginConGoogle = async () => {
     /** @type {string | null} */
     let firestoreWarning = null;
     try {
-        const userRef = doc(db, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
+        const pendingDeletion = storageRepository.getPendingAccountDeletion();
+        const isPendingDeletionForUser = Boolean(
+            pendingDeletion &&
+                pendingDeletion.uid === user.uid &&
+                pendingDeletion.stage === 'firestore_deleted_auth_pending',
+        );
 
-        if (!userSnap.exists()) {
-            await setDoc(userRef, buildUserDoc(user));
+        if (!isPendingDeletionForUser) {
+            const userRef = doc(db, 'users', user.uid);
+            const userSnap = await getDoc(userRef);
+
+            if (!userSnap.exists()) {
+                await setDoc(userRef, buildUserDoc(user));
+            }
         }
     } catch (firestoreError) {
         const mapped = mapFirebaseError(firestoreError);

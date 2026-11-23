@@ -302,13 +302,26 @@ export function AuthProvider({ children }) {
                         meta: storageRepository.getSyncMeta(),
                     });
 
-                    const [cloudRes, role] = await Promise.all([
-                        fetchCloudBundle(firebaseUser.uid),
-                        getUserRole(firebaseUser.uid),
-                    ]);
+                    const pendingDeletion = storageRepository.getPendingAccountDeletion();
+                    const isPendingDeletionForUser = Boolean(
+                        pendingDeletion &&
+                            pendingDeletion.uid === firebaseUser.uid &&
+                            pendingDeletion.stage === 'firestore_deleted_auth_pending',
+                    );
 
-                    setUserRole(role);
-                    await reconcileWithCloud(firebaseUser, { prefetchedCloud: cloudRes });
+                    if (isPendingDeletionForUser) {
+                        setPendingAccountDeletion(pendingDeletion);
+                        setUserData(null);
+                        setUserRole('user');
+                    } else {
+                        const [cloudRes, role] = await Promise.all([
+                            fetchCloudBundle(firebaseUser.uid),
+                            getUserRole(firebaseUser.uid),
+                        ]);
+
+                        setUserRole(role);
+                        await reconcileWithCloud(firebaseUser, { prefetchedCloud: cloudRes });
+                    }
                 } else {
                     setUser(null);
                     userRef.current = null;

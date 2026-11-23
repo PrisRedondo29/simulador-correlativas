@@ -8,6 +8,7 @@ const mockGetDoc = vi.fn();
 const mockSetDoc = vi.fn();
 const mockDoc = vi.fn((_db, col, id) => ({ path: `${col}/${id}`, id }));
 const mockServerTimestamp = vi.fn(() => 'SERVER_TS');
+const mockGetPendingAccountDeletion = vi.fn(() => null);
 
 vi.mock('firebase/auth', () => ({
     GoogleAuthProvider: vi.fn(),
@@ -27,6 +28,12 @@ vi.mock('firebase/firestore', () => ({
 vi.mock('./firebase', () => ({
     auth: {},
     db: {},
+}));
+
+vi.mock('./storageRepository', () => ({
+    default: {
+        getPendingAccountDeletion: (...args) => mockGetPendingAccountDeletion(...args),
+    },
 }));
 
 import {
@@ -95,6 +102,30 @@ describe('authService - Registro seguro sin fugas de localStorage entre cuentas'
                 value: originalLocalStorage,
             });
         }
+    });
+
+    it('no recrea el documento en Firestore durante loginConGoogle si existe una eliminación parcial pendiente para ese UID', async () => {
+        mockGetPendingAccountDeletion.mockReturnValueOnce({
+            uid: 'uid-pending-del',
+            stage: 'firestore_deleted_auth_pending',
+            clearLocalData: false,
+        });
+        mockSignInWithPopup.mockResolvedValue({
+            user: {
+                uid: 'uid-pending-del',
+                email: 'pending@unlu.edu.ar',
+                displayName: 'Pendiente',
+                photoURL: null,
+            },
+        });
+        mockGetDoc.mockResolvedValue({ exists: () => false });
+
+        const { user, firestoreWarning } = await loginConGoogle();
+
+        expect(user.uid).toBe('uid-pending-del');
+        expect(firestoreWarning).toBeNull();
+        expect(mockSetDoc).not.toHaveBeenCalled();
+        expect(mockGetDoc).not.toHaveBeenCalled();
     });
 
     it('no sobrescribe el documento en Firestore cuando el usuario ya existe', async () => {
