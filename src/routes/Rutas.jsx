@@ -14,6 +14,7 @@ const ComoUsar = lazy(() => import('../pages/ComoUsar'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const Contacto = lazy(() => import('../pages/Contacto'));
 const Legal = lazy(() => import('../pages/Legal'));
+const NotFound = lazy(() => import('../pages/NotFound'));
 
 const LoadingFallback = () => (
     <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -94,6 +95,10 @@ const Rutas = ({ plan, setPlan }) => {
         {
             path: '/privacidad',
             element: <Navigate to="/legal" replace />,
+        },
+        {
+            path: '*',
+            element: <NotFound />,
         },
     ]);
 

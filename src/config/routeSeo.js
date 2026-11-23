@@ -107,17 +107,37 @@ function normalizePathname(pathname) {
     return pathname.replace(/\/+$/, '') || '/';
 }
 
+const LEGACY_REDIRECT_MAP = {
+    '/progreso': '/mis-materias',
+    '/cursada': '/mi-agenda',
+    '/transicion': '/cambio-plan',
+    '/config': '/configuracion',
+    '/privacidad': '/legal',
+};
+
+const NOT_FOUND_SEO = {
+    title: 'Página no encontrada',
+    documentTitle: 'Página no encontrada | Simulador de Correlativas UNLu',
+    description: 'La ruta solicitada no existe dentro del Simulador de Correlativas UNLu.',
+    canonicalPath: '/',
+    robots: 'noindex, nofollow',
+};
+
 /**
  * Obtiene los metadatos SEO correspondientes a una ruta.
+ * Para rutas desconocidas devuelve metadatos de 404 con `robots: 'noindex, nofollow'`.
  * @param {string | null | undefined} pathname
- * @returns {RouteSeoMeta & { canonicalUrl: string }}
+ * @returns {RouteSeoMeta & { canonicalUrl: string, robots: string }}
  */
 export function getRouteSeo(pathname) {
     const normalized = normalizePathname(pathname);
-    const meta = ROUTE_SEO[normalized] ?? ROUTE_SEO['/'];
+    const resolvedPath = LEGACY_REDIRECT_MAP[normalized] ?? normalized;
+    const known = ROUTE_SEO[resolvedPath];
+    const meta = known ?? NOT_FOUND_SEO;
     const canonicalUrl = `${CANONICAL_ORIGIN}${meta.canonicalPath}`;
     return {
         ...meta,
+        robots: known ? 'index, follow' : NOT_FOUND_SEO.robots,
         canonicalUrl,
     };
 }
@@ -171,6 +191,7 @@ export function applyRouteSeo(pathname, doc = typeof document !== 'undefined' ? 
     doc.title = seo.documentTitle;
     upsertMetaTag(doc, 'name', 'title', seo.documentTitle);
     upsertMetaTag(doc, 'name', 'description', seo.description);
+    upsertMetaTag(doc, 'name', 'robots', seo.robots);
     upsertMetaTag(doc, 'property', 'og:title', seo.documentTitle);
     upsertMetaTag(doc, 'property', 'og:description', seo.description);
     upsertMetaTag(doc, 'property', 'og:url', seo.canonicalUrl);

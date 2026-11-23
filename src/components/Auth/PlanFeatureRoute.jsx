@@ -64,7 +64,7 @@ export default function PlanFeatureRoute({ feature, children }) {
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2.5 w-full justify-center pt-1">
+                    <div className="flex flex-col sm:flex-row flex-wrap gap-2.5 w-full justify-center pt-1">
                         <Button
                             size="sm"
                             className="bg-[#005A36] hover:bg-[#00472B] dark:bg-[#2E8B63] text-white font-semibold rounded-xl px-5 h-9"
@@ -91,6 +91,14 @@ export default function PlanFeatureRoute({ feature, children }) {
                                 Ir a Configuración
                             </Button>
                         )}
+                        <Button
+                            size="sm"
+                            variant="light"
+                            className="text-[#64748B] dark:text-[#94A3B8] font-medium rounded-xl px-3 h-9"
+                            onPress={() => navigate(-1)}
+                        >
+                            Volver
+                        </Button>
                     </div>
                 </CardBody>
             </Card>

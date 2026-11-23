@@ -8,14 +8,21 @@ describe('routeSeo - metadatos dinámicos y URL canónica por ruta', () => {
         document.title = '';
     });
 
-    it('normaliza rutas con barra final y devuelve fallback seguro para rutas desconocidas', () => {
+    it('normaliza rutas con barra final y devuelve noindex para rutas desconocidas', () => {
         const materiasSeo = getRouteSeo('/mis-materias/');
         expect(materiasSeo.title).toBe('Mis Materias');
+        expect(materiasSeo.robots).toBe('index, follow');
         expect(materiasSeo.canonicalUrl).toBe(`${CANONICAL_ORIGIN}/mis-materias`);
 
         const fallbackSeo = getRouteSeo('/ruta-inexistente');
         expect(fallbackSeo.canonicalUrl).toBe(`${CANONICAL_ORIGIN}/`);
-        expect(fallbackSeo.title).toBe('Inicio');
+        expect(fallbackSeo.title).toBe('Página no encontrada');
+        expect(fallbackSeo.robots).toBe('noindex, nofollow');
+
+        applyRouteSeo('/ruta-inexistente');
+        expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
+            'noindex, nofollow',
+        );
     });
 
     it('actualiza document.title, description, Open Graph y link rel=canonical en el DOM', () => {

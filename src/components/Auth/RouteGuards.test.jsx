@@ -100,4 +100,44 @@ describe('PlanFeatureRoute - Guardas declarativas por capacidades del plan', () 
             expect(screen.getByText(expectedPageText)).toBeTruthy();
         });
     });
+
+    it('renderiza página 404 NotFound para rutas inexistentes con enlaces a Inicio, Mis Materias y Simulador', async () => {
+        storageRepository.setPlanActivo('17.14', { silent: true });
+
+        render(
+            <MemoryRouter initialEntries={['/ruta-que-no-existe']}>
+                <PlanProvider>
+                    <LocationSpy />
+                    <Rutas plan="17.14" setPlan={vi.fn()} />
+                </PlanProvider>
+            </MemoryRouter>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByText(/Página no encontrada/i)).toBeTruthy();
+            expect(screen.getByRole('button', { name: /Ir a Inicio/i })).toBeTruthy();
+            expect(screen.getByRole('button', { name: /Mis Materias/i })).toBeTruthy();
+            expect(screen.getByRole('button', { name: /Simulador/i })).toBeTruthy();
+        });
+    });
+
+    it('enlace compartido a /cambio-plan desde Plan 17.14 muestra restricción académica (no 404 ni auth) y mantiene la URL', async () => {
+        storageRepository.setPlanActivo('17.14', { silent: true });
+
+        render(
+            <MemoryRouter initialEntries={['/cambio-plan']}>
+                <PlanProvider>
+                    <LocationSpy />
+                    <Rutas plan="17.14" setPlan={vi.fn()} />
+                </PlanProvider>
+            </MemoryRouter>,
+        );
+
+        await waitFor(() => {
+            expect(screen.getByTestId('location-path').textContent).toBe('/cambio-plan');
+            expect(screen.getByText(/Herramienta disponible para el Plan 17\.13/i)).toBeTruthy();
+            expect(screen.queryByText(/Página no encontrada/i)).toBeNull();
+            expect(screen.getByRole('button', { name: /Volver/i })).toBeTruthy();
+        });
+    });
 });
