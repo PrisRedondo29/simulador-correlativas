@@ -28,6 +28,10 @@ function Footer() {
                     <div className="flex flex-wrap items-center justify-center gap-3">
                         <span>Desarrollado por Priscila Redondo</span>
                         <span aria-hidden="true">·</span>
+                        <Link to="/novedades" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
+                            Novedades
+                        </Link>
+                        <span aria-hidden="true">·</span>
                         <Link to="/contacto" className="font-medium text-[#005A36] dark:text-[#6EE7B7] hover:underline">
                             Contacto
                         </Link>

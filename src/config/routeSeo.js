@@ -95,6 +95,13 @@ export const ROUTE_SEO = {
             'Política de privacidad (Ley 25.326), descargo de proyecto estudiantil no oficial UNLu, detalle de datos tratados y derechos del titular.',
         canonicalPath: '/legal',
     },
+    '/novedades': {
+        title: 'Novedades',
+        documentTitle: 'Novedades 2.0.0 | Simulador de Correlativas UNLu',
+        description:
+            'Conocé todas las novedades de la versión 2.0.0: SAWeb local, Mi Agenda, Estadísticas, Simulador v2, PWA offline y privacidad.',
+        canonicalPath: '/novedades',
+    },
 };
 
 /**

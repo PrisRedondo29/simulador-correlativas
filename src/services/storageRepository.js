@@ -55,6 +55,7 @@ export const STORAGE_KEYS = {
     PENDING_ACCOUNT_DELETION: 'unlu_pending_account_deletion:v1',
     ANALYTICS_CONSENT: 'unlu_analytics_consent:v1',
     ANALYTICS_FIRST_SEEN: 'unlu_analytics_first_seen:v1',
+    LAST_SEEN_RELEASE_VERSION: 'unlu_last_seen_release_version:v1',
     CATALOG_META_CACHE: 'unlu_catalog_meta:v1',
     /** @param {string} plan */
     catalogPlanCache: (plan) => `unlu_catalog_plan+${plan}`,
@@ -961,6 +962,19 @@ export function createStorageRepository(storage = getBrowserStorage()) {
 
         clearAnalyticsFirstSeen: () =>
             remove(STORAGE_KEYS.ANALYTICS_FIRST_SEEN, { silent: true }),
+
+        /**
+         * Última versión de novedades vista/cerrada por el usuario.
+         * @returns {string | null}
+         */
+        getLastSeenReleaseVersion: () => getRaw(STORAGE_KEYS.LAST_SEEN_RELEASE_VERSION),
+
+        /**
+         * @param {string} version
+         * @param {StorageWriteOptions} [options]
+         */
+        setLastSeenReleaseVersion: (version, options = { silent: true }) =>
+            setRaw(STORAGE_KEYS.LAST_SEEN_RELEASE_VERSION, version, options),
 
         /**
          * Indica si existen evidencias históricas de uso previo del simulador en `localStorage`

@@ -20,6 +20,7 @@ const ROUTE_TO_FEATURE = {
     '/configuracion': 'configuracion',
     '/contacto': 'contacto',
     '/legal': 'legal',
+    '/novedades': 'novedades',
 };
 
 /**

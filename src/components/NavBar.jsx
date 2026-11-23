@@ -36,6 +36,7 @@ const ROUTE_TITLES = {
     '/contacto': 'Contacto',
     '/legal': 'Aviso legal y privacidad',
     '/privacidad': 'Aviso legal y privacidad',
+    '/novedades': 'Novedades',
 };
 
 // ─── Panel de usuario (sección inferior del sidebar) ──────────────────────────

@@ -16,6 +16,7 @@ const Footer = lazy(() => import('./components/Footer'));
 const SyncModal = lazy(() => import('./components/SyncModal'));
 const PwaUpdatePrompt = lazy(() => import('./components/Pwa/PwaUpdatePrompt'));
 const AnalyticsConsentBanner = lazy(() => import('./components/Shared/AnalyticsConsentBanner'));
+const WhatsNewModal = lazy(() => import('./components/Shared/WhatsNewModal'));
 
 function AppContent() {
     const { isCriticalError } = useAuth();
@@ -37,6 +38,9 @@ function AppContent() {
 
     return (
         <OnboardingGate>
+            <Suspense fallback={null}>
+                <WhatsNewModal />
+            </Suspense>
             <div className="flex items-start min-h-screen overflow-x-clip bg-[#F8FAFC] dark:bg-[#0F1419]">
                 <NavBar plan={plan} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
                 <main className={`flex-1 min-w-0 min-h-screen flex flex-col relative pt-14 lg:pt-0 transition-all duration-300 ${isCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>

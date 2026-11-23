@@ -28,8 +28,9 @@ import OnboardingPlanStep from './OnboardingPlanStep';
 import OnboardingSubjectsStep from './OnboardingSubjectsStep';
 import { DEV_SIMULATE_NEWCOMER_EVENT } from './onboardingEvents';
 import { mergeSawebImportWithExisting } from '../../utils/sawebParser';
+import { CURRENT_RELEASE_VERSION } from '../../config/releaseNotes';
 
-const FREE_ROUTES = ['/como-usar', '/contacto', '/legal', '/privacidad'];
+const FREE_ROUTES = ['/como-usar', '/contacto', '/legal', '/privacidad', '/novedades'];
 const ONBOARDING_DRAFT_KEY = 'onboarding_draft_state';
 
 function readOnboardingDraft() {
@@ -156,6 +157,7 @@ export default function OnboardingGate({ children }) {
             ) {
                 awaitingCloudLoginRef.current = false;
                 storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        storageRepository.setLastSeenReleaseVersion(CURRENT_RELEASE_VERSION);
                 addToast({
                     title: '¡Bienvenido de vuelta!',
                     description: 'Recuperamos tus materias desde la nube.',
@@ -176,6 +178,7 @@ export default function OnboardingGate({ children }) {
         ) {
             awaitingCloudLoginRef.current = false;
             storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        storageRepository.setLastSeenReleaseVersion(CURRENT_RELEASE_VERSION);
         }
     }, [isAuthenticated, hasExistingData, onboardingVersion]);
 
@@ -197,6 +200,7 @@ export default function OnboardingGate({ children }) {
             if (storageRepository.hasExistingAcademicData()) {
                 awaitingCloudLoginRef.current = false;
                 storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        storageRepository.setLastSeenReleaseVersion(CURRENT_RELEASE_VERSION);
                 addToast({
                     title: '¡Bienvenido de vuelta!',
                     description: 'Recuperamos tus materias desde la nube.',
@@ -237,6 +241,7 @@ export default function OnboardingGate({ children }) {
     const handleSkipExisting = () => {
         saveOnboardingDraft(null);
         storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        storageRepository.setLastSeenReleaseVersion(CURRENT_RELEASE_VERSION);
         addToast({
             title: 'Tip: podés subir tu Analítico PDF',
             description:
@@ -263,6 +268,7 @@ export default function OnboardingGate({ children }) {
         setPlan(selectedPlan);
         updateAuthProgreso(selectedPlan, progresoDraft, {});
         storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        storageRepository.setLastSeenReleaseVersion(CURRENT_RELEASE_VERSION);
 
         trackSeleccionCarrera({
             plan: selectedPlan,
@@ -348,6 +354,7 @@ export default function OnboardingGate({ children }) {
         setPlan(targetPlan);
         updateAuthProgreso(targetPlan, nextProgreso, nextDetalles);
         storageRepository.setOnboardingVersionCompleted(CURRENT_ONBOARDING_VERSION);
+        storageRepository.setLastSeenReleaseVersion(CURRENT_RELEASE_VERSION);
 
         trackSeleccionCarrera({
             plan: targetPlan,

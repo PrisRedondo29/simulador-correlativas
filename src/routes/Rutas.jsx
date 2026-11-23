@@ -14,6 +14,7 @@ const ComoUsar = lazy(() => import('../pages/ComoUsar'));
 const SettingsPage = lazy(() => import('../pages/SettingsPage'));
 const Contacto = lazy(() => import('../pages/Contacto'));
 const Legal = lazy(() => import('../pages/Legal'));
+const Novedades = lazy(() => import('../pages/Novedades'));
 const NotFound = lazy(() => import('../pages/NotFound'));
 
 const LoadingFallback = () => (
@@ -95,6 +96,10 @@ const Rutas = ({ plan, setPlan }) => {
         {
             path: '/privacidad',
             element: <Navigate to="/legal" replace />,
+        },
+        {
+            path: '/novedades',
+            element: <Novedades />,
         },
         {
             path: '*',
