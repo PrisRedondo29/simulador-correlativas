@@ -15,6 +15,7 @@ import storageRepository, { STORAGE_KEYS } from './services/storageRepository';
 const Footer = lazy(() => import('./components/Footer'));
 const SyncModal = lazy(() => import('./components/SyncModal'));
 const PwaUpdatePrompt = lazy(() => import('./components/Pwa/PwaUpdatePrompt'));
+const AnalyticsConsentBanner = lazy(() => import('./components/Shared/AnalyticsConsentBanner'));
 
 function AppContent() {
     const { isCriticalError } = useAuth();
@@ -65,6 +66,7 @@ function App() {
                         <Suspense fallback={null}>
                             <SyncModal />
                             <PwaUpdatePrompt />
+                            <AnalyticsConsentBanner />
                         </Suspense>
                         <AppContent />
                     </BrowserRouter>

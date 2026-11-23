@@ -22,10 +22,16 @@ const DATA_INVENTORY = [
         retention: 'Mientras mantengas tu cuenta; podés exportarla en JSON o eliminar tu cuenta y datos en la nube directamente desde Configuración.',
     },
     {
-        channel: 'Métricas de uso y errores técnicos (Firebase Analytics / GA4)',
-        data: 'Eventos agregados de navegación y uso de funciones, reportes técnicos de error sanitizados y UID técnico cuando hay sesión activa.',
-        purpose: 'Detectar fallas y mejorar funcionalidades. Nunca registra DNI, legajo ni calificaciones individuales.',
-        retention: 'Según la política de retención estándar de Google Analytics / Firebase.',
+        channel: 'Métricas de uso opcionales (PostHog Cloud EU)',
+        data: 'Solo si aceptás explícitamente (opt-in): eventos agregados de uso de funciones, tiempo activo estimado, identificador de navegador consentido (distinct_id) y UID técnico si iniciás sesión con Google. Sin Session Replay, sin autocaptura, sin notas, DNI ni legajo.',
+        purpose: 'Comprender qué herramientas ayudan más, detectar errores y mejorar la experiencia del simulador.',
+        retention: 'Procesado en servidores de PostHog Cloud (Unión Europea). Podés revocar el consentimiento en cualquier momento desde Configuración.',
+    },
+    {
+        channel: 'Respaldos exportados manualmente (JSON)',
+        data: 'Copia portable de tu progreso, notas, regularidades y Mi Agenda descargada a tu dispositivo.',
+        purpose: 'Conservar un respaldo bajo tu exclusiva custodia o migrarlo manualmente.',
+        retention: 'Bajo tu control directo en tu dispositivo; la app no almacena copias en servidores.',
     },
     {
         channel: 'Formulario de contacto (EmailJS)',
@@ -122,7 +128,7 @@ export default function Legal() {
                     Información transparente sobre el alcance orientativo de este simulador y el tratamiento de tus datos conforme a la Ley N° 25.326 de Protección de los Datos Personales (República Argentina).
                 </p>
                 <p className="text-xs font-medium text-[#64748B] dark:text-[#94A3B8]">
-                    Última actualización: 22 de noviembre de 2026
+                    Última actualización: 23 de noviembre de 2026
                 </p>
             </header>
 
@@ -267,19 +273,27 @@ export default function Legal() {
                             <Link to="/configuracion" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
                                 Configuración
                             </Link>{' '}
-                            podés exportar tu respaldo en JSON o eliminar definitivamente tu cuenta de Google y tus datos sincronizados en Cloud Firestore (previa reautenticación), además de borrar tus datos locales en el navegador o escribirnos a través de{' '}
-                            <Link to="/contacto" className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline">
-                                Contacto
-                            </Link>{' '}
-                            o al correo{' '}
-                            <a
-                                href="mailto:prisredondo29@gmail.com"
-                                className="font-semibold text-[#005A36] dark:text-[#6EE7B7] hover:underline"
-                            >
-                                prisredondo29@gmail.com
-                            </a>
-                            .
+                            podés exportar tu respaldo en JSON, activar o revocar el consentimiento de métricas en PostHog, borrar tus datos locales o eliminar definitivamente tu cuenta de Google y tus datos sincronizados en Cloud Firestore (previa reautenticación).
                         </p>
+                        <div className="rounded-xl bg-[#FFFBEB] dark:bg-[#2D2210] border border-[#FDE68A] dark:border-[#5C4318] p-3.5 text-xs sm:text-sm text-[#92400E] dark:text-[#FCD34D] leading-relaxed space-y-1.5">
+                            <p className="font-semibold">
+                                Alcance y límites de la eliminación en analítica (PostHog Cloud EU)
+                            </p>
+                            <p>
+                                Dar de baja tu cuenta de Firebase Auth y Cloud Firestore <strong>no elimina automáticamente</strong> los eventos agregados históricos ya enviados a PostHog mientras el consentimiento estuvo activo. Al cerrar sesión, revocar el consentimiento o borrar tu cuenta, el navegador ejecuta <code>posthog.reset()</code> y limpia los identificadores locales para desvincular futuras visitas. Si deseás solicitar la supresión de los registros asociados a tu cuenta en PostHog, escribinos desde tu correo de Google vinculado a{' '}
+                                <a
+                                    href="mailto:prisredondo29@gmail.com?subject=Supresi%C3%B3n%20de%20datos%20anal%C3%ADticos%20PostHog"
+                                    className="font-semibold underline"
+                                >
+                                    prisredondo29@gmail.com
+                                </a>{' '}
+                                o a través de{' '}
+                                <Link to="/contacto" className="font-semibold underline">
+                                    Contacto
+                                </Link>
+                                .
+                            </p>
+                        </div>
                         <div className="rounded-xl bg-[#F8FAFC] dark:bg-[#1E2730] border border-[#E2E8F0] dark:border-[#2A3540] p-3.5 text-xs sm:text-sm text-[#475569] dark:text-[#CBD5E1] leading-relaxed">
                             La{' '}
                             <strong>Agencia de Acceso a la Información Pública (AAIP)</strong>, en su carácter de Órgano de Control de la Ley N° 25.326, tiene la atribución de atender las denuncias y reclamos que se interpongan con relación al incumplimiento de las normas sobre protección de datos personales (

@@ -20,7 +20,11 @@ import { usePlanCapabilities } from '../context/PlanContext';
 import { DEFAULT_PLAN } from '../config/planPolicies';
 import { updateUserConfig } from '../services/dbService';
 import { useTheme } from 'next-themes';
-import { trackSeleccionCarrera } from '../services/analyticsService';
+import {
+    getAnalyticsConsent,
+    setAnalyticsConsent,
+    trackSeleccionCarrera,
+} from '../services/analyticsService';
 import storageRepository, { subscribeStorageChanges } from '../services/storageRepository';
 import { getAvailableTours } from '../config/tutorialTours';
 import usePwaInstall from '../hooks/usePwaInstall';
@@ -62,6 +66,8 @@ export default function SettingsPage({ plan, setPlan }) {
 
     const [alias, setAlias] = useState('');
     const [saving, setSaving] = useState(false);
+    const [analyticsConsent, setAnalyticsConsentState] = useState(() => getAnalyticsConsent());
+    const [isUpdatingConsent, setIsUpdatingConsent] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isDeletingAccount, setIsDeletingAccount] = useState(false);
     const [deleteDialogError, setDeleteDialogError] = useState(null);
@@ -758,6 +764,42 @@ export default function SettingsPage({ plan, setPlan }) {
                                 <i className="fa-solid fa-file-shield text-[11px]" aria-hidden="true" />
                                 Aviso legal y privacidad
                             </Link>
+                        </div>
+
+                        <div className="pt-3 border-t border-[#F1F5F9] dark:border-[#2A3540] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                                <p className="text-xs font-semibold text-[#1E293B] dark:text-[#F1F5F9]">
+                                    Métricas opcionales de uso (PostHog Cloud EU)
+                                </p>
+                                <p className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">
+                                    Estado actual:{' '}
+                                    <strong>
+                                        {analyticsConsent === 'accepted'
+                                            ? 'Activadas (opt-in)'
+                                            : analyticsConsent === 'rejected'
+                                              ? 'Desactivadas'
+                                              : 'Pendiente de elección'}
+                                    </strong>
+                                    . Nunca registra notas, DNI, legajo ni grabaciones.
+                                </p>
+                            </div>
+                            <Switch
+                                aria-label="Permitir métricas opcionales de uso en PostHog"
+                                isSelected={analyticsConsent === 'accepted'}
+                                isDisabled={isUpdatingConsent}
+                                color="success"
+                                size="sm"
+                                onValueChange={async (checked) => {
+                                    setIsUpdatingConsent(true);
+                                    try {
+                                        const next = checked ? 'accepted' : 'rejected';
+                                        await setAnalyticsConsent(next);
+                                        setAnalyticsConsentState(next);
+                                    } finally {
+                                        setIsUpdatingConsent(false);
+                                    }
+                                }}
+                            />
                         </div>
 
                         {user && (
