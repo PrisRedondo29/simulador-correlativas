@@ -821,6 +821,8 @@ export interface HistorialSemestre {
 export interface ResultadoReconstruccionHistorial {
     historial: HistorialSemestre[];
     progresoFinal: ProgresoSimuladorMap;
+    progresoBaseFinal?: ProgresoSimuladorMap;
+    materiasCursandoCodigos?: string[];
     anioFinal: number;
     cuatriFinal: string;
 }

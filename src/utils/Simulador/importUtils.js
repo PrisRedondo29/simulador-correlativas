@@ -46,7 +46,36 @@ export const reconstruirHistorial = (progresoReal, progresoDetalles, materias) =
         return estado === 'Aprobado' || estado === 'Promocionado' || estado === 'Regular';
     });
 
-    if (materiasCompletadas.length === 0) return null;
+    const materiasCursando = materias.filter((m) => progresoReal[m.codigo] === 'Cursando');
+
+    if (materiasCompletadas.length === 0 && materiasCursando.length === 0) return null;
+
+    const actual = getCuatrimestreActual();
+
+    /** @type {ProgresoSimuladorMap} */
+    const progresoAcumulado = {};
+    materias.forEach((m) => {
+        progresoAcumulado[m.codigo] = 'No Cursado';
+    });
+
+    if (materiasCompletadas.length === 0) {
+        /** @type {ProgresoSimuladorMap} */
+        const progresoBaseFinal = { ...progresoAcumulado };
+        /** @type {ProgresoSimuladorMap} */
+        const progresoFinal = { ...progresoAcumulado };
+        materiasCursando.forEach((m) => {
+            progresoFinal[m.codigo] = 'Cursado';
+        });
+
+        return {
+            historial: [],
+            progresoFinal,
+            progresoBaseFinal,
+            materiasCursandoCodigos: materiasCursando.map((m) => m.codigo),
+            anioFinal: actual.anio,
+            cuatriFinal: actual.cuatri,
+        };
+    }
 
     /** @type {MateriaImportada[]} */
     const cursadas = materiasCompletadas.map((m) => {
@@ -146,11 +175,6 @@ export const reconstruirHistorial = (progresoReal, progresoDetalles, materias) =
 
     /** @type {HistorialSemestre[]} */
     const historial = [];
-    /** @type {ProgresoSimuladorMap} */
-    const progresoAcumulado = {};
-    materias.forEach((m) => {
-        progresoAcumulado[m.codigo] = 'No Cursado';
-    });
 
     llavesOrdenadas.forEach((key) => {
         const semestre = semestresMap[key];
@@ -170,7 +194,6 @@ export const reconstruirHistorial = (progresoReal, progresoDetalles, materias) =
         });
     });
 
-    const actual = getCuatrimestreActual();
     const ultimoSemestre = historial[historial.length - 1];
 
     let anioFinal;
@@ -209,14 +232,27 @@ export const reconstruirHistorial = (progresoReal, progresoDetalles, materias) =
 
         anioFinal = actual.anio;
         cuatriFinal = actual.cuatri;
+    } else if (materiasCursando.length > 0) {
+        anioFinal = actual.anio;
+        cuatriFinal = actual.cuatri;
     } else {
         anioFinal = siguienteAnio;
         cuatriFinal = siguienteCuatri;
     }
 
+    /** @type {ProgresoSimuladorMap} */
+    const progresoBaseFinal = { ...progresoAcumulado };
+    /** @type {ProgresoSimuladorMap} */
+    const progresoFinal = { ...progresoAcumulado };
+    materiasCursando.forEach((m) => {
+        progresoFinal[m.codigo] = 'Cursado';
+    });
+
     return {
         historial,
-        progresoFinal: { ...progresoAcumulado },
+        progresoFinal,
+        progresoBaseFinal,
+        materiasCursandoCodigos: materiasCursando.map((m) => m.codigo),
         anioFinal,
         cuatriFinal,
     };

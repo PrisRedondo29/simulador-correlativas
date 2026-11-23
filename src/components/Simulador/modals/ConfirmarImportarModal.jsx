@@ -41,11 +41,17 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
             );
         }).length;
 
+        const cursandoCount = materias.filter((m) => progresoReal[m.codigo] === 'Cursando').length;
         const sinFecha = total - conFecha;
         const porcentaje = Math.round((conFecha / total) * 100);
 
-        return { total, conFecha, sinFecha, porcentaje };
+        return { total, conFecha, sinFecha, porcentaje, cursandoCount };
     }, [progresoReal, progresoDetalles, materias]);
+
+    const cursandoOnlyCount = useMemo(() => {
+        if (!progresoReal || !materias?.length) return 0;
+        return materias.filter((m) => progresoReal[m.codigo] === 'Cursando').length;
+    }, [progresoReal, materias]);
 
     const completitudBaja = stats && stats.porcentaje < 60;
 
@@ -144,6 +150,15 @@ function ConfirmarImportarModal({ isOpen, onOpenChange, onConfirm, progresoReal,
                                         <i className="fa-solid fa-triangle-exclamation text-warning-500 text-xs" />
                                         <p className="text-[11px] text-warning-800 dark:text-warning-300 font-medium">
                                             Esta es una <strong>aproximación</strong> y puede no ser 100% idéntica a tu realidad académica.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {cursandoOnlyCount > 0 && (
+                                    <div className="bg-secondary-50 dark:bg-secondary-500/10 border border-secondary-200 dark:border-secondary-500/30 p-2.5 rounded-xl flex gap-2 items-center">
+                                        <i className="fa-solid fa-play text-secondary-600 dark:text-secondary-400 text-xs" />
+                                        <p className="text-[11px] text-secondary-800 dark:text-secondary-300 font-medium">
+                                            Se precargarán <strong>{cursandoOnlyCount}</strong> {cursandoOnlyCount === 1 ? 'materia en curso' : 'materias en curso'} en el cuatrimestre actual (sin darlas por aprobadas).
                                         </p>
                                     </div>
                                 )}

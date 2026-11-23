@@ -216,7 +216,7 @@ function Simulador({ plan: initialPlan }) {
         } else {
             addToast({
                 title: 'Sin materias para importar',
-                description: 'No hay materias aprobadas o regulares cargadas en Mis Materias para importar.',
+                description: 'No hay materias aprobadas, regulares o en curso cargadas en Mis Materias para importar.',
                 color: 'warning',
             });
         }

@@ -6,7 +6,8 @@ const useSimuladorMaterias = (materias, progreso, cuatri, setProgreso, progresoB
     const { materiasCursables, materiasBloqueadas } = useMemo(() => {
         if (progresoBase === null || progresoBase === undefined) return { materiasCursables: [], materiasBloqueadas: [] };
 
-        // 1. Filtramos por temporada (paridad de cuatrimestre) o actividades flexibles de tramo final, y que no estén cursadas
+        // 1. Filtramos por temporada (paridad de cuatrimestre) o actividades flexibles de tramo final,
+        //    o materias ya marcadas en el cuatrimestre actual (p. ej. importadas en estado Cursando)
         const materiasCandidatas = materias.filter(m => {
             const numCuatri = Number(m.cuatrimestre);
             const esImpar = numCuatri % 2 !== 0;
@@ -15,19 +16,23 @@ const useSimuladorMaterias = (materias, progreso, cuatri, setProgreso, progresoB
 
             const coincideTemporada = esFlexible || (cuatri === "1" && esImpar) || (cuatri === "2" && esPar);
             const noCursada = progresoBase[m.codigo] === "No Cursado";
+            const enCursoActual = progreso?.[m.codigo] === "Cursado" && noCursada;
 
-            return coincideTemporada && noCursada;
+            return (coincideTemporada && noCursada) || enCursoActual;
         });
 
         const cursables = [];
         const bloqueadas = [];
 
         materiasCandidatas.forEach((materia) => {
+            const enCursoActual = progreso?.[materia.codigo] === "Cursado" && progresoBase[materia.codigo] === "No Cursado";
             const esTesina = materia.tesis;
             let esCursable = false;
             let correlativasFaltantes = [];
 
-            if (esTesina) {
+            if (enCursoActual) {
+                esCursable = true;
+            } else if (esTesina) {
                 const hayPendientes = materias.some(m =>
                     m.codigo !== materia.codigo && !m.tesis && progresoBase[m.codigo] !== "Cursado"
                 );
@@ -64,7 +69,7 @@ const useSimuladorMaterias = (materias, progreso, cuatri, setProgreso, progresoB
         });
 
         return { materiasCursables: cursables, materiasBloqueadas: bloqueadas };
-    }, [cuatri, materias, progresoBase, semestreActualPlan])
+    }, [cuatri, materias, progreso, progresoBase, semestreActualPlan])
 
     const cambioDeEstado = (codigoMateria) => {
         const nuevoEstado = progreso[codigoMateria] === "Cursado" ? "No Cursado" : "Cursado"

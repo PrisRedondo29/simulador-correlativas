@@ -52,4 +52,63 @@ describe('importUtils - Importación de progreso real al Simulador', () => {
         expect(res.anioFinal).toBe(2026);
         expect(res.cuatriFinal).toBe('1');
     });
+
+    it('permite importar cuando el estudiante solo tiene materias en estado Cursando ubicándolas en el cuatrimestre actual sin consolidarlas en progresoBaseFinal', () => {
+        const res = reconstruirHistorial(
+            { M1: 'Cursando', M2: 'Bloqueado', M3: 'Disponible' },
+            {},
+            MATERIAS_IMPORT,
+        );
+
+        expect(res).not.toBeNull();
+        expect(res.historial).toEqual([]);
+        expect(res.anioFinal).toBe(2026);
+        expect(res.cuatriFinal).toBe('1');
+        expect(res.materiasCursandoCodigos).toEqual(['M1']);
+        expect(res.progresoFinal).toEqual({ M1: 'Cursado', M2: 'No Cursado', M3: 'No Cursado' });
+        expect(res.progresoBaseFinal).toEqual({ M1: 'No Cursado', M2: 'No Cursado', M3: 'No Cursado' });
+    });
+
+    it('maneja mezcla de Aprobado, Promocionado, Regular, Cursando y Libre manteniendo Cursando fuera del historial consolidado', () => {
+        const materiasMix = [
+            ...MATERIAS_IMPORT,
+            { codigo: 'M4', nombre: 'Bases de Datos', anio: '2', cuatrimestre: '4', correlativas: [] },
+            { codigo: 'M5', nombre: 'Redes', anio: '3', cuatrimestre: '5', correlativas: [] },
+        ];
+        const res = reconstruirHistorial(
+            {
+                M1: 'Aprobado',
+                M2: 'Promocionado',
+                M3: 'Regular',
+                M4: 'Cursando',
+                M5: 'Libre',
+            },
+            {
+                M1: { fechaRegularidad: { anio: 2025, cuatrimestre: 1 } },
+                M2: { fechaRegularidad: { anio: 2025, cuatrimestre: 2 } },
+                M3: { fechaRegularidad: { anio: 2025, cuatrimestre: 2 } },
+            },
+            materiasMix,
+        );
+
+        expect(res).not.toBeNull();
+        expect(res.anioFinal).toBe(2026);
+        expect(res.cuatriFinal).toBe('1');
+        expect(res.materiasCursandoCodigos).toEqual(['M4']);
+        // M1, M2 y M3 consolidados; M4 solo en progresoFinal (actual); M5 (Libre) en No Cursado
+        expect(res.progresoBaseFinal).toEqual({
+            M1: 'Cursado',
+            M2: 'Cursado',
+            M3: 'Cursado',
+            M4: 'No Cursado',
+            M5: 'No Cursado',
+        });
+        expect(res.progresoFinal).toEqual({
+            M1: 'Cursado',
+            M2: 'Cursado',
+            M3: 'Cursado',
+            M4: 'Cursado',
+            M5: 'No Cursado',
+        });
+    });
 });

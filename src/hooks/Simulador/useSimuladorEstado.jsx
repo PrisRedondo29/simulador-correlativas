@@ -547,6 +547,11 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
         setCuatri(datos.cuatriFinal);
         setSimulacionTerminada(false);
 
+        const nextBase = datos.progresoBaseFinal
+            ? { ...datos.progresoBaseFinal }
+            : { ...datos.progresoFinal };
+        const nextSimulado = { ...datos.progresoFinal };
+
         const shouldTransitionImmediately =
             plan === '17.13' &&
             Boolean(planTransition?.enabled) &&
@@ -562,11 +567,11 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
             setPreImportedTransitionSnapshot({
                 activePlan: '17.13',
                 materias: sourceMaterias,
-                progresoSimulado: { ...datos.progresoFinal },
-                progresoBase: { ...datos.progresoFinal },
+                progresoSimulado: { ...nextSimulado },
+                progresoBase: { ...nextBase },
             });
             aplicarPaseHaciaTargetPlan(
-                datos.progresoFinal,
+                nextBase,
                 datos.anioFinal,
                 datos.cuatriFinal,
                 { notify: true, forceFrom1713: true },
@@ -578,8 +583,8 @@ const useSimuladorEstado = ({ plan, anioInicio, cuatriInicio, planTransition = n
             setActivePlan(plan);
             setTransitionAppliedInfo(null);
             setPreImportedTransitionSnapshot(null);
-            setProgresoSimulado(datos.progresoFinal);
-            setProgresoBase(datos.progresoFinal);
+            setProgresoSimulado(nextSimulado);
+            setProgresoBase(nextBase);
         }
     };
 

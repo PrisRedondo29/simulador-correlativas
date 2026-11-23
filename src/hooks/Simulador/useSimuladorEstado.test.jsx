@@ -25,6 +25,7 @@ vi.mock('../../services/analyticsService', () => ({
 }));
 
 import useSimuladorEstado, { homologarProgresoSimulado1713A1714 } from './useSimuladorEstado';
+import useSimuladorMaterias from './useSimuladorMaterias';
 
 const mockPlanMaterias = [
     { codigo: 'M1', nombre: 'Intro', anio: 1, cuatrimestre: 1, correlativas: [] },
@@ -282,5 +283,101 @@ describe('useSimuladorEstado - Navegación de semestres, retroceso y finalizaci�
         );
         expect(projected.progreso1714['11289']).toBe('Cursado');
         expect(projected.equivalenciasCount).toBe(3);
+    });
+
+    it('importarHistorialReconstruido con Cursando preserva progresoBase separado, no desbloquea correlativas hasta avanzar, evita duplicados y soporta reimportación sobre simulación iniciada', async () => {
+        const materiasTest = [
+            { codigo: '11271', nombre: 'Intro Prog', anio: 1, cuatrimestre: 1, correlativas: [] },
+            { codigo: '11274', nombre: 'Prog Estructurada', anio: 1, cuatrimestre: 2, correlativas: ['11271'] },
+            { codigo: '11275', nombre: 'POO', anio: 2, cuatrimestre: 3, correlativas: ['11274'] },
+        ];
+        mockGetPlanByNumber.mockResolvedValue({ materias: materiasTest });
+
+        const { result } = renderHook(() => {
+            const estado = useSimuladorEstado({
+                plan: '17.14',
+                anioInicio: '2026',
+                cuatriInicio: '1',
+            });
+            const mat = useSimuladorMaterias(
+                estado.materias,
+                estado.progresoSimulado,
+                estado.cuatri,
+                estado.setProgresoSimulado,
+                estado.progresoBase,
+                estado.anioActual,
+                estado.semestreActualPlan,
+            );
+            return { estado, mat };
+        });
+
+        await waitFor(() => {
+            expect(result.current.estado.materias).toHaveLength(3);
+        });
+
+        // Simulación ya iniciada previamente
+        act(() => {
+            result.current.estado.setProgresoSimulado({
+                11271: 'Cursado',
+                11274: 'No Cursado',
+                11275: 'No Cursado',
+            });
+        });
+        act(() => {
+            result.current.estado.handleSiguiente(result.current.mat.materiasCursables);
+        });
+        expect(result.current.estado.historialSemestres).toHaveLength(1);
+
+        // Importar progreso real con 11271 en Cursando (no aprobada aún) -> reemplaza limpiamente
+        act(() => {
+            result.current.estado.importarHistorialReconstruido({
+                historial: [],
+                progresoFinal: { 11271: 'Cursado', 11274: 'No Cursado', 11275: 'No Cursado' },
+                progresoBaseFinal: { 11271: 'No Cursado', 11274: 'No Cursado', 11275: 'No Cursado' },
+                materiasCursandoCodigos: ['11271'],
+                anioFinal: 2026,
+                cuatriFinal: '1',
+            });
+        });
+
+        expect(result.current.estado.historialSemestres).toHaveLength(0);
+        expect(result.current.estado.progresoSimulado['11271']).toBe('Cursado');
+        expect(result.current.estado.progresoBase['11271']).toBe('No Cursado');
+        expect(result.current.mat.materiasCursables.map((m) => m.codigo)).toEqual(['11271']);
+
+        // Avanzar al 2°C 2026: 11271 se consolida sin duplicarse y recién entonces habilita 11274
+        act(() => {
+            result.current.estado.handleSiguiente(result.current.mat.materiasCursables);
+        });
+
+        expect(result.current.estado.historialSemestres).toHaveLength(1);
+        expect(result.current.estado.progresoBase['11271']).toBe('Cursado');
+        expect(result.current.estado.cuatri).toBe('2');
+        expect(result.current.mat.materiasCursables.map((m) => m.codigo)).toEqual(['11274']);
+
+        // Reimportar progreso actualizado no duplica historial
+        act(() => {
+            result.current.estado.importarHistorialReconstruido({
+                historial: [
+                    {
+                        anioActual: 2026,
+                        cuatri: '1',
+                        materiasDelSemestre: [materiasTest[0]],
+                        progresoSnapshot: { 11271: 'Cursado', 11274: 'No Cursado', 11275: 'No Cursado' },
+                        progresoBaseSnapshot: { 11271: 'No Cursado', 11274: 'No Cursado', 11275: 'No Cursado' },
+                        esImportado: true,
+                    },
+                ],
+                progresoFinal: { 11271: 'Cursado', 11274: 'Cursado', 11275: 'No Cursado' },
+                progresoBaseFinal: { 11271: 'Cursado', 11274: 'No Cursado', 11275: 'No Cursado' },
+                materiasCursandoCodigos: ['11274'],
+                anioFinal: 2026,
+                cuatriFinal: '2',
+            });
+        });
+
+        expect(result.current.estado.historialSemestres).toHaveLength(1);
+        expect(result.current.estado.progresoBase['11274']).toBe('No Cursado');
+        expect(result.current.estado.progresoSimulado['11274']).toBe('Cursado');
     });
 });
