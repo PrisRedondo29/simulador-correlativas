@@ -38,14 +38,20 @@ export function parseAllowedAnalyticsHosts(rawEnv) {
 }
 
 /**
- * Verifica si el hostname actual está autorizado para enviar métricas a GA4 en producción.
- * En desarrollo (`import.meta.env.DEV`) devuelve `true` para permitir depuración local.
+ * Verifica si el hostname actual está autorizado para enviar métricas de Analytics.
+ * Bloquea estrictamente entornos de test (`VITEST` / `MODE === 'test'`).
  *
  * @param {string | null | undefined} hostname
- * @param {{ isDev?: boolean, allowedHostsEnv?: string | null | undefined }} [options]
+ * @param {{ isDev?: boolean, isTestEnv?: boolean, allowedHostsEnv?: string | null | undefined }} [options]
  * @returns {boolean}
  */
 export function isAnalyticsHostAllowed(hostname, options = {}) {
+    const isTestEnv =
+        options.isTestEnv !== undefined
+            ? options.isTestEnv
+            : import.meta.env.MODE === 'test' || Boolean(import.meta.env.VITEST);
+    if (isTestEnv) return false;
+
     const isDev = options.isDev !== undefined ? options.isDev : import.meta.env.DEV === true;
     if (isDev) return true;
 
@@ -58,6 +64,31 @@ export function isAnalyticsHostAllowed(hostname, options = {}) {
             : import.meta.env.VITE_ANALYTICS_ALLOWED_HOSTS,
     );
     return allowedHosts.includes(normalizedHost);
+}
+
+/**
+ * Sanitiza una URL conservando origen, pathname y únicamente parámetros UTM permitidos.
+ * Elimina tokens, fragmentos hash u otros query params potencialmente sensibles.
+ *
+ * @param {string | null | undefined} rawUrl
+ * @returns {string | null}
+ */
+export function sanitizeAnalyticsUrl(rawUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') return null;
+    try {
+        const parsed = new URL(rawUrl, 'https://mi-avance-academico.vercel.app');
+        const safeParams = new URLSearchParams();
+        for (const key of UTM_KEYS) {
+            const val = parsed.searchParams.get(key);
+            if (typeof val === 'string' && val.trim()) {
+                safeParams.set(key, val.trim().slice(0, MAX_PARAM_LENGTH));
+            }
+        }
+        const query = safeParams.toString();
+        return `${parsed.origin}${parsed.pathname}${query ? `?${query}` : ''}`;
+    } catch {
+        return null;
+    }
 }
 
 /**

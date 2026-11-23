@@ -53,6 +53,8 @@ export const STORAGE_KEYS = {
     SYNC_META: 'unlu_sync_meta:v1',
     SYNC_RECOVERY_BACKUP: 'unlu_sync_recovery_backup:v1',
     PENDING_ACCOUNT_DELETION: 'unlu_pending_account_deletion:v1',
+    ANALYTICS_CONSENT: 'unlu_analytics_consent:v1',
+    ANALYTICS_FIRST_SEEN: 'unlu_analytics_first_seen:v1',
     CATALOG_META_CACHE: 'unlu_catalog_meta:v1',
     /** @param {string} plan */
     catalogPlanCache: (plan) => `unlu_catalog_plan+${plan}`,
@@ -912,6 +914,69 @@ export function createStorageRepository(storage = getBrowserStorage()) {
             remove(STORAGE_KEYS.PENDING_ACCOUNT_DELETION, { silent: true }),
 
         clearCloudSyncMetadata: () => remove(STORAGE_KEYS.SYNC_META, { silent: true }),
+
+        /**
+         * Preferencia explícita de analítica no esencial (`'pending' | 'accepted' | 'rejected'`).
+         * Independiente de `posthog.reset()` y de `clearLocalUserData()`.
+         * @returns {'pending' | 'accepted' | 'rejected'}
+         */
+        getAnalyticsConsent: () => {
+            const raw = getRaw(STORAGE_KEYS.ANALYTICS_CONSENT);
+            if (raw === 'accepted' || raw === 'rejected') return raw;
+            return 'pending';
+        },
+
+        /**
+         * @param {'pending' | 'accepted' | 'rejected'} status
+         * @param {StorageWriteOptions} [options]
+         */
+        setAnalyticsConsent: (status, options = {}) => {
+            if (status !== 'accepted' && status !== 'rejected' && status !== 'pending') {
+                return false;
+            }
+            return setRaw(STORAGE_KEYS.ANALYTICS_CONSENT, status, options);
+        },
+
+        /**
+         * Marca de primer uso analítico (solo se persiste tras opt-in).
+         * @returns {{ firstSeenAt: string, userTenure: string } | null}
+         */
+        getAnalyticsFirstSeen: () => {
+            const parsed = getJSON(STORAGE_KEYS.ANALYTICS_FIRST_SEEN, /** @type {any} */ (null));
+            if (
+                !parsed ||
+                typeof parsed !== 'object' ||
+                typeof parsed.firstSeenAt !== 'string'
+            ) {
+                return null;
+            }
+            return parsed;
+        },
+
+        /**
+         * @param {{ firstSeenAt: string, userTenure: string }} data
+         */
+        setAnalyticsFirstSeen: (data) =>
+            setJSON(STORAGE_KEYS.ANALYTICS_FIRST_SEEN, data, { silent: true }),
+
+        clearAnalyticsFirstSeen: () =>
+            remove(STORAGE_KEYS.ANALYTICS_FIRST_SEEN, { silent: true }),
+
+        /**
+         * Indica si existen evidencias históricas de uso previo del simulador en `localStorage`
+         * antes de habilitar analítica (para distinguir usuarios nuevos vs recurrentes pre-PostHog).
+         * @returns {boolean | null}
+         */
+        hasHistoricalAppUsage: () => {
+            if (!storage) return null;
+            try {
+                if (getRaw(STORAGE_KEYS.ONBOARDING_VERSION) !== null) return true;
+                if (getRaw(STORAGE_KEYS.PLAN_ACTIVO) !== null) return true;
+                return !isAcademicBundleEmpty(readAcademicBundle());
+            } catch {
+                return null;
+            }
+        },
 
         clearLocalUserData: () => {
             clearAcademicCache();

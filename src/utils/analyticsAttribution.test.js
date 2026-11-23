@@ -6,6 +6,7 @@ import {
     getTrafficAttributionParams,
     isAnalyticsHostAllowed,
     parseAllowedAnalyticsHosts,
+    sanitizeAnalyticsUrl,
 } from './analyticsAttribution';
 
 function createMemoryStorage() {
@@ -35,18 +36,29 @@ describe('analyticsAttribution - filtro de dominios GA4 y persistencia UTM SPA',
         ]);
 
         expect(
-            isAnalyticsHostAllowed('mi-avance-academico.vercel.app', { isDev: false }),
+            isAnalyticsHostAllowed('mi-avance-academico.vercel.app', { isDev: false, isTestEnv: false }),
         ).toBe(true);
         expect(
-            isAnalyticsHostAllowed('clon-externo.netlify.app', { isDev: false }),
+            isAnalyticsHostAllowed('clon-externo.netlify.app', { isDev: false, isTestEnv: false }),
         ).toBe(false);
         expect(
             isAnalyticsHostAllowed('dev-simulador.vercel.app', {
                 isDev: false,
+                isTestEnv: false,
                 allowedHostsEnv: 'mi-avance-academico.vercel.app,dev-simulador.vercel.app',
             }),
         ).toBe(true);
-        expect(isAnalyticsHostAllowed('localhost', { isDev: true })).toBe(true);
+        expect(isAnalyticsHostAllowed('localhost', { isDev: true, isTestEnv: false })).toBe(true);
+        // En Vitest (isTestEnv por defecto) bloquea incluso hostnames de producción
+        expect(isAnalyticsHostAllowed('mi-avance-academico.vercel.app')).toBe(false);
+    });
+
+    it('sanitiza URLs eliminando query params arbitrarios y hashes pero conservando UTMs', () => {
+        expect(
+            sanitizeAnalyticsUrl(
+                'https://mi-avance-academico.vercel.app/mis-materias?token=secret123&utm_source=ig&dni=12345678#hash',
+            ),
+        ).toBe('https://mi-avance-academico.vercel.app/mis-materias?utm_source=ig');
     });
 
     it('extrae referrer externo excluyendo autoreferencias o URLs inválidas', () => {

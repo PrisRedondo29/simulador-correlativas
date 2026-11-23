@@ -48,6 +48,8 @@ vi.mock('../services/logService', () => ({
 }));
 
 vi.mock('../services/analyticsService', () => ({
+    syncAnalyticsAuthUser: vi.fn(),
+    trackAccountDeleted: vi.fn(),
     trackLogin: vi.fn(),
     trackLogout: vi.fn(),
 }));

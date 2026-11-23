@@ -10,7 +10,12 @@ import {
 } from '../services/authService';
 import { isIntentionalAuthCancel } from '../utils/errorCodes';
 import { logError } from '../services/logService';
-import { trackLogin, trackLogout } from '../services/analyticsService';
+import {
+    syncAnalyticsAuthUser,
+    trackAccountDeleted,
+    trackLogin,
+    trackLogout,
+} from '../services/analyticsService';
 import { deleteUserCloudData, getUserData, getUserRole } from '../services/dbService';
 import {
     fetchCloudBundle,
@@ -293,6 +298,7 @@ export function AuthProvider({ children }) {
                 if (firebaseUser) {
                     setUser(firebaseUser);
                     userRef.current = firebaseUser;
+                    syncAnalyticsAuthUser(firebaseUser.uid);
 
                     // Rehidratamos inmediatamente contra el storage local antes de ir a red
                     dispatchSync({
@@ -327,6 +333,7 @@ export function AuthProvider({ children }) {
                     userRef.current = null;
                     setUserData(null);
                     setUserRole('user');
+                    syncAnalyticsAuthUser(null);
                     dispatchSync({ type: 'SIGNED_OUT' });
                 }
             } catch (err) {
@@ -992,7 +999,7 @@ export function AuthProvider({ children }) {
                 storageRepository.clearCloudSyncMetadata();
             }
 
-            trackLogout();
+            trackAccountDeleted();
             setUser(null);
             userRef.current = null;
             setUserData(null);
