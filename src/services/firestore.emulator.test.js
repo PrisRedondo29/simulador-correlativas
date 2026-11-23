@@ -20,7 +20,12 @@ import {
     updateDoc,
     addDoc,
 } from 'firebase/firestore';
-import { commitAcademicBundleTransaction, deleteUserCloudData } from './dbService';
+import {
+    classifyLegacyUserDocCompatibility,
+    commitAcademicBundleTransaction,
+    deleteUserCloudData,
+    updateUserConfig,
+} from './dbService';
 import { fetchCloudBundle } from './syncService';
 import { computeBundleHash } from '../utils/Sync/syncStateMachine';
 
@@ -565,5 +570,103 @@ describe('Firestore Emulator - Reglas de seguridad (firestore.rules) y transacci
         const stored = (await getDoc(doc(dbClient1, 'users', 'uid-race'))).data();
         expect(stored.syncRevision).toBe(11);
         expect(conflicts[0].remoteHash).toBe(winners[0].uploadedHash);
+    });
+
+    it('SDK real: normaliza config legacy (config: null y alias: null/claves extra) en commitAcademicBundleTransaction y updateUserConfig sin alterar datos académicos', async () => {
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await setDoc(doc(ctx.firestore(), 'users', 'uid-legacy-null'), {
+                uid: 'uid-legacy-null',
+                email: 'legacy1@unlu.edu.ar',
+                createdAt: serverTimestamp(),
+                schemaVersion: 1,
+                syncRevision: 1,
+                config: null,
+                progreso: { '17.14': { '11071': 'Aprobado' } },
+                simulaciones: { '17.14': { anioFinal: 2029 } },
+            });
+            await setDoc(doc(ctx.firestore(), 'users', 'uid-legacy-dirty-cfg'), {
+                uid: 'uid-legacy-dirty-cfg',
+                email: 'legacy2@unlu.edu.ar',
+                createdAt: serverTimestamp(),
+                schemaVersion: 1,
+                syncRevision: 1,
+                config: {
+                    alias: null,
+                    planActivo: '17.14',
+                    tema: 'dark',
+                    extraLegacyKey: 'obsoleto',
+                },
+                progreso: { '17.14': { '11071': 'Aprobado' } },
+                simulaciones: {},
+            });
+        });
+
+        const dbNull = testEnv
+            .authenticatedContext('uid-legacy-null', { email: 'legacy1@unlu.edu.ar' })
+            .firestore();
+        const resNull = await commitAcademicBundleTransaction(
+            'uid-legacy-null',
+            {
+                progreso: { '17.14': { '11071': 'Aprobado', '11073': 'Regular' } },
+                progresoDetalles: {},
+                cursada: {},
+                simulaciones: { '17.14': { anioFinal: 2029 } },
+            },
+            { expectedRevision: 1, deps: makeRealFirestoreDeps(dbNull, 'legacy1@unlu.edu.ar') },
+        );
+        expect(resNull.status).toBe('synced');
+        const storedNull = (await getDoc(doc(dbNull, 'users', 'uid-legacy-null'))).data();
+        expect(storedNull.config).toEqual({});
+        expect(storedNull.simulaciones).toEqual({ '17.14': { anioFinal: 2029 } });
+
+        const dbDirty = testEnv
+            .authenticatedContext('uid-legacy-dirty-cfg', { email: 'legacy2@unlu.edu.ar' })
+            .firestore();
+        await updateUserConfig('uid-legacy-dirty-cfg', { tema: 'light' }, {
+            docFn: doc,
+            getDocFn: getDoc,
+            setDocFn: setDoc,
+            serverTimestampFn: serverTimestamp,
+            firestoreDb: dbDirty,
+            email: 'legacy2@unlu.edu.ar',
+        });
+        const storedDirty = (await getDoc(doc(dbDirty, 'users', 'uid-legacy-dirty-cfg'))).data();
+        expect(storedDirty.config).toEqual({ planActivo: '17.14', tema: 'light' });
+        expect(storedDirty.progreso).toEqual({ '17.14': { '11071': 'Aprobado' } });
+    });
+
+    it('SDK real: clasifica y rechaza documentos legacy con createdAt inmutable de tipo string bajo reglas vigentes', async () => {
+        const legacyInvalidDoc = {
+            uid: 'uid-legacy-bad-ts',
+            email: 'badts@unlu.edu.ar',
+            createdAt: '2024-01-01T00:00:00.000Z',
+            schemaVersion: 1,
+            syncRevision: 1,
+            progreso: { '17.14': { '11071': 'Aprobado' } },
+        };
+
+        const classification = classifyLegacyUserDocCompatibility(legacyInvalidDoc, 'uid-legacy-bad-ts');
+        expect(classification.compatible).toBe(false);
+        expect(classification.immutableBlockers).toContain('invalid_createdAt_type');
+
+        await testEnv.withSecurityRulesDisabled(async (ctx) => {
+            await setDoc(doc(ctx.firestore(), 'users', 'uid-legacy-bad-ts'), legacyInvalidDoc);
+        });
+
+        const dbBadTs = testEnv
+            .authenticatedContext('uid-legacy-bad-ts', { email: 'badts@unlu.edu.ar' })
+            .firestore();
+        const res = await commitAcademicBundleTransaction(
+            'uid-legacy-bad-ts',
+            {
+                progreso: { '17.14': { '11071': 'Aprobado', '11073': 'Aprobado' } },
+                progresoDetalles: {},
+                cursada: {},
+                simulaciones: {},
+            },
+            { expectedRevision: 1, deps: makeRealFirestoreDeps(dbBadTs, 'badts@unlu.edu.ar') },
+        );
+        expect(res.status).toBe('error');
+        expect(res.code).toBe('permission-denied');
     });
 });

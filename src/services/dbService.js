@@ -37,6 +37,120 @@ export const ACADEMIC_SYNC_MERGE_FIELDS = [
     'simulaciones',
 ];
 
+export const CONFIG_SYNC_MERGE_FIELDS = [
+    'uid',
+    'email',
+    'schemaVersion',
+    'configUpdatedAt',
+    'config',
+];
+
+const ALLOWED_CONFIG_THEMES = new Set(['light', 'dark', 'system']);
+const ALLOWED_CONFIG_KEYS = new Set(['alias', 'planActivo', 'tema']);
+
+/**
+ * Normaliza un objeto `config` legado o parcial al esquema estricto aceptado por `firestore.rules`:
+ * solo claves `alias` (string <= 80), `planActivo` (string <= 20 | null) y `tema` ('light'|'dark'|'system').
+ *
+ * @param {unknown} rawConfig
+ * @returns {UserCloudConfig}
+ */
+export const canonicalizeCloudConfig = (rawConfig) => {
+    if (!rawConfig || typeof rawConfig !== 'object' || Array.isArray(rawConfig)) {
+        return {};
+    }
+    const source = /** @type {Record<string, unknown>} */ (rawConfig);
+    /** @type {UserCloudConfig} */
+    const normalized = {};
+
+    if (typeof source.alias === 'string') {
+        normalized.alias = source.alias.slice(0, 80);
+    }
+    if (source.planActivo === null) {
+        normalized.planActivo = null;
+    } else if (typeof source.planActivo === 'string') {
+        normalized.planActivo = source.planActivo.slice(0, 20);
+    }
+    if (typeof source.tema === 'string' && ALLOWED_CONFIG_THEMES.has(source.tema)) {
+        normalized.tema = /** @type {'light' | 'dark' | 'system'} */ (source.tema);
+    }
+
+    return normalized;
+};
+
+/**
+ * Verifica si `config` cumple exactamente el contrato de `validConfig` en `firestore.rules`.
+ *
+ * @param {unknown} rawConfig
+ * @returns {boolean}
+ */
+export const isValidCanonicalCloudConfig = (rawConfig) => {
+    if (!rawConfig || typeof rawConfig !== 'object' || Array.isArray(rawConfig)) {
+        return false;
+    }
+    const source = /** @type {Record<string, unknown>} */ (rawConfig);
+    for (const key of Object.keys(source)) {
+        if (!ALLOWED_CONFIG_KEYS.has(key)) return false;
+    }
+    if ('alias' in source && (typeof source.alias !== 'string' || source.alias.length > 80)) {
+        return false;
+    }
+    if (
+        'planActivo' in source &&
+        source.planActivo !== null &&
+        (typeof source.planActivo !== 'string' || source.planActivo.length > 20)
+    ) {
+        return false;
+    }
+    if (
+        'tema' in source &&
+        (typeof source.tema !== 'string' || !ALLOWED_CONFIG_THEMES.has(source.tema))
+    ) {
+        return false;
+    }
+    return true;
+};
+
+/**
+ * Clasifica si un documento legacy de `/users/{uid}` tiene campos incompatibles reparables desde
+ * el cliente (como `config` inválido) o bloqueos inmutables bajo las reglas vigentes (`createdAt`
+ * con tipo no-Timestamp o `uid` distinto al dueño).
+ *
+ * @param {Record<string, any> | null | undefined} docData
+ * @param {string} expectedUid
+ * @returns {{ compatible: boolean, clientRepairableConfig: boolean, immutableBlockers: string[] }}
+ */
+export const classifyLegacyUserDocCompatibility = (docData, expectedUid) => {
+    if (!docData || typeof docData !== 'object') {
+        return { compatible: true, clientRepairableConfig: false, immutableBlockers: [] };
+    }
+    /** @type {string[]} */
+    const immutableBlockers = [];
+
+    if ('uid' in docData && docData.uid !== expectedUid) {
+        immutableBlockers.push('uid_mismatch');
+    }
+    if ('createdAt' in docData) {
+        const created = docData.createdAt;
+        const isTimestampLike =
+            Boolean(created) &&
+            typeof created === 'object' &&
+            (typeof created.toDate === 'function' || typeof created.seconds === 'number');
+        if (!isTimestampLike) {
+            immutableBlockers.push('invalid_createdAt_type');
+        }
+    }
+
+    const clientRepairableConfig =
+        'config' in docData && !isValidCanonicalCloudConfig(docData.config);
+
+    return {
+        compatible: immutableBlockers.length === 0 && !clientRepairableConfig,
+        clientRepairableConfig,
+        immutableBlockers,
+    };
+};
+
 /**
  * Consulta el rol de un usuario en la colección 'roles'.
  * @param {string | null | undefined} uid
@@ -79,32 +193,50 @@ export const getUserData = async (uid) => {
 
 /**
  * Guarda alias, plan activo y tema en la configuración del usuario.
+ * Normaliza `config` y reemplaza el mapa atómicamente con `mergeFields` para sanear
+ * configuraciones legacy (ej. `alias: null` o claves obsoletas) sin alterar datos académicos.
+ *
  * @param {string} uid
  * @param {UserCloudConfig} config
  * @returns {Promise<void>}
  */
-export const updateUserConfig = async (uid, config) => {
+export const updateUserConfig = async (uid, config, deps = {}) => {
     if (!uid || !config) return;
 
-    const userRef = doc(db, 'users', uid);
-    const currentUser = auth.currentUser;
-    const { alias, planActivo, tema } = config;
+    const docFn = deps.docFn ?? doc;
+    const getDocFn = deps.getDocFn ?? getDoc;
+    const setDocFn = deps.setDocFn ?? setDoc;
+    const serverTimestampFn = deps.serverTimestampFn ?? serverTimestamp;
+    const firestoreDb = deps.firestoreDb ?? db;
+    const resolvedEmail =
+        deps.email !== undefined ? deps.email : auth.currentUser?.email || '';
 
-    /** @type {UserCloudConfig} */
-    const configData = {};
-    if (alias !== undefined) configData.alias = alias;
-    if (planActivo !== undefined) configData.planActivo = planActivo;
-    if (tema !== undefined) configData.tema = tema;
+    const userRef = docFn(firestoreDb, 'users', uid);
+    let baseConfig = {};
+    try {
+        const existingSnap = await getDocFn(userRef);
+        if (existingSnap.exists()) {
+            baseConfig = canonicalizeCloudConfig(existingSnap.data()?.config);
+        }
+    } catch {
+        // Si falla la lectura previa (p. ej. offline), continuamos normalizando el payload entrante.
+    }
+
+    const incoming = canonicalizeCloudConfig(config);
+    const configData = {
+        ...baseConfig,
+        ...incoming,
+    };
 
     const updates = {
         uid,
-        email: currentUser?.email || '',
+        email: resolvedEmail,
         schemaVersion: SCHEMA_VERSION,
-        configUpdatedAt: serverTimestamp(),
+        configUpdatedAt: serverTimestampFn(),
         config: configData,
     };
 
-    await setDoc(userRef, updates, { merge: true });
+    await setDocFn(userRef, updates, { mergeFields: CONFIG_SYNC_MERGE_FIELDS });
 };
 
 /**
@@ -223,14 +355,27 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
             }
 
             const nextRevision = remoteRevision + 1;
+            const shouldRepairConfig =
+                Boolean(remoteData) &&
+                'config' in remoteData &&
+                !isValidCanonicalCloudConfig(remoteData.config);
+
             const payloadToWrite = {
                 ...payloadBase,
                 syncRevision: nextRevision,
                 academicUpdatedAt: serverTimestampFn(),
+                ...(shouldRepairConfig
+                    ? {
+                          config: canonicalizeCloudConfig(remoteData?.config),
+                          configUpdatedAt: serverTimestampFn(),
+                      }
+                    : {}),
             };
 
             transaction.set(userRef, payloadToWrite, {
-                mergeFields: ACADEMIC_SYNC_MERGE_FIELDS,
+                mergeFields: shouldRepairConfig
+                    ? [...ACADEMIC_SYNC_MERGE_FIELDS, 'config', 'configUpdatedAt']
+                    : ACADEMIC_SYNC_MERGE_FIELDS,
             });
 
             return {
