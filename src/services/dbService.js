@@ -356,7 +356,7 @@ export const commitAcademicBundleTransaction = async (uid, bundle, options = {})
 
             const nextRevision = remoteRevision + 1;
             const shouldRepairConfig =
-                Boolean(remoteData) &&
+                remoteData != null &&
                 'config' in remoteData &&
                 !isValidCanonicalCloudConfig(remoteData.config);
 
