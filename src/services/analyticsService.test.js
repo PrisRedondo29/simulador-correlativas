@@ -9,7 +9,10 @@ import {
     setAnalyticsConsent,
     syncAnalyticsAuthUser,
     track,
+    trackActiveFeatureTime,
+    trackCloudSyncResult,
     trackPageView,
+    trackProyeccionEgreso,
 } from './analyticsService';
 
 function createFakePostHog() {
@@ -211,6 +214,74 @@ describe('analyticsService - PostHog Cloud EU, consentimiento opt-in e identific
         expect(sanitized).toEqual({
             plan: '17.14',
             $current_url: 'https://mi-avance-academico.vercel.app/simulador?utm_source=ig',
+        });
+    });
+
+    it('verifica contrato completo de first_visit_recorded, first_action_completed (único entre recargas), feature_active_time, simulator_completed y cloud_sync_result', async () => {
+        await setAnalyticsConsent('accepted');
+
+        // 1. first_visit_recorded emitido una única vez
+        const firstVisitCalls = () =>
+            fakePostHog.capture.mock.calls.filter(([name]) => name === 'first_visit_recorded');
+        expect(firstVisitCalls()).toHaveLength(1);
+
+        // 2. simulator_completed dispara first_action_completed una única vez
+        await trackProyeccionEgreso({
+            plan: '17.14',
+            semestres_totales: 8,
+            anio_proyeccion: 2029,
+            isTransition: false,
+        });
+        expect(fakePostHog.capture).toHaveBeenCalledWith('simulator_completed', {
+            plan: '17.14',
+            semesters_total: 8,
+            projected_year: 2029,
+            is_transition: false,
+        });
+        expect(
+            fakePostHog.capture.mock.calls.filter(([name]) => name === 'first_action_completed'),
+        ).toHaveLength(1);
+
+        // Simular recarga de página: first_visit_recorded y first_action_completed NO se repiten
+        __resetAnalyticsStateForTests();
+        await setAnalyticsConsent('accepted');
+        await trackProyeccionEgreso({
+            plan: '17.14',
+            semestres_totales: 9,
+            anio_proyeccion: 2030,
+            isTransition: true,
+        });
+        expect(firstVisitCalls()).toHaveLength(1);
+        expect(
+            fakePostHog.capture.mock.calls.filter(([name]) => name === 'first_action_completed'),
+        ).toHaveLength(1);
+
+        // 3. feature_active_time y cloud_sync_result sin PII
+        await trackActiveFeatureTime({
+            route: '/simulador',
+            feature: 'simulador',
+            activeSeconds: 42,
+        });
+        expect(fakePostHog.capture).toHaveBeenCalledWith('feature_active_time', {
+            route: '/simulador',
+            feature: 'simulador',
+            active_seconds: 42,
+        });
+
+        await trackCloudSyncResult({ result: 'synced', origin: 'manual' });
+        await trackCloudSyncResult({
+            result: 'conflict_resolved',
+            resolution: 'use_remote',
+            origin: 'manual',
+        });
+        expect(fakePostHog.capture).toHaveBeenCalledWith('cloud_sync_result', {
+            result: 'synced',
+            origin: 'manual',
+        });
+        expect(fakePostHog.capture).toHaveBeenCalledWith('cloud_sync_result', {
+            result: 'conflict_resolved',
+            resolution: 'use_remote',
+            origin: 'manual',
         });
     });
 });

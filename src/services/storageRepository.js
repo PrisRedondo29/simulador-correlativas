@@ -939,7 +939,7 @@ export function createStorageRepository(storage = getBrowserStorage()) {
 
         /**
          * Marca de primer uso analítico (solo se persiste tras opt-in).
-         * @returns {{ firstSeenAt: string, userTenure: string } | null}
+         * @returns {{ firstSeenAt: string, userTenure: string, firstActionAt?: string } | null}
          */
         getAnalyticsFirstSeen: () => {
             const parsed = getJSON(STORAGE_KEYS.ANALYTICS_FIRST_SEEN, /** @type {any} */ (null));
@@ -954,7 +954,7 @@ export function createStorageRepository(storage = getBrowserStorage()) {
         },
 
         /**
-         * @param {{ firstSeenAt: string, userTenure: string }} data
+         * @param {{ firstSeenAt: string, userTenure: string, firstActionAt?: string }} data
          */
         setAnalyticsFirstSeen: (data) =>
             setJSON(STORAGE_KEYS.ANALYTICS_FIRST_SEEN, data, { silent: true }),

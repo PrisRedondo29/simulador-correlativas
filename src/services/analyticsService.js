@@ -399,14 +399,24 @@ export const trackPageView = async ({ path, title = '' }) => {
  */
 export const trackFirstUsefulAction = async (actionName) => {
     if (firstValueEmittedInSession) return;
-    firstValueEmittedInSession = true;
+    if (!canRunAnalytics()) return;
     const firstSeen = storageRepository.getAnalyticsFirstSeen();
+    if (firstSeen?.firstActionAt) {
+        firstValueEmittedInSession = true;
+        return;
+    }
+
+    firstValueEmittedInSession = true;
     let elapsedSec = 0;
     if (firstSeen?.firstSeenAt) {
         const diffMs = Date.now() - Date.parse(firstSeen.firstSeenAt);
         if (Number.isFinite(diffMs) && diffMs >= 0) {
             elapsedSec = Math.round(diffMs / 1000);
         }
+        storageRepository.setAnalyticsFirstSeen({
+            ...firstSeen,
+            firstActionAt: new Date().toISOString(),
+        });
     }
     await track('first_action_completed', {
         action_name: actionName,
