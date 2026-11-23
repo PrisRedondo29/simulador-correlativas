@@ -23,7 +23,13 @@ describe('Legal - Transparencia de datos y PostHog Cloud EU', () => {
         expect(screen.getAllByText(/PostHog Cloud EU/i).length).toBeGreaterThanOrEqual(2);
         expect(screen.getByText(/Respaldos exportados manualmente/i)).toBeTruthy();
         expect(
-            screen.getByText(/no elimina automáticamente.*eventos agregados históricos ya enviados a PostHog/i),
+            screen.getByText(
+                (_, el) =>
+                    el?.tagName === 'P' &&
+                    /no elimina automáticamente.*eventos agregados históricos ya enviados a PostHog/i.test(
+                        el.textContent || '',
+                    ),
+            ),
         ).toBeTruthy();
     });
 });
