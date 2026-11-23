@@ -89,6 +89,20 @@ export default defineConfig({
             },
           },
           {
+            urlPattern: /\/assets\/(?:vendor-pdf-.*\.js|pdf\.worker.*\.mjs)$/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'lazy-pdf-assets',
+              expiration: {
+                maxEntries: 6,
+                maxAgeSeconds: 60 * 60 * 24 * 90,
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
+              },
+            },
+          },
+          {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'StaleWhileRevalidate',
             options: {

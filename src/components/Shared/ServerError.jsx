@@ -30,7 +30,7 @@ const ServerError = () => {
                             ¿Qué significa el Modo Offline?
                         </p>
                         <p className="text-xs text-[#92400E]/90 dark:text-[#FCD34D]/85 mt-1 leading-relaxed">
-                            Podrás usar el simulador con normalidad y los cambios se guardarán en este dispositivo. Se sincronizarán con la nube automáticamente cuando vuelva la conexión.
+                            Podrás usar el simulador con normalidad y tus cambios se guardarán localmente en este dispositivo. Cuando vuelva la conexión, podrás sincronizarlos manualmente con la nube desde el menú de cuenta.
                         </p>
                     </div>
 
